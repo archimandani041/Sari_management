@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+/* Custom Scrollbar for modern look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(161, 109, 71, 0.35);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(161, 109, 71, 0.60);
+}
+
+/* Print CSS Stylesheet */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .MuiDrawer-root,
+  header,
+  .MuiAppBar-root,
+  .no-print,
+  button,
+  .MuiButton-root,
+  .MuiInputBase-root,
+  .MuiTablePagination-root {
+    display: none !important;
+  }
+
+  .printable-area {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .MuiPaper-root {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  svg, canvas {
+    max-width: 100% !important;
+  }
+}

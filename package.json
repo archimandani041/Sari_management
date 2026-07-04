@@ -1,0 +1,11 @@
+{
+  "name": "sari-stock-system",
+  "version": "1.0.0",
+  "description": "Sari Stock Management System root coordinator",
+  "scripts": {
+    "install:all": "npm install --prefix client && npm install --prefix server",
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client",
+    "dev": "npx concurrently \"npm run server\" \"npm run client\""
+  }
+}
