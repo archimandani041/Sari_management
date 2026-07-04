@@ -48,7 +48,7 @@ const ColorRow = ({ color, index, onChange, onRemove, isDuplicate }) => (
 );
 
 // ── A single combination card ─────────────────────────────────────
-const CombinationCard = ({ combo, comboIndex, isDuplicateName, onUpdate, onRemove, onDuplicate }) => {
+const CombinationCard = ({ combo, comboIndex, isDuplicateName, onUpdate, onRemove }) => {
   const handleColorChange = (ci, field, val) => {
     const colors = [...combo.colors];
     colors[ci] = { ...colors[ci], [field]: val };
@@ -65,9 +65,6 @@ const CombinationCard = ({ combo, comboIndex, isDuplicateName, onUpdate, onRemov
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
         <Chip label={`Combination ${comboIndex + 1}`} size="small" color="primary" variant="outlined" />
         <Box>
-          <Tooltip title="Duplicate"><IconButton size="small" onClick={() => onDuplicate(comboIndex)} sx={{ mr: 0.5 }}>
-            <ContentPasteIcon fontSize="small" />
-          </IconButton></Tooltip>
           <Tooltip title="Delete Combination"><IconButton size="small" color="error" onClick={() => onRemove(comboIndex)}>
             <DeleteIcon fontSize="small" />
           </IconButton></Tooltip>
@@ -181,6 +178,10 @@ const SareeForm = () => {
   const [dupConfirmData, setDupConfirmData] = useState(null);
   // dupConfirmData = { uniqueEntries: [...], duplicateEntries: [{entry, duplicateOf}], warnings: [...] }
 
+  // "All detected sarees already exist" warning
+  const [allSareesExistOpen, setAllSareesExistOpen] = useState(false);
+  const [allSareesExistCodes, setAllSareesExistCodes] = useState([]);
+
   // UI
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -228,7 +229,7 @@ const SareeForm = () => {
           try {
             const pendingEntries = JSON.parse(pendingImportStr);
             let updatedBeams = [...loadedBeams];
-            
+
             for (const entry of pendingEntries) {
               const targetCombo = {
                 combination_name: entry.combination_name || '',
@@ -236,26 +237,26 @@ const SareeForm = () => {
                 notes: '',
                 status: 'In Stock',
                 brand: 'KP',
-                colors: entry.colors && entry.colors.length > 0 
-                  ? entry.colors 
+                colors: entry.colors && entry.colors.length > 0
+                  ? entry.colors
                   : [{ f_number: 'F-1', color_name: '', company_name: '' }]
               };
-              
+
               if (entry.beam_name) {
-                const existingBeamIdx = updatedBeams.findIndex(b => 
+                const existingBeamIdx = updatedBeams.findIndex(b =>
                   b.beam_name.toLowerCase() === entry.beam_name.toLowerCase()
                 );
-                
+
                 if (existingBeamIdx >= 0) {
                   const existingCombos = updatedBeams[existingBeamIdx].combinations;
                   const entryColorKey = (entry.colors || []).map(c => `${c.f_number}:${c.color_name}`).sort().join('|').toLowerCase();
-                  
+
                   const dupIdx = existingCombos.findIndex(combo => {
                     const comboNameMatch = (combo.combination_name || '').trim().toLowerCase() === (entry.combination_name || '').trim().toLowerCase();
                     const comboColorKey = (combo.colors || []).map(c => `${c.f_number}:${c.color_name}`).sort().join('|').toLowerCase();
                     return comboNameMatch && comboColorKey === entryColorKey;
                   });
-                  
+
                   if (dupIdx >= 0) {
                     existingCombos[dupIdx].current_stock = targetCombo.current_stock;
                   } else {
@@ -272,7 +273,7 @@ const SareeForm = () => {
                 updatedBeams[0].combinations.push(targetCombo);
               }
             }
-            
+
             loadedBeams = updatedBeams;
             setSnack('Imported and merged WhatsApp entries into existing saree!');
           } catch (e) {
@@ -305,6 +306,61 @@ const SareeForm = () => {
     setBeams(b);
   };
 
+  // ── Frequency-based multi-saree target selector ──────────
+  // Groups parsed entries by normalized series_code, ranks by frequency DESC then
+  // first-appearance ASC, queries the DB once, and returns the best unexisting code.
+  // Returns { targetCode, allowedEntries, blockedEntries } or null if all exist.
+  const selectTargetSareeByFrequency = async (allEntries) => {
+    const normalize = (code) => (code || '').trim().toUpperCase().replace(/\s+/g, '');
+
+    // 1. Group entries by normalized code, track frequency and first index
+    const groupMap = {};
+    allEntries.forEach((entry, idx) => {
+      const code = normalize(entry.series_code || entry.series_base);
+      if (!code) return;
+      if (!groupMap[code]) {
+        groupMap[code] = { code, frequency: 0, firstIndex: idx, entries: [] };
+      }
+      groupMap[code].frequency++;
+      groupMap[code].entries.push(entry);
+    });
+
+    // 2. Sort candidates: frequency DESC, firstIndex ASC
+    const candidates = Object.values(groupMap).sort((a, b) =>
+      b.frequency !== a.frequency ? b.frequency - a.frequency : a.firstIndex - b.firstIndex
+    );
+
+    if (candidates.length === 0) return null; // no codes detected at all
+
+    // 3. Query DB once for all unique normalized codes
+    const uniqueCodes = candidates.map(c => c.code);
+    const existingNormalized = new Set();
+    try {
+      // Use a broad search and filter locally — avoids N+1 queries
+      const searchParam = uniqueCodes.join(' ');
+      const { data } = await sareeAPI.getAll({ search: searchParam, limit: 200 });
+      (data.sarees || []).forEach(s => {
+        existingNormalized.add(normalize(s.series_code));
+      });
+    } catch {
+      // If DB check fails, proceed without filtering — don't block the import
+    }
+
+    // 4. Pick best available candidate
+    const target = candidates.find(c => !existingNormalized.has(c.code));
+
+    if (!target) {
+      // All codes exist
+      return { allExist: true, existingCodes: candidates.map(c => c.code) };
+    }
+
+    const targetCode = target.code;
+    const allowedEntries = allEntries.filter(e => normalize(e.series_code || e.series_base) === targetCode);
+    const blockedEntries = allEntries.filter(e => normalize(e.series_code || e.series_base) !== targetCode);
+
+    return { targetCode, allowedEntries, blockedEntries, allExist: false };
+  };
+
   // ── WhatsApp paste parser ─────────────────────────────────
   const handleParse = async () => {
     setParseError('');
@@ -330,19 +386,47 @@ const SareeForm = () => {
         return; // wait for user to confirm
       }
 
-      // ── Step 2: Single-saree enforcement (checking Series Base/Sari Number) ───────────────────────────
-      const targetBase = seriesBase.trim()
-        ? seriesBase.trim().toUpperCase()
-        : (allEntries.find(e => e.series_base)?.series_base?.toUpperCase() ?? null);
+      // ── Step 2: Multi-saree detection with frequency-based target selection ──
+      const distinctCodes = new Set(
+        allEntries.map(e => (e.series_code || e.series_base || '').trim().toUpperCase()).filter(Boolean)
+      );
 
-      if (targetBase) {
-        const allowedEntries = [];
-        const blockedEntries = [];
-        for (const e of allEntries) {
-          const entryBase = (e.series_base || '').trim().toUpperCase();
-          if (!entryBase || entryBase === targetBase) allowedEntries.push(e);
-          else blockedEntries.push(e);
+      if (distinctCodes.size > 1 || (distinctCodes.size === 1 && seriesBase.trim() && !distinctCodes.has(seriesBase.trim().toUpperCase()))) {
+        // Multiple sarees in the message — select the best target
+        const result = await selectTargetSareeByFrequency(allEntries);
+
+        if (!result) {
+          // No recognizable codes, fall through to normal preview
+        } else if (result.allExist) {
+          setAllSareesExistCodes(result.existingCodes);
+          setAllSareesExistOpen(true);
+          setPasteOpen(false);
+          return;
+        } else if (result.blockedEntries.length > 0) {
+          setBlockedConfirmData({ targetCode: result.targetCode, blockedEntries: result.blockedEntries, allowedEntries: result.allowedEntries, warnings });
+          setBlockedConfirmOpen(true);
+          setPasteOpen(false);
+          return;
+        } else {
+          // All entries belong to the single target (edge case)
+          setParsedEntries(result.allowedEntries);
+          setSelectedPreviewRows(result.allowedEntries.map((_, i) => i));
+          setParseWarnings(warnings);
+          setPreviewOpen(true);
+          setPasteOpen(false);
+          return;
         }
+      } else if (seriesBase.trim()) {
+        // Single code in message — still enforce it matches the open form's series base
+        const targetBase = seriesBase.trim().toUpperCase();
+        const allowedEntries = allEntries.filter(e => {
+          const entryBase = (e.series_base || '').trim().toUpperCase();
+          return !entryBase || entryBase === targetBase;
+        });
+        const blockedEntries = allEntries.filter(e => {
+          const entryBase = (e.series_base || '').trim().toUpperCase();
+          return entryBase && entryBase !== targetBase;
+        });
         if (blockedEntries.length > 0) {
           setBlockedConfirmData({ targetCode: targetBase, blockedEntries, allowedEntries, warnings });
           setBlockedConfirmOpen(true);
@@ -384,7 +468,7 @@ const SareeForm = () => {
   };
 
   // Called when user confirms removal of duplicate blocks
-  const confirmDedupAndProceed = () => {
+  const confirmDedupAndProceed = async () => {
     if (!dupConfirmData) return;
     const { uniqueEntries, duplicateEntries, warnings } = dupConfirmData;
     const finalWarnings = [
@@ -394,19 +478,27 @@ const SareeForm = () => {
     setDupConfirmOpen(false);
     setDupConfirmData(null);
 
-    // After dedup, still run the single-saree enforcement on the remaining entries
-    const targetBase = seriesBase.trim()
-      ? seriesBase.trim().toUpperCase()
-      : (uniqueEntries.find(e => e.series_base)?.series_base?.toUpperCase() ?? null);
+    // After dedup, still run the multi-saree enforcement on the remaining entries
+    const distinctAfterDedup = new Set(
+      uniqueEntries.map(e => (e.series_code || e.series_base || '').trim().toUpperCase()).filter(Boolean)
+    );
 
-    if (targetBase) {
-      const allowedEntries = [];
-      const blockedEntries = [];
-      for (const e of uniqueEntries) {
-        const entryBase = (e.series_base || '').trim().toUpperCase();
-        if (!entryBase || entryBase === targetBase) allowedEntries.push(e);
-        else blockedEntries.push(e);
+    if (distinctAfterDedup.size > 1 || (distinctAfterDedup.size === 1 && seriesBase.trim() && !distinctAfterDedup.has(seriesBase.trim().toUpperCase()))) {
+      const result = await selectTargetSareeByFrequency(uniqueEntries);
+      if (result && result.allExist) {
+        setAllSareesExistCodes(result.existingCodes);
+        setAllSareesExistOpen(true);
+        return;
       }
+      if (result && result.blockedEntries.length > 0) {
+        setBlockedConfirmData({ targetCode: result.targetCode, blockedEntries: result.blockedEntries, allowedEntries: result.allowedEntries, warnings: finalWarnings });
+        setBlockedConfirmOpen(true);
+        return;
+      }
+    } else if (seriesBase.trim()) {
+      const targetBase = seriesBase.trim().toUpperCase();
+      const allowedEntries = uniqueEntries.filter(e => { const b = (e.series_base || '').trim().toUpperCase(); return !b || b === targetBase; });
+      const blockedEntries = uniqueEntries.filter(e => { const b = (e.series_base || '').trim().toUpperCase(); return b && b !== targetBase; });
       if (blockedEntries.length > 0) {
         setBlockedConfirmData({ targetCode: targetBase, blockedEntries, allowedEntries, warnings: finalWarnings });
         setBlockedConfirmOpen(true);
@@ -619,20 +711,20 @@ const SareeForm = () => {
     const remaining = sareeExistQueue.slice(1);
 
     // Filter parsed entries for skip mode
-    const filteredParsed = parsedEntries.filter(entry => 
+    const filteredParsed = parsedEntries.filter(entry =>
       (entry.series_code || '').toUpperCase() !== currentConflict.seriesCode
     );
 
     if (resolution === 'skip') {
       setParsedEntries(filteredParsed);
       setSelectedPreviewRows([]);
-      
+
       if (remaining.length > 0) {
         setSareeExistQueue(remaining);
         setActiveSareeExist(remaining[0]);
       } else {
         // finished checking saree existence.
-        const keptChecked = filteredParsed.filter(entry => 
+        const keptChecked = filteredParsed.filter(entry =>
           selectedPreviewRows.includes(parsedEntries.indexOf(entry))
         );
         setActiveSareeExist(null);
@@ -644,7 +736,7 @@ const SareeForm = () => {
       setSareeExistQueue([]);
       navigate(`/sarees/${currentConflict.sareeId}`);
     } else if (resolution === 'update') {
-      const entriesToMerge = parsedEntries.filter(entry => 
+      const entriesToMerge = parsedEntries.filter(entry =>
         (entry.series_code || '').toUpperCase() === currentConflict.seriesCode
       );
       localStorage.setItem('pending_whatsapp_import', JSON.stringify(entriesToMerge));
@@ -741,7 +833,7 @@ const SareeForm = () => {
     <Box>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
-        <IconButton onClick={() => navigate(-1)} color="primary"><ArrowBack /></IconButton>
+        <IconButton onClick={() => navigate('/sarees')} color="primary"><ArrowBack /></IconButton>
         <Box flex={1}>
           <Typography variant="h2" sx={{ fontSize: '1.75rem', fontWeight: 800 }}>
             {isEdit ? 'Edit Saree' : 'Add New Saree'}
@@ -790,7 +882,7 @@ const SareeForm = () => {
                   <TextField fullWidth multiline rows={2} label="Description" value={description}
                     onChange={e => setDescription(e.target.value)} />
                 </Grid>
-                </Grid>
+              </Grid>
             </Paper>
 
             {/* Beams */}
@@ -1039,10 +1131,10 @@ const SareeForm = () => {
       </Dialog>
 
       {/* Level 4: WhatsApp Import Duplicate Saree Dialog */}
-      <Dialog 
-        open={!!activeSareeExist} 
-        onClose={() => { setActiveSareeExist(null); setSareeExistQueue([]); }} 
-        maxWidth="xs" 
+      <Dialog
+        open={!!activeSareeExist}
+        onClose={() => { setActiveSareeExist(null); setSareeExistQueue([]); }}
+        maxWidth="xs"
         fullWidth
         PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
       >
@@ -1227,6 +1319,40 @@ const SareeForm = () => {
             onClick={confirmDedupAndProceed}
           >
             Yes, Remove Duplicates & Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* All Detected Sarees Already Exist Dialog */}
+      <Dialog
+        open={allSareesExistOpen}
+        onClose={() => { setAllSareesExistOpen(false); setPasteOpen(true); }}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: 1 }}>
+          ⚠️ All Detected Sarees Already Exist
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 1.5 }}>
+            All sarees found in this message are already in your inventory. No new saree can be created.
+          </Alert>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Detected codes:
+          </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+            {allSareesExistCodes.map(code => (
+              <Chip key={code} label={code} size="small" color="warning" variant="outlined" sx={{ fontWeight: 700 }} />
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button variant="outlined" onClick={() => { setAllSareesExistOpen(false); setPasteOpen(true); }}>
+            Go Back
+          </Button>
+          <Button variant="contained" onClick={() => { setAllSareesExistOpen(false); navigate('/sarees'); }}>
+            View All Sarees
           </Button>
         </DialogActions>
       </Dialog>

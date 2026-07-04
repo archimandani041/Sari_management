@@ -273,7 +273,7 @@ const parseWhatsAppMessage = (req, res) => {
 const handleWhatsAppWebhook = async (req, res) => {
   try {
     let messageText = req.body.Body || req.body.message || req.body.text;
-    
+
     // Support WhatsApp Cloud API nested structure
     if (!messageText && req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.text?.body) {
       messageText = req.body.entry[0].changes[0].value.messages[0].text.body;
@@ -297,7 +297,7 @@ const handleWhatsAppWebhook = async (req, res) => {
     // Split into blocks and parse
     const blocks = splitIntoBlocks(lines);
     const parsedEntries = blocks.map(parseBlock);
-    
+
     const results = [];
 
     for (const entry of parsedEntries) {
@@ -337,7 +337,7 @@ const handleWhatsAppWebhook = async (req, res) => {
         .limit(1);
 
       if (beamError) throw beamError;
-      
+
       let beam;
       if (!beams || beams.length === 0) {
         // Create the beam
@@ -427,7 +427,7 @@ const handleWhatsAppWebhook = async (req, res) => {
         isNewCombo = true;
         originalStock = 0;
         finalStock = entry.stock;
-        
+
         const nextComboNum = combos.length + 1;
         const comboName = `Combination ${nextComboNum}`;
 
@@ -443,7 +443,7 @@ const handleWhatsAppWebhook = async (req, res) => {
           .select().single();
 
         if (insertComboError) throw insertComboError;
-        
+
         // Insert colors
         if (entry.colors?.length > 0) {
           const colorsPayload = entry.colors.map(col => ({

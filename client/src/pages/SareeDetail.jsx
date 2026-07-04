@@ -381,7 +381,8 @@ const SareeDetail = () => {
             setRequestDialogOpen(false);
             setRequestCombo(null);
           }}
-          saree={saree}
+          seriesCode={saree.series_code}
+          sareeId={saree.id}
           beamName={requestBeamName}
           combination={requestCombo}
           onSuccess={() => {

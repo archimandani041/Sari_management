@@ -21,7 +21,6 @@ import SareeDetail from './pages/SareeDetail';
 import LowStock from './pages/LowStock';
 import StockHistory from './pages/StockHistory';
 import Settings from './pages/Settings';
-import AdvancedSearch from './pages/AdvancedSearch';
 import Suppliers from './pages/Suppliers';
 import StockRequests from './pages/StockRequests';
 
@@ -49,7 +48,7 @@ const AppContent = () => {
                   {/* Saree Inventory Grid */}
                   <Route path="/sarees" element={<AllSarees />} />
                   <Route path="/sarees/:id" element={<SareeDetail />} />
-                  <Route path="/search" element={<AdvancedSearch />} />
+                  <Route path="/search" element={<Navigate to="/sarees" replace />} />
                   <Route path="/low-stock" element={<LowStock />} />
                   <Route path="/history" element={<StockHistory />} />
                   <Route path="/suppliers" element={<Suppliers />} />

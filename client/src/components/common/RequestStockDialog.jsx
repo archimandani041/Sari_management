@@ -21,7 +21,8 @@ import SendIcon from '@mui/icons-material/Send';
 import { supplierAPI, stockRequestAPI } from '../../services/api';
 
 // ── Build professional WhatsApp message ─────────────────────
-const buildWhatsAppMessage = ({ seriesCode, beamName, colors, currentStock, requestedQty }) => {
+const buildWhatsAppMessage = ({ brand, status, seriesCode, beamName, colors, currentStock, requestedQty }) => {
+  const brandHeader = brand ? `${brand.trim()}\n` : '';
   const beamHeader = beamName ? (beamName.trim().endsWith(':') ? beamName.trim() : `${beamName.trim()}:`) : 'Beam:';
   const colorLines = (colors || []).map(c => {
     const fPart = c.f_number || 'F';
@@ -30,8 +31,10 @@ const buildWhatsAppMessage = ({ seriesCode, beamName, colors, currentStock, requ
     return `${fPart} : ${colorPart}${companyPart}`;
   }).join('\n');
 
-  return `${beamHeader}
-${seriesCode ? `${seriesCode} ( DELIVERY )` : '( DELIVERY )'}
+  const statusLabel = status ? `( ${status.toUpperCase()} )` : '( DELIVERY )';
+
+  return `${brandHeader}${beamHeader}
+${seriesCode ? `${seriesCode} ${statusLabel}` : statusLabel}
 ${colorLines || '(No color details)'}
 Previous Stock: ${currentStock ?? 0} pcs
 ${requestedQty} pcs/-`;
@@ -60,6 +63,8 @@ const RequestStockDialog = ({ open, onClose, combination, beamName, seriesCode, 
 
   const message = selectedSupplier ? buildWhatsAppMessage({
     supplier: selectedSupplier,
+    brand: combination?.brand,
+    status: combination?.status,
     seriesCode,
     beamName,
     combinationName: combination?.combination_name,

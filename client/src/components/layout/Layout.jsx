@@ -14,7 +14,7 @@ const Layout = ({ children }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'transparent' }}>
       {/* Sidebar Drawer */}
       <Sidebar />
 
@@ -45,7 +45,7 @@ const Layout = ({ children }) => {
             flexGrow: 1,
             p: { xs: 2, sm: 3 },
             overflowY: 'auto',
-            bgcolor: 'background.default'
+            bgcolor: 'transparent'
           }}
         >
           {children}

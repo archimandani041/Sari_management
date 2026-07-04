@@ -146,7 +146,6 @@ const CombinationCard = ({ combo: initialCombo, comboIndex, beamName, sareeId, o
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Chip size="small" label={`${combo.current_stock} pcs`} color="primary" />
-            <Tooltip title="Duplicate"><IconButton size="small" onClick={handleDuplicate} disabled={saving}><ContentCopyIcon fontSize="small" /></IconButton></Tooltip>
             <Tooltip title="Delete Combination"><IconButton size="small" color="error" onClick={() => setDelConfirm(true)} disabled={saving}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
           </Box>
         </Box>

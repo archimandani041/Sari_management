@@ -11,7 +11,6 @@ import {
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import SareeIcon from '@mui/icons-material/Checkroom';
-import AddIcon from '@mui/icons-material/AddCircle';
 import LowStockIcon from '@mui/icons-material/WarningAmber';
 import HistoryIcon from '@mui/icons-material/History';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -33,13 +32,11 @@ const navSections = [
     items: [
       { label: 'Dashboard', path: '/', icon: <DashboardIcon />, roles: ['admin', 'staff'] },
       { label: 'All Sarees', path: '/sarees', icon: <SareeIcon />, roles: ['admin', 'staff'] },
-      { label: 'Advanced Search', path: '/search', icon: <SearchIcon />, roles: ['admin', 'staff'] },
     ],
   },
   {
     heading: 'Inventory',
     items: [
-      { label: 'Add Saree', path: '/sarees/add', icon: <AddIcon />, roles: ['admin'] },
       { label: 'Low Stock', path: '/low-stock', icon: <LowStockIcon />, roles: ['admin', 'staff'], badge: true },
       { label: 'Stock History', path: '/history', icon: <HistoryIcon />, roles: ['admin', 'staff'] },
     ],
@@ -68,23 +65,29 @@ const Sidebar = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isLight = themeMode === 'light';
 
-  const sidebarBg = theme.palette.sidebar?.bg || (isLight ? '#FFFFFF' : '#141210');
   const mutedText = isLight ? '#9E8E7A' : '#8A7C6A';
-  const idleText  = isLight ? '#2E2A24' : '#D8CABA';
+  const idleText = isLight ? '#2E2A24' : '#D8CABA';
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
-  const isItemActive = (path) =>
-    location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
+  const isItemActive = (path) => {
+    // '/sarees/add' and '/sarees/edit/...' are sub-workflows of All Sarees,
+    // so keep '/sarees' highlighted for those routes too.
+    if (path === '/sarees') {
+      return location.pathname === '/sarees' ||
+        location.pathname.startsWith('/sarees/add') ||
+        location.pathname.startsWith('/sarees/edit');
+    }
+    return location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
+  };
 
   const drawerContent = (
     <Box sx={{
       display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden',
-      bgcolor: sidebarBg,
-      borderRight: `1px solid ${theme.palette.divider}`,
+      bgcolor: 'transparent',
     }}>
       {/* Brand */}
       <Box sx={{ px: 2.5, pt: 2.5, pb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 68 }}>
@@ -241,8 +244,6 @@ const Sidebar = () => {
         '& .MuiDrawer-paper': {
           width: DRAWER_WIDTH,
           boxSizing: 'border-box',
-          border: 'none',
-          bgcolor: sidebarBg,
         },
       }}
     >

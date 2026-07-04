@@ -41,7 +41,8 @@ const logActivity = async (user, action, entityType, entityId, details) => {
 const getSarees = async (req, res) => {
   try {
     const {
-      page = 1, limit = 25, search = '', sort = 'newest', status = '', brand = '', saree_status = ''
+      page = 1, limit = 25, search = '', sort = 'newest', status = '', brand = '', saree_status = '',
+      company = '', color = ''
     } = req.query;
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -79,6 +80,30 @@ const getSarees = async (req, res) => {
         .eq('status', saree_status);
       const statusSareeIds = (statusCombos || []).map(c => c.beams?.saree_id).filter(Boolean);
       query = query.in('id', statusSareeIds.length > 0 ? statusSareeIds : ['00000000-0000-0000-0000-000000000000']);
+    }
+
+    // Company filter
+    if (company) {
+      const { data: companyColors } = await supabase
+        .from('combination_colors')
+        .select('combination_id, combinations(beam_id, beams(saree_id))')
+        .ilike('company_name', `%${company}%`);
+      const companySareeIds = (companyColors || [])
+        .map(c => c.combinations?.beams?.saree_id)
+        .filter(Boolean);
+      query = query.in('id', companySareeIds.length > 0 ? companySareeIds : ['00000000-0000-0000-0000-000000000000']);
+    }
+
+    // Color filter
+    if (color) {
+      const { data: colorMatches } = await supabase
+        .from('combination_colors')
+        .select('combination_id, combinations(beam_id, beams(saree_id))')
+        .ilike('color_name', `%${color}%`);
+      const colorSareeIds = (colorMatches || [])
+        .map(c => c.combinations?.beams?.saree_id)
+        .filter(Boolean);
+      query = query.in('id', colorSareeIds.length > 0 ? colorSareeIds : ['00000000-0000-0000-0000-000000000000']);
     }
 
     // Search

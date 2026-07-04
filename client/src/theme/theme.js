@@ -1,11 +1,11 @@
 /**
- * Material UI Theme Configuration — "SariStock" design system
- * Palette: Earth / Sand / Latte / Olive / Midnight / Linen
- * All app styling flows through these tokens.
+ * Material UI Theme Configuration — "SariStock" · Premium Glassmorphism
+ * Palette: Earth / Sand / Latte / Olive / Midnight / Linen  (unchanged)
+ * Surfaces are frosted glass floating over an ambient earth-toned gradient.
  */
 import { createTheme } from '@mui/material/styles';
 
-// ── Brand palette ──────────────────────────────────────────────
+// ── Brand palette (unchanged) ──────────────────────────────────
 export const PALETTE = {
   EARTH:    '#A16D47',  // warm brown  — primary brand color
   SAND:     '#D8CABA',  // light beige — surfaces / borders
@@ -28,8 +28,36 @@ export const CHART_COLORS = [
   '#D2B896',   // lighter latte
 ];
 
+// Ambient page gradient (frosted glass needs something to distort behind it)
+export const APP_BACKGROUND = {
+  light: `
+    radial-gradient(900px 520px at 10% -8%, rgba(192,173,141,0.55), transparent 60%),
+    radial-gradient(760px 520px at 100% 0%, rgba(161,109,71,0.28), transparent 55%),
+    radial-gradient(720px 620px at 50% 118%, rgba(216,202,186,0.55), transparent 60%),
+    linear-gradient(135deg, #F7F3EB 0%, #EFE6D8 100%)`,
+  dark: `
+    radial-gradient(900px 520px at 10% -8%, rgba(161,109,71,0.30), transparent 60%),
+    radial-gradient(760px 520px at 100% 0%, rgba(119,111,79,0.24), transparent 55%),
+    radial-gradient(720px 620px at 50% 118%, rgba(161,109,71,0.16), transparent 60%),
+    linear-gradient(135deg, #14110B 0%, #1C1811 100%)`,
+};
+
 export const getTheme = (mode = 'dark') => {
   const isLight = mode === 'light';
+
+  // ── Glass surface tokens ─────────────────────────────────────
+  const glass = {
+    // decorative cards — more translucent for depth
+    bg:       isLight ? 'rgba(255,255,255,0.58)' : 'rgba(38,32,23,0.52)',
+    // readable surfaces (tables, menus, dialogs, drawer, header) — higher opacity
+    bgStrong: isLight ? 'rgba(255,255,255,0.74)' : 'rgba(32,27,19,0.74)',
+    border:   isLight ? 'rgba(255,255,255,0.65)' : 'rgba(216,202,186,0.09)',
+    borderStrong: isLight ? 'rgba(255,255,255,0.75)' : 'rgba(216,202,186,0.12)',
+    blur:     'blur(16px) saturate(140%)',
+    blurStrong: 'blur(20px) saturate(150%)',
+    shadow:   isLight ? '0 8px 32px rgba(29,29,29,0.10)' : '0 8px 32px rgba(0,0,0,0.45)',
+    shadowHover: isLight ? '0 16px 44px rgba(29,29,29,0.16)' : '0 18px 48px rgba(0,0,0,0.60)',
+  };
 
   return createTheme({
     palette: {
@@ -51,20 +79,20 @@ export const getTheme = (mode = 'dark') => {
       error:   { main: '#EF4444', light: '#F87171', dark: '#DC2626' },
       info:    { main: '#38BDF8', light: '#7DD3FC', dark: '#0EA5E9' },
       background: {
-        default: isLight ? PALETTE.LINEN    : '#18160F',
-        paper:   isLight ? '#FFFFFF'         : '#221E16',
+        // kept for any explicit reference, but the real canvas is the gradient on <body>
+        default: isLight ? PALETTE.LINEN : '#161209',
+        paper:   isLight ? '#FFFFFF'      : '#221E16',
       },
       text: {
         primary:   isLight ? PALETTE.MIDNIGHT : PALETTE.LINEN,
         secondary: isLight ? PALETTE.OLIVE    : PALETTE.SAND,
       },
-      divider: isLight ? PALETTE.SAND : '#3A3428',
-      // Custom tokens consumed by Sidebar and other components
+      divider: isLight ? 'rgba(119,111,79,0.18)' : 'rgba(216,202,186,0.12)',
+      // Custom tokens
+      glass,
       sidebar: {
-        bg:     SIDEBAR_BG[mode] || SIDEBAR_BG.dark,
-        active: isLight
-          ? 'rgba(161,109,71,0.10)'
-          : 'rgba(161,109,71,0.14)',
+        bg:     glass.bgStrong,
+        active: isLight ? 'rgba(161,109,71,0.14)' : 'rgba(192,173,141,0.16)',
       },
       brand: {
         main:  PALETTE.EARTH,
@@ -76,52 +104,115 @@ export const getTheme = (mode = 'dark') => {
       },
     },
     typography: {
-      fontFamily: '"Outfit", "Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-      h1: { fontWeight: 800, fontSize: '2.5rem',  letterSpacing: '-0.02em' },
-      h2: { fontWeight: 800, fontSize: '2rem',    letterSpacing: '-0.01em' },
-      h3: { fontWeight: 700, fontSize: '1.5rem',  letterSpacing: '-0.01em' },
-      h4: { fontWeight: 700, fontSize: '1.25rem' },
-      h5: { fontWeight: 700, fontSize: '1.1rem'  },
-      h6: { fontWeight: 700, fontSize: '1rem'    },
+      // Clean modern sans everywhere — legible on frosted glass
+      fontFamily: '"Plus Jakarta Sans", "Outfit", "Inter", system-ui, -apple-system, sans-serif',
+      h1: { fontWeight: 800, fontSize: '2.4rem',  letterSpacing: '-0.025em', lineHeight: 1.12 },
+      h2: { fontWeight: 800, fontSize: '1.95rem', letterSpacing: '-0.02em',  lineHeight: 1.15 },
+      h3: { fontWeight: 800, fontSize: '1.55rem', letterSpacing: '-0.02em',  lineHeight: 1.2 },
+      h4: { fontWeight: 700, fontSize: '1.3rem',  letterSpacing: '-0.015em' },
+      h5: { fontWeight: 700, fontSize: '1.1rem',  letterSpacing: '-0.01em' },
+      h6: { fontWeight: 700, fontSize: '1rem',    letterSpacing: '-0.01em' },
       subtitle1: { fontWeight: 500, fontSize: '0.95rem' },
+      subtitle2: { fontWeight: 600, fontSize: '0.85rem' },
       body1:  { fontSize: '0.9rem',  lineHeight: 1.6 },
       body2:  { fontSize: '0.85rem', lineHeight: 1.5 },
-      button: { textTransform: 'none', fontWeight: 600 },
+      button: { textTransform: 'none', fontWeight: 600, letterSpacing: '0.01em' },
     },
-    shape: { borderRadius: 12 },
+    shape: { borderRadius: 14 },
     shadows: [
       'none',
-      '0 1px 3px rgba(0,0,0,0.10)',
-      '0 2px 6px rgba(0,0,0,0.10)',
-      '0 4px 12px rgba(0,0,0,0.12)',
-      '0 6px 16px rgba(0,0,0,0.14)',
-      '0 8px 24px rgba(0,0,0,0.16)',
-      '0 12px 32px rgba(0,0,0,0.18)',
-      ...Array(18).fill('0 12px 32px rgba(0,0,0,0.18)'),
+      '0 1px 3px rgba(0,0,0,0.08)',
+      '0 2px 8px rgba(0,0,0,0.10)',
+      '0 6px 18px rgba(0,0,0,0.12)',
+      '0 8px 24px rgba(0,0,0,0.14)',
+      '0 10px 30px rgba(0,0,0,0.16)',
+      '0 14px 38px rgba(0,0,0,0.18)',
+      ...Array(18).fill('0 16px 44px rgba(0,0,0,0.20)'),
     ],
     components: {
-      MuiCard: {
+      // Ambient gradient canvas behind all the glass
+      MuiCssBaseline: {
         styleOverrides: {
-          root: {
-            borderRadius: 16,
-            backgroundImage: 'none',
-            boxShadow: isLight
-              ? '0 2px 12px rgba(29,29,29,0.06)'
-              : '0 2px 12px rgba(0,0,0,0.40)',
-            border: `1px solid ${isLight ? PALETTE.SAND : '#3A3428'}`,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              boxShadow: isLight
-                ? '0 10px 30px rgba(29,29,29,0.10)'
-                : '0 12px 32px rgba(0,0,0,0.55)',
-              transform: 'translateY(-2px)',
-            },
+          body: {
+            minHeight: '100vh',
+            background: (isLight ? APP_BACKGROUND.light : APP_BACKGROUND.dark).trim(),
+            backgroundAttachment: 'fixed',
+            backgroundRepeat: 'no-repeat',
+          },
+          '@media (prefers-reduced-motion: reduce)': {
+            '*': { transition: 'none !important', animationDuration: '0.001ms !important' },
           },
         },
       },
+      // Base surface = readable frosted glass (menus, dialogs, table containers, panels)
       MuiPaper: {
         styleOverrides: {
-          root: { backgroundImage: 'none' },
+          root: {
+            backgroundImage: 'none',
+            backgroundColor: glass.bgStrong,
+            backdropFilter: glass.blur,
+            WebkitBackdropFilter: glass.blur,
+            border: `1px solid ${glass.border}`,
+          },
+        },
+      },
+      // Cards inherit the frosted Paper surface; add depth via radius + lift
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            borderRadius: 18,
+            boxShadow: glass.shadow,
+            transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), box-shadow 0.28s cubic-bezier(0.4,0,0.2,1)',
+            '&:hover': { boxShadow: glass.shadowHover, transform: 'translateY(-3px)' },
+          },
+        },
+      },
+      // Header — frosted top bar
+      MuiAppBar: {
+        styleOverrides: {
+          root: {
+            backgroundImage: 'none',
+            backgroundColor: glass.bgStrong,
+            backdropFilter: glass.blurStrong,
+            WebkitBackdropFilter: glass.blurStrong,
+            boxShadow: 'none',
+            borderBottom: `1px solid ${glass.border}`,
+          },
+        },
+      },
+      // Sidebar — frosted floating panel
+      MuiDrawer: {
+        styleOverrides: {
+          paper: {
+            border: 'none',
+            backgroundImage: 'none',
+            backgroundColor: glass.bgStrong,
+            backdropFilter: glass.blurStrong,
+            WebkitBackdropFilter: glass.blurStrong,
+            borderRight: `1px solid ${glass.border}`,
+            boxShadow: glass.shadow,
+          },
+        },
+      },
+      // Dialogs & popovers/menus — keep dense text crisp
+      MuiDialog: {
+        styleOverrides: {
+          paper: {
+            backgroundColor: glass.bgStrong,
+            backdropFilter: glass.blurStrong,
+            WebkitBackdropFilter: glass.blurStrong,
+            border: `1px solid ${glass.borderStrong}`,
+            backgroundImage: 'none',
+          },
+        },
+      },
+      MuiPopover: {
+        styleOverrides: {
+          paper: {
+            backgroundColor: glass.bgStrong,
+            backdropFilter: glass.blurStrong,
+            WebkitBackdropFilter: glass.blurStrong,
+          },
         },
       },
       MuiButton: {
@@ -133,17 +224,23 @@ export const getTheme = (mode = 'dark') => {
             transition: 'all 0.2s ease',
           },
           contained: {
-            boxShadow: `0 2px 10px rgba(161,109,71,0.30)`,
-            '&:hover': {
-              boxShadow: `0 4px 18px rgba(161,109,71,0.45)`,
-              transform: 'translateY(-1px)',
-            },
+            boxShadow: '0 4px 14px rgba(161,109,71,0.35)',
+            '&:hover': { boxShadow: '0 6px 20px rgba(161,109,71,0.48)', transform: 'translateY(-1px)' },
+          },
+          outlined: {
+            borderColor: isLight ? 'rgba(119,111,79,0.35)' : 'rgba(216,202,186,0.22)',
+            backdropFilter: 'blur(6px)',
           },
         },
       },
       MuiTextField: {
         styleOverrides: {
-          root: { '& .MuiOutlinedInput-root': { borderRadius: 10 } },
+          root: {
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 10,
+              backgroundColor: isLight ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.04)',
+            },
+          },
         },
       },
       MuiChip: {
@@ -156,16 +253,17 @@ export const getTheme = (mode = 'dark') => {
           head: {
             fontWeight: 700, fontSize: '0.8rem',
             textTransform: 'uppercase', letterSpacing: '0.05em',
+            backgroundColor: isLight ? 'rgba(216,202,186,0.22)' : 'rgba(216,202,186,0.06)',
+          },
+          root: {
+            borderColor: isLight ? 'rgba(119,111,79,0.14)' : 'rgba(216,202,186,0.08)',
           },
         },
       },
-      MuiDrawer: {
+      MuiTableRow: {
         styleOverrides: {
-          paper: {
-            borderRight: 'none',
-            boxShadow: isLight
-              ? '2px 0 16px rgba(29,29,29,0.06)'
-              : '2px 0 16px rgba(0,0,0,0.45)',
+          root: {
+            '&:hover': { backgroundColor: isLight ? 'rgba(161,109,71,0.06)' : 'rgba(192,173,141,0.06)' },
           },
         },
       },

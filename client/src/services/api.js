@@ -83,7 +83,8 @@ export const stockAPI = {
 
 // Dashboard APIs
 export const dashboardAPI = {
-  get: () => api.get('/dashboard'),
+  get: (params) => api.get('/dashboard', { params }),
+  predict: (params) => api.get('/dashboard/predict', { params }),
 };
 
 

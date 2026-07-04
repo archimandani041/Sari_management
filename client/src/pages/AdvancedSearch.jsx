@@ -281,7 +281,7 @@ const AdvancedSearch = () => {
     <Box sx={{ flexGrow: 1, px: { xs: 1, md: 3 }, py: 3 }}>
       
       {/* Dynamic Breadcrumbs Navigation (Level 5 requirement) */}
-      <Paper sx={{ p: 1.5, px: 3, borderRadius: 3, mb: 4, bgcolor: 'background.paper', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <Paper sx={{ p: 1.5, px: 3, borderRadius: 3, mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Breadcrumbs aria-label="breadcrumb">
           <Link underline="hover" color="inherit" href="/" onClick={(e) => { e.preventDefault(); navigate('/'); }}>
             Home
