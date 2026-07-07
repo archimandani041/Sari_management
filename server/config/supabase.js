@@ -4,9 +4,14 @@
  */
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const cleanEnvVar = (val) => {
+  if (!val) return val;
+  return val.trim().replace(/^['"]|['"]$/g, '');
+};
+
+const supabaseUrl = cleanEnvVar(process.env.SUPABASE_URL);
+const supabaseServiceKey = cleanEnvVar(process.env.SUPABASE_SERVICE_ROLE_KEY);
+const supabaseAnonKey = cleanEnvVar(process.env.SUPABASE_ANON_KEY);
 
 const isValidUrl = (url) => {
   return url && (url.startsWith('http://') || url.startsWith('https://'));
@@ -15,7 +20,8 @@ const isValidUrl = (url) => {
 // Decode a Supabase JWT key's `role` claim (anon | service_role) without verifying signature
 const getKeyRole = (key) => {
   try {
-    const payload = JSON.parse(Buffer.from(key.split('.')[1], 'base64').toString());
+    const cleanKey = cleanEnvVar(key);
+    const payload = JSON.parse(Buffer.from(cleanKey.split('.')[1], 'base64').toString());
     return payload.role;
   } catch {
     return null;
