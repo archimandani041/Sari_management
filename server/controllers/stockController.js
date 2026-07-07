@@ -165,7 +165,29 @@ const getHistory = async (req, res) => {
 
     // Apply text filters
     if (search) {
-      query = query.or(`reason.ilike.%${search}%,beam_name.ilike.%${search}%,combination_name.ilike.%${search}%,changed_by_name.ilike.%${search}%`);
+      const cleanSearch = search.trim();
+      
+      // 1. Fetch matching Saree IDs (case-insensitive series_code or sari_name)
+      const { data: matchedSarees } = await supabase
+        .from('sarees')
+        .select('id')
+        .or(`series_code.ilike.%${cleanSearch}%,sari_name.ilike.%${cleanSearch}%`);
+      
+      const matchedSareeIds = (matchedSarees || []).map(s => s.id);
+
+      // 2. Build multi-field PostgREST OR conditions
+      const orParts = [
+        `beam_name.ilike.%${cleanSearch}%`,
+        `combination_name.ilike.%${cleanSearch}%`,
+        `changed_by_name.ilike.%${cleanSearch}%`,
+        `reason.ilike.%${cleanSearch}%`
+      ];
+
+      if (matchedSareeIds.length > 0) {
+        orParts.push(`saree_id.in.(${matchedSareeIds.join(',')})`);
+      }
+
+      query = query.or(orParts.join(','));
     }
     if (supplier_name) {
       query = query.ilike('reason', `%supplier_name%:${supplier_name}%`);

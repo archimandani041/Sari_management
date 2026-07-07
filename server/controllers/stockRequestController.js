@@ -37,7 +37,7 @@ const createStockRequest = async (req, res) => {
       saree_id, combination_id, supplier_id,
       beam_name, combination_name, series_code,
       requested_qty, current_stock, minimum_stock,
-      whatsapp_message, notes
+      whatsapp_message, notes, movement_type
     } = req.body;
 
     if (!combination_id) return res.status(400).json({ error: 'combination_id is required' });
@@ -60,8 +60,13 @@ const createStockRequest = async (req, res) => {
       .single();
     const supplierName = supplier?.name || 'Supplier';
 
+    const isDelivery = movement_type === 'DELIVERY_OUT';
     const oldStock = combo.current_stock || 0;
-    const newStock = oldStock + parseInt(requested_qty);
+    const newStock = isDelivery ? (oldStock - parseInt(requested_qty)) : (oldStock + parseInt(requested_qty));
+
+    if (isDelivery && newStock < 0) {
+      return res.status(400).json({ error: 'Delivery quantity cannot exceed available stock.' });
+    }
 
     // 1. Update combination stock
     const { error: updateErr } = await supabase
@@ -72,6 +77,26 @@ const createStockRequest = async (req, res) => {
 
     // 2. Log to stock_history (which populates the Audit History Log table)
     const userName = req.user.full_name || req.user.username;
+    const quantityChanged = isDelivery ? -parseInt(requested_qty) : parseInt(requested_qty);
+    const transactionDetails = {
+      sari_number: series_code || 'UNKNOWN',
+      beam_name: beam_name || 'UNKNOWN',
+      combination_name: combo.combination_name || combination_name || 'Combination',
+      action: isDelivery ? 'Delivery' : 'Stock Added',
+      opening_stock: oldStock,
+      quantity_changed: quantityChanged,
+      closing_stock: newStock,
+      reason_category: isDelivery ? 'Decrease' : 'Increase',
+      supplier_name: supplierName || null,
+      customer_name: null,
+      invoice_number: null,
+      delivery_notes: null,
+      remarks: isDelivery 
+        ? `Delivered via WhatsApp (Supplier: ${supplierName})` 
+        : `Requested via WhatsApp (Supplier: ${supplierName})`,
+      user_name: userName
+    };
+
     const { error: histErr } = await supabase
       .from('stock_history')
       .insert({
@@ -81,15 +106,16 @@ const createStockRequest = async (req, res) => {
         combination_name: combo.combination_name || combination_name || null,
         old_stock: oldStock,
         new_stock: newStock,
-        action: 'Increase',
-        reason: `Requested via WhatsApp (Supplier: ${supplierName})`,
+        action: isDelivery ? 'Decrease' : 'Increase',
+        reason: JSON.stringify(transactionDetails),
+        changed_by: req.user.id,
         changed_by_name: userName
       });
     if (histErr) throw histErr;
 
     // 3. Log to activity_logs
     await supabase.from('activity_logs').insert({
-      action: 'REQUEST_STOCK_WHATSAPP',
+      action: isDelivery ? 'DELIVERY_STOCK_WHATSAPP' : 'REQUEST_STOCK_WHATSAPP',
       entity_type: 'combination',
       entity_id: combination_id,
       user_name: userName,
@@ -102,6 +128,10 @@ const createStockRequest = async (req, res) => {
         new_stock: newStock
       }
     });
+
+    const finalNotes = isDelivery
+      ? `DELIVERY_OUT${notes ? `: ${notes}` : ''}`
+      : `STOCK_IN${notes ? `: ${notes}` : ''}`;
 
     // 4. Create the stock request record
     const { data, error } = await supabase
@@ -117,7 +147,7 @@ const createStockRequest = async (req, res) => {
         current_stock: oldStock, // log original stock at request time
         minimum_stock: parseInt(minimum_stock) || 20,
         whatsapp_message: whatsapp_message || null,
-        notes: notes || null,
+        notes: finalNotes,
         status: 'Requested',
         requested_by: req.user.id,
         requested_by_name: userName

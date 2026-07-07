@@ -36,7 +36,7 @@ const Header = () => {
       try {
         const { data } = await dashboardAPI.get();
         const alerts = [];
-        
+
         // Low stock alerts
         if (data.lowStockSarees && data.lowStockSarees.length > 0) {
           data.lowStockSarees.forEach(s => {

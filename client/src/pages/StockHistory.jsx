@@ -3,25 +3,50 @@
  * Complete log of all stock adjustments, changes, and user attributions with JSON metadata.
  */
 import { useState, useEffect, useCallback } from 'react';
-import { stockAPI } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { stockAPI, sareeAPI } from '../services/api';
+import RequestStockDialog from '../components/common/RequestStockDialog';
 import {
   Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, TablePagination, Typography, FormControl, InputLabel, Select,
-  MenuItem, Grid, TextField, Chip, CircularProgress, Tooltip, IconButton
+  MenuItem, Grid, TextField, Chip, CircularProgress, Tooltip, IconButton, Snackbar,
+  InputAdornment, LinearProgress, Button
 } from '@mui/material';
-import {
-  Info as InfoIcon,
-  FilterList as FilterIcon
-} from '@mui/icons-material';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 
 const StockHistory = () => {
+  const navigate = useNavigate();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState('');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [total, setTotal] = useState(0);
+
+  // States for opening the WhatsApp Dialog
+  const [selectedSaree, setSelectedSaree] = useState(null);
+  const [selectedSareeId, setSelectedSareeId] = useState('');
+  const [selectedBeam, setSelectedBeam] = useState(null);
+  const [selectedCombo, setSelectedCombo] = useState(null);
+  const [movementType, setMovementType] = useState('STOCK_IN');
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [snack, setSnack] = useState('');
+
+  // Handle debouncing of search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(0);
+    }, 350);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [search]);
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
@@ -30,7 +55,7 @@ const StockHistory = () => {
         page: page + 1,
         limit: rowsPerPage,
         action: action || undefined,
-        search: search || undefined
+        search: debouncedSearch || undefined
       };
       const { data } = await stockAPI.getHistory(params);
       setHistory(data.history || []);
@@ -40,7 +65,7 @@ const StockHistory = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, action, search]);
+  }, [page, rowsPerPage, action, debouncedSearch]);
 
   useEffect(() => {
     fetchHistory();
@@ -55,6 +80,90 @@ const StockHistory = () => {
     setPage(0);
   };
 
+  // Navigates to Saree Detail Page using Series Code resolution if needed
+  const handleNavigateToSaree = async (sareeId, seriesCode) => {
+    if (sareeId) {
+      navigate(`/sarees/${sareeId}`);
+      return;
+    }
+    if (!seriesCode) return;
+    try {
+      const { data } = await sareeAPI.getAll({ search: seriesCode });
+      const matched = data.sarees?.find(s => s.series_code === seriesCode);
+      if (matched) {
+        navigate(`/sarees/${matched.id}`);
+      } else {
+        setSnack('Saree details are no longer available.');
+      }
+    } catch (err) {
+      console.error(err);
+      setSnack('Saree details are no longer available.');
+    }
+  };
+
+  // Initiates Stock Movement by resolving the latest Combination data
+  const handleInitiateMovement = async (item) => {
+    let sareeId = item.saree_id;
+    const seriesCode = item.series_code || item.sarees?.series_code;
+    const beamName = item.beam_name || item.details?.beam_name;
+    const comboName = item.combination_name || item.details?.combination_name;
+
+    // 1. Resolve Saree ID if missing
+    if (!sareeId && seriesCode) {
+      try {
+        const { data } = await sareeAPI.getAll({ search: seriesCode });
+        const matched = data.sarees?.find(s => s.series_code === seriesCode);
+        if (matched) {
+          sareeId = matched.id;
+        }
+      } catch (err) {
+        console.error('Failed to resolve Saree ID:', err);
+      }
+    }
+
+    if (!sareeId) {
+      setSnack('This Combination is no longer available.');
+      return;
+    }
+
+    // 2. Fetch the latest Saree data (Beams, Combinations, Colors, Stock)
+    try {
+      const { data } = await sareeAPI.getById(sareeId);
+      const saree = data.saree;
+      if (!saree) {
+        setSnack('This Combination is no longer available.');
+        return;
+      }
+
+      // Find the matched Beam
+      const matchedBeam = saree.beams?.find(b => b.beam_name === beamName);
+      if (!matchedBeam) {
+        setSnack('This Combination is no longer available.');
+        return;
+      }
+
+      // Find the matched Combination
+      const matchedCombo = matchedBeam.combinations?.find(c => c.combination_name === comboName);
+      if (!matchedCombo) {
+        setSnack('This Combination is no longer available.');
+        return;
+      }
+
+      // Pre-fill and open dialog
+      setSelectedSaree(saree);
+      setSelectedSareeId(sareeId);
+      setSelectedBeam(matchedBeam);
+      setSelectedCombo(matchedCombo);
+      setMovementType(item.action === 'Decrease' ? 'DELIVERY_OUT' : 'STOCK_IN');
+      setRequestDialogOpen(true);
+    } catch (err) {
+      console.error(err);
+      setSnack('This Combination is no longer available.');
+    }
+  };
+
+  const isFirstLoad = loading && history.length === 0;
+
   return (
     <Box>
       <Box sx={{ mb: 4 }}>
@@ -62,7 +171,7 @@ const StockHistory = () => {
           Stock Transaction History
         </Typography>
         <Typography variant="subtitle1">
-          Complete immutable audit trails of all inventory adjustments
+          Complete immutable audit trail of all inventory adjustments
         </Typography>
       </Box>
 
@@ -72,7 +181,11 @@ const StockHistory = () => {
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FormControl fullWidth>
               <InputLabel>Filter by Action</InputLabel>
-              <Select value={action} label="Filter by Action" onChange={(e) => { setAction(e.target.value); setPage(0); }}>
+              <Select
+                value={action}
+                label="Filter by Action"
+                onChange={(e) => { setAction(e.target.value); setPage(0); }}
+              >
                 <MenuItem value="">All Actions</MenuItem>
                 <MenuItem value="Increase">Increase (+)</MenuItem>
                 <MenuItem value="Decrease">Decrease (-)</MenuItem>
@@ -81,26 +194,57 @@ const StockHistory = () => {
               </Select>
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 5 }}>
             <TextField
               fullWidth
               label="Search keyword"
-              placeholder="Sari, Beam, Combo, User, Remarks..."
+              placeholder="Search by Saree name or series code..."
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              onChange={(e) => setSearch(e.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: search ? (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => setSearch('')}>
+                        <ClearIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null
+                }
+              }}
             />
           </Grid>
         </Grid>
       </Paper>
 
+      {/* Active Filter Feedback */}
+      {(debouncedSearch || action) && (
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            Showing {total} {action ? `${action === 'Increase' ? 'Increase (+)' : action === 'Decrease' ? 'Decrease (-)' : action} ` : ''}transaction{total !== 1 ? 's' : ''}
+            {debouncedSearch ? ` for "${debouncedSearch}"` : ''}
+          </Typography>
+        </Box>
+      )}
+
       {/* Transactions Table */}
-      {loading ? (
+      {isFirstLoad ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper} sx={{ borderRadius: 3 }}>
-          <Table size="small">
+        <TableContainer component={Paper} sx={{ borderRadius: 3, position: 'relative', overflow: 'hidden' }}>
+          {loading && (
+            <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 2 }}>
+              <LinearProgress color="primary" />
+            </Box>
+          )}
+          <Table size="small" sx={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
             <TableHead sx={{ bgcolor: 'action.hover' }}>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>Date & Time</TableCell>
@@ -110,25 +254,62 @@ const StockHistory = () => {
                 <TableCell sx={{ fontWeight: 700 }}>Action Details</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>ERP Metadata & Notes</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Responsible User</TableCell>
+                <TableCell sx={{ fontWeight: 700, textAlign: 'center' }}>Action</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {history.map((item) => {
                 const details = item.details || {};
+                const sId = item.saree_id;
+                const sCode = item.sarees?.series_code || item.series_code;
+                const bName = details.beam_name || item.beam_name;
+                const cName = details.combination_name || item.combination_name;
+
                 return (
                   <TableRow key={item.id} hover sx={{ opacity: item.is_undone ? 0.5 : 1 }}>
                     <TableCell sx={{ fontSize: '0.82rem' }}>{new Date(item.created_at).toLocaleString()}</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>
-                      {item.sarees?.sari_name || '—'}
-                      <Typography variant="caption" display="block" color="text.secondary">
-                        Code: {item.sarees?.series_code || item.series_code}
-                      </Typography>
+                    <TableCell>
+                      <Tooltip title="View Saree Details">
+                        <Box
+                          component="span"
+                          onClick={() => handleNavigateToSaree(sId, sCode)}
+                          sx={{
+                            cursor: 'pointer',
+                            fontWeight: 700,
+                            display: 'inline-block',
+                            '&:hover': {
+                              textDecoration: 'underline',
+                              color: 'primary.main'
+                            }
+                          }}
+                        >
+                          {item.sarees?.sari_name || '—'}
+                          <Typography variant="caption" display="block" color="text.secondary">
+                            Code: {sCode || '—'}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.82rem' }}>
-                      {details.beam_name || item.beam_name || '—'}
-                      <Typography variant="caption" display="block" color="text.secondary">
-                        Combo: {details.combination_name || item.combination_name || '—'}
-                      </Typography>
+                    <TableCell>
+                      <Tooltip title="Create Stock Movement">
+                        <Box
+                          component="div"
+                          onClick={() => handleInitiateMovement(item)}
+                          sx={{
+                            cursor: 'pointer',
+                            fontSize: '0.82rem',
+                            '&:hover': {
+                              textDecoration: 'underline',
+                              color: 'primary.main'
+                            }
+                          }}
+                        >
+                          {bName || '—'}
+                          <Typography variant="caption" display="block" color="text.secondary">
+                            Combo: {cName || '—'}
+                          </Typography>
+                        </Box>
+                      </Tooltip>
                     </TableCell>
                     <TableCell sx={{ fontWeight: 800 }}>
                       {item.old_stock} → {item.new_stock}
@@ -142,8 +323,8 @@ const StockHistory = () => {
                         size="small"
                         color={
                           item.action === 'Increase' ? 'success' :
-                          item.action === 'Decrease' ? 'error' :
-                          item.action === 'Undo' ? 'warning' : 'default'
+                            item.action === 'Decrease' ? 'error' :
+                              item.action === 'Undo' ? 'warning' : 'default'
                         }
                       />
                     </TableCell>
@@ -151,6 +332,11 @@ const StockHistory = () => {
                       {details.reason_category && (
                         <Typography variant="caption" display="block">
                           <strong>Category:</strong> {details.reason_category}
+                        </Typography>
+                      )}
+                      {details.movement_type && (
+                        <Typography variant="caption" display="block">
+                          <strong>Movement Type:</strong> {details.movement_type === 'STOCK_IN' ? 'Stock In' : details.movement_type === 'DELIVERY_OUT' ? 'Delivery Out' : details.movement_type}
                         </Typography>
                       )}
                       {details.supplier_name && (
@@ -180,13 +366,47 @@ const StockHistory = () => {
                       )}
                     </TableCell>
                     <TableCell sx={{ fontSize: '0.82rem' }}>{details.user_name || item.changed_by_name || 'System'}</TableCell>
+                    <TableCell align="center">
+                      <Tooltip title="Create Stock Movement">
+                        <IconButton
+                          size="small"
+                          color="success"
+                          onClick={() => handleInitiateMovement(item)}
+                        >
+                          <WhatsAppIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
                   </TableRow>
                 );
               })}
               {history.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
-                    No stock transaction history found.
+                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                    <Typography color="text.secondary" variant="body1" sx={{ mb: 2 }}>
+                      {debouncedSearch && action ? (
+                        `No ${action === 'Increase' ? 'Increase (+)' : action === 'Decrease' ? 'Decrease (-)' : action} transactions found for "${debouncedSearch}".`
+                      ) : debouncedSearch ? (
+                        `No history found for "${debouncedSearch}".`
+                      ) : action ? (
+                        `No ${action === 'Increase' ? 'Increase (+)' : action === 'Decrease' ? 'Decrease (-)' : action} transactions found.`
+                      ) : (
+                        'No transaction history found.'
+                      )}
+                    </Typography>
+                    {(debouncedSearch || action) && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => {
+                          setSearch('');
+                          setAction('');
+                          setPage(0);
+                        }}
+                      >
+                        Clear Filters
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               )}
@@ -203,6 +423,31 @@ const StockHistory = () => {
           />
         </TableContainer>
       )}
+
+      {/* Reused stock movement dialog */}
+      {selectedCombo && (
+        <RequestStockDialog
+          open={requestDialogOpen}
+          onClose={() => setRequestDialogOpen(false)}
+          seriesCode={selectedSaree?.series_code || ''}
+          sareeId={selectedSareeId}
+          beamName={selectedBeam?.beam_name || ''}
+          combination={selectedCombo}
+          initialMovementType={movementType}
+          onSuccess={() => {
+            fetchHistory();
+            setRequestDialogOpen(false);
+          }}
+        />
+      )}
+
+      <Snackbar
+        open={!!snack}
+        autoHideDuration={3000}
+        onClose={() => setSnack('')}
+        message={snack}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Box>
   );
 };

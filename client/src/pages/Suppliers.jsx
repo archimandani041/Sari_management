@@ -138,7 +138,7 @@ const Suppliers = () => {
               {loading ? (
                 [...Array(4)].map((_, i) => (
                   <TableRow key={i}>
-                    {[1,2,3,4,5,6].map(j => <TableCell key={j}><Skeleton /></TableCell>)}
+                    {[1, 2, 3, 4, 5, 6].map(j => <TableCell key={j}><Skeleton /></TableCell>)}
                   </TableRow>
                 ))
               ) : filtered.length === 0 ? (

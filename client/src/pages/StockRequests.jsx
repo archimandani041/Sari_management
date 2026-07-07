@@ -129,7 +129,7 @@ const StockRequests = () => {
               {loading ? (
                 [...Array(5)].map((_, i) => (
                   <TableRow key={i}>
-                    {[1,2,3,4,5,6].map(j => <TableCell key={j}><Skeleton /></TableCell>)}
+                    {[1, 2, 3, 4, 5, 6].map(j => <TableCell key={j}><Skeleton /></TableCell>)}
                   </TableRow>
                 ))
               ) : requests.length === 0 ? (
@@ -145,7 +145,14 @@ const StockRequests = () => {
                     {new Date(req.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{req.series_code}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{req.series_code}</Typography>
+                      {req.notes?.startsWith('DELIVERY_OUT') ? (
+                        <Chip label="Delivery Out" size="small" color="warning" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }} />
+                      ) : (
+                        <Chip label="Stock In" size="small" color="success" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }} />
+                      )}
+                    </Box>
                     <Typography variant="caption" color="text.secondary">
                       {req.beam_name} · {req.combination_name || 'Combination'}
                     </Typography>
@@ -157,7 +164,13 @@ const StockRequests = () => {
                     )}
                   </TableCell>
                   <TableCell align="center">
-                    <Chip label={`${req.requested_qty} pcs`} size="small" color="primary" variant="outlined" sx={{ fontWeight: 700 }} />
+                    <Chip
+                      label={`${req.notes?.startsWith('DELIVERY_OUT') ? '-' : '+'}${req.requested_qty} pcs`}
+                      size="small"
+                      color={req.notes?.startsWith('DELIVERY_OUT') ? 'warning' : 'primary'}
+                      variant="outlined"
+                      sx={{ fontWeight: 700 }}
+                    />
                   </TableCell>
                   <TableCell align="center">
                     {isAdmin ? (

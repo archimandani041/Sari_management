@@ -2,33 +2,31 @@ require('dotenv').config();
 const { supabase } = require('./config/supabase');
 
 async function run() {
-  console.log('Testing Supabase...');
+  console.log('Testing PostgREST syntax...');
   try {
-    // Let's try to query the combinations table to check its columns
-    const { data, error } = await supabase
-      .from('combinations')
-      .select('*')
-      .limit(1);
+    const { data: sarees } = await supabase.from('sarees').select('id').limit(2);
+    const ids = (sarees || []).map(s => s.id);
+    console.log('Test Saree IDs:', ids);
 
-    if (error) {
-      console.error('Error fetching combinations:', error);
-      return;
-    }
-    console.log('Successfully connected! Combination row:', data);
+    if (ids.length > 0) {
+      const orQuery = `beam_name.ilike.%white%,saree_id.in.(${ids.join(',')})`;
+      console.log('Querying stock_history with OR:', orQuery);
+      const { data, error } = await supabase
+        .from('stock_history')
+        .select('id, beam_name, saree_id')
+        .or(orQuery)
+        .limit(5);
 
-    // Let's check if we can run an RPC to alter the table.
-    // Sometimes there might be a function to run raw SQL.
-    const { data: rpcData, error: rpcError } = await supabase.rpc('exec_sql', {
-      sql_string: 'ALTER TABLE combinations ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT \'In Stock\' CHECK (status IN (\'In Stock\', \'In Delivery\'));'
-    });
-
-    if (rpcError) {
-      console.log('rpc("exec_sql") not available or failed:', rpcError.message);
+      if (error) {
+        console.error('Query failed:', error);
+      } else {
+        console.log('Query succeeded! Rows:', data);
+      }
     } else {
-      console.log('rpc("exec_sql") succeeded:', rpcData);
+      console.log('No sarees found to test.');
     }
   } catch (err) {
-    console.error('Catch error:', err);
+    console.error('Error during test:', err);
   }
 }
 

@@ -167,134 +167,134 @@ const SareeDetail = () => {
 
       {/* TAB 0: BEAMS & COMBINATIONS */}
 
-        <Grid container spacing={3}>
-          {/* Left column */}
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card sx={{ borderRadius: 4, overflow: 'hidden', mb: 3 }}>
-              <CardMedia component="img" height={320} image={saree.image_url || '/placeholder-sari.png'} alt={saree.sari_name} sx={{ objectFit: 'cover' }} />
-            </Card>
+      <Grid container spacing={3}>
+        {/* Left column */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Card sx={{ borderRadius: 4, overflow: 'hidden', mb: 3 }}>
+            <CardMedia component="img" height={320} image={saree.image_url || '/placeholder-sari.png'} alt={saree.sari_name} sx={{ objectFit: 'cover' }} />
+          </Card>
 
-            <Paper sx={{ p: 3, borderRadius: 4, mb: 3 }}>
-              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Saree Info</Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableBody>
-                    <TableRow><TableCell sx={{ fontWeight: 700 }}>Series Code</TableCell><TableCell>{saree.series_code}</TableCell></TableRow>
-                    <TableRow><TableCell sx={{ fontWeight: 700 }}>Brands</TableCell><TableCell>
-                      {Array.from(new Set(saree.beams?.flatMap(b => b.combinations?.map(c => c.brand).filter(Boolean)) || [])).map(b => (
-                        <Chip
-                          key={b}
-                          label={b}
-                          size="small"
-                          sx={{
-                            fontWeight: 700,
-                            mr: 0.5,
-                            bgcolor: b === 'KP' ? 'secondary.light' : 'warning.light',
-                            color: b === 'KP' ? 'secondary.dark' : 'warning.dark'
-                          }}
-                        />
-                      ))}
-                    </TableCell></TableRow>
-                    <TableRow><TableCell sx={{ fontWeight: 700 }}>Statuses</TableCell><TableCell>
-                      {Array.from(new Set(saree.beams?.flatMap(b => b.combinations?.map(c => c.status).filter(Boolean)) || [])).map(s => (
-                        <Chip
-                          key={s}
-                          label={s}
-                          size="small"
-                          variant="outlined"
-                          sx={{
-                            fontWeight: 700,
-                            mr: 0.5,
-                            color: s === 'In Stock' ? 'success.main' : 'info.main',
-                            borderColor: s === 'In Stock' ? 'success.main' : 'info.main'
-                          }}
-                        />
-                      ))}
-                    </TableCell></TableRow>
-                    <TableRow><TableCell sx={{ fontWeight: 700 }}>Total Stock</TableCell><TableCell sx={{ fontWeight: 800 }}>{totalStock} pcs</TableCell></TableRow>
-                    <TableRow><TableCell sx={{ fontWeight: 700 }}>Price</TableCell><TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>{saree.price != null ? `₹${Number(saree.price).toLocaleString('en-IN')}` : '—'}</TableCell></TableRow>
-                    <TableRow><TableCell sx={{ fontWeight: 700 }}>Stock Status</TableCell><TableCell>
-                      <Chip label={statusInfo.label} color={statusInfo.color} size="small" sx={{ bgcolor: statusInfo.bg, fontWeight: 700 }} />
-                    </TableCell></TableRow>
-                    <TableRow><TableCell sx={{ fontWeight: 700 }}>Beams</TableCell><TableCell>{saree.beams?.length || 0}</TableCell></TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          </Grid>
-
-          {/* Right column */}
-          <Grid size={{ xs: 12, md: 8 }}>
-            <Paper sx={{ p: 3, borderRadius: 4, mb: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>Beams & Combinations</Typography>
-              {saree.beams?.map((beam, bi) => (
-                <Box key={beam.id} sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'primary.main', mb: 1 }}>{beam.beam_name}</Typography>
-                  <Grid container spacing={2}>
-                    {beam.combinations?.map((c, ci) => {
-                      const isLow = (c.current_stock ?? 0) <= (c.minimum_stock ?? 20);
-                      return (
-                        <Grid size={12} key={c.id}>
-                          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: isLow ? 'warning.light' : 'divider' }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                                  {c.combination_name || `Combination ${ci + 1}`}
-                                </Typography>
-                                <Chip
-                                  label={c.brand || 'KP'}
-                                  color="secondary"
-                                  size="small"
-                                  sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
-                                />
-                                <Chip
-                                  label={c.status || 'In Stock'}
-                                  variant="outlined"
-                                  color={(c.status || 'In Stock') === 'In Stock' ? 'success' : 'info'}
-                                  size="small"
-                                  sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
-                                />
-                                {c.notes && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', width: '100%' }}>Notes: {c.notes}</Typography>}
-                              </Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Chip
-                                  label={`${c.current_stock} pcs`}
-                                  color={isLow ? (c.current_stock === 0 ? 'error' : 'warning') : 'primary'}
-                                  size="small"
-                                />
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  color="success"
-                                  startIcon={<WhatsAppIcon fontSize="small" />}
-                                  onClick={() => {
-                                    setRequestCombo(c);
-                                    setRequestBeamName(beam.beam_name);
-                                    setRequestDialogOpen(true);
-                                  }}
-                                  sx={{ whiteSpace: 'nowrap', fontSize: '0.72rem' }}
-                                >
-                                  Request Stock
-                                </Button>
-
-                              </Box>
-                            </Box>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                              {c.combination_colors?.map((col) => (
-                                <Chip key={col.id} label={`${col.f_number}: ${col.color_name} ${col.company_name ? `(${col.company_name})` : ''}`} size="small" variant="outlined" />
-                              ))}
-                            </Box>
-                          </Paper>
-                        </Grid>
-                      );
-                    })}
-                  </Grid>
-                  {bi < saree.beams.length - 1 && <Divider sx={{ mt: 2 }} />}
-                </Box>
-              ))}
-            </Paper>
-          </Grid>
+          <Paper sx={{ p: 3, borderRadius: 4, mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Saree Info</Typography>
+            <TableContainer>
+              <Table size="small">
+                <TableBody>
+                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Series Code</TableCell><TableCell>{saree.series_code}</TableCell></TableRow>
+                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Brands</TableCell><TableCell>
+                    {Array.from(new Set(saree.beams?.flatMap(b => b.combinations?.map(c => c.brand).filter(Boolean)) || [])).map(b => (
+                      <Chip
+                        key={b}
+                        label={b}
+                        size="small"
+                        sx={{
+                          fontWeight: 700,
+                          mr: 0.5,
+                          bgcolor: b === 'KP' ? 'secondary.light' : 'warning.light',
+                          color: b === 'KP' ? 'secondary.dark' : 'warning.dark'
+                        }}
+                      />
+                    ))}
+                  </TableCell></TableRow>
+                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Statuses</TableCell><TableCell>
+                    {Array.from(new Set(saree.beams?.flatMap(b => b.combinations?.map(c => c.status).filter(Boolean)) || [])).map(s => (
+                      <Chip
+                        key={s}
+                        label={s}
+                        size="small"
+                        variant="outlined"
+                        sx={{
+                          fontWeight: 700,
+                          mr: 0.5,
+                          color: s === 'In Stock' ? 'success.main' : 'info.main',
+                          borderColor: s === 'In Stock' ? 'success.main' : 'info.main'
+                        }}
+                      />
+                    ))}
+                  </TableCell></TableRow>
+                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Total Stock</TableCell><TableCell sx={{ fontWeight: 800 }}>{totalStock} pcs</TableCell></TableRow>
+                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Price</TableCell><TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>{saree.price != null ? `₹${Number(saree.price).toLocaleString('en-IN')}` : '—'}</TableCell></TableRow>
+                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Stock Status</TableCell><TableCell>
+                    <Chip label={statusInfo.label} color={statusInfo.color} size="small" sx={{ bgcolor: statusInfo.bg, fontWeight: 700 }} />
+                  </TableCell></TableRow>
+                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Beams</TableCell><TableCell>{saree.beams?.length || 0}</TableCell></TableRow>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
         </Grid>
+
+        {/* Right column */}
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Paper sx={{ p: 3, borderRadius: 4, mb: 3 }}>
+            <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>Beams & Combinations</Typography>
+            {saree.beams?.map((beam, bi) => (
+              <Box key={beam.id} sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'primary.main', mb: 1 }}>{beam.beam_name}</Typography>
+                <Grid container spacing={2}>
+                  {beam.combinations?.map((c, ci) => {
+                    const isLow = (c.current_stock ?? 0) <= (c.minimum_stock ?? 20);
+                    return (
+                      <Grid size={12} key={c.id}>
+                        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: isLow ? 'warning.light' : 'divider' }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                {c.combination_name || `Combination ${ci + 1}`}
+                              </Typography>
+                              <Chip
+                                label={c.brand || 'KP'}
+                                color="secondary"
+                                size="small"
+                                sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
+                              />
+                              <Chip
+                                label={c.status || 'In Stock'}
+                                variant="outlined"
+                                color={(c.status || 'In Stock') === 'In Stock' ? 'success' : 'info'}
+                                size="small"
+                                sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
+                              />
+                              {c.notes && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', width: '100%' }}>Notes: {c.notes}</Typography>}
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Chip
+                                label={`${c.current_stock} pcs`}
+                                color={isLow ? (c.current_stock === 0 ? 'error' : 'warning') : 'primary'}
+                                size="small"
+                              />
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="success"
+                                startIcon={<WhatsAppIcon fontSize="small" />}
+                                onClick={() => {
+                                  setRequestCombo(c);
+                                  setRequestBeamName(beam.beam_name);
+                                  setRequestDialogOpen(true);
+                                }}
+                                sx={{ whiteSpace: 'nowrap', fontSize: '0.72rem' }}
+                              >
+                                Request Stock
+                              </Button>
+
+                            </Box>
+                          </Box>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                            {c.combination_colors?.map((col) => (
+                              <Chip key={col.id} label={`${col.f_number}: ${col.color_name} ${col.company_name ? `(${col.company_name})` : ''}`} size="small" variant="outlined" />
+                            ))}
+                          </Box>
+                        </Paper>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+                {bi < saree.beams.length - 1 && <Divider sx={{ mt: 2 }} />}
+              </Box>
+            ))}
+          </Paper>
+        </Grid>
+      </Grid>
 
 
 

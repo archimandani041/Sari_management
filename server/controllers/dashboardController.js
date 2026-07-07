@@ -628,8 +628,12 @@ Return a JSON object with exactly the following keys:
 }
 Do not write markdown formatting in your response (like \`\`\`json). Return raw JSON only.`;
 
+  const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -642,7 +646,7 @@ Do not write markdown formatting in your response (like \`\`\`json). Return raw 
           responseMimeType: "application/json"
         }
       }),
-      timeout: 10000
+      signal: controller.signal
     });
 
     if (!response.ok) {
@@ -653,15 +657,33 @@ Do not write markdown formatting in your response (like \`\`\`json). Return raw 
     const text = resData.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) throw new Error("Empty response from Gemini");
 
-    return JSON.parse(text.trim());
+    let cleanedText = text.trim();
+    if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '');
+      cleanedText = cleanedText.replace(/\s*```$/, '');
+    }
+    cleanedText = cleanedText.trim();
+
+    const parsed = JSON.parse(cleanedText);
+    const isValid = parsed
+      && typeof parsed.summary === 'string' && parsed.summary.trim().length > 0
+      && Array.isArray(parsed.reasoning)
+      && Array.isArray(parsed.risks)
+      && Array.isArray(parsed.actions);
+
+    if (!isValid) throw new Error("Gemini response failed shape validation");
+
+    return parsed;
   } catch (err) {
-    console.error("Gemini API error:", err);
+    console.error("Gemini API error:", err.name === 'AbortError' ? 'Request timed out after 10s' : err);
     return {
       summary: "AI explanation temporarily unavailable.",
       reasoning: ["Failed to connect to AI server or parse response."],
       risks: ["Unable to fetch automated risk assessment."],
       actions: ["Please try again later. Numerical calculations remain fully active."]
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
@@ -883,7 +905,6 @@ const getPrediction = async (req, res) => {
       previousAvgDailyDemand: Math.round(avgDemandPrior * 10) / 10,
       forecast30Days: Math.round(forecastDemand),
       safetyStock,
-      incomingStock: 0,
       recommendedOrderQty,
       daysRemaining: daysRemaining === 999 ? 999 : Math.round(daysRemaining * 10) / 10,
       trend,
