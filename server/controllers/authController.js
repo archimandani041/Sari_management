@@ -127,31 +127,49 @@ const register = async (req, res) => {
   try {
     const { username, email, password, role, full_name } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(password, salt);
+    // Create user in Supabase Auth using the admin API (Service Role)
+    const { data, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true, // auto-confirm since it's created by admin
+      user_metadata: {
+        username: username || email.split('@')[0],
+        full_name: full_name || ''
+      }
+    });
 
-    const { data: user, error } = await supabase
+    if (authError) {
+      return res.status(400).json({ error: authError.message });
+    }
+
+    const authUser = data.user;
+
+    // Create public profile
+    const { data: user, error: dbError } = await supabase
       .from('users')
       .insert({
-        username: username.toLowerCase().trim(),
+        id: authUser.id,
+        username: (username || email.split('@')[0]).toLowerCase().trim(),
         email,
-        password_hash,
+        password_hash: 'supabase_managed',
         role: role || 'staff',
-        full_name
+        full_name: full_name || '',
+        is_active: true
       })
       .select('id, username, email, role, full_name')
       .single();
 
-    if (error) {
-      if (error.code === '23505') {
-        return res.status(400).json({ error: 'Username already exists' });
+    if (dbError) {
+      // If public record fails, clean up the auth user to avoid orphan auth state
+      await supabase.auth.admin.deleteUser(authUser.id);
+      if (dbError.code === '23505') {
+        return res.status(400).json({ error: 'Username or email already exists in system' });
       }
-      throw error;
+      throw dbError;
     }
 
     res.status(201).json({ user });
@@ -160,5 +178,6 @@ const register = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 
 module.exports = { login, logout, getMe, register };
