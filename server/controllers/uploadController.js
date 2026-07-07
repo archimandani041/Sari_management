@@ -3,7 +3,7 @@
  */
 const { supabase } = require('../config/supabase');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto');
 
 const BUCKET_NAME = 'saree-images';
 
@@ -23,7 +23,7 @@ const uploadImage = async (req, res) => {
     }
 
     const ext = path.extname(req.file.originalname);
-    const fileName = `${uuidv4()}${ext}`;
+    const fileName = `${randomUUID()}${ext}`;
     const filePath = `sarees/${fileName}`;
 
     const { data, error } = await supabase.storage
