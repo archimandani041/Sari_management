@@ -53,7 +53,7 @@ export const APP_BACKGROUND = {
   dark: `
     radial-gradient(900px 520px at 10% -8%, rgba(114,56,61,0.15), transparent 60%),
     radial-gradient(760px 520px at 100% 0%, rgba(172,156,141,0.08), transparent 55%),
-    linear-gradient(135deg, #1A1816 0%, ${LUXE.charcoal} 100%)`,
+    linear-gradient(135deg, #24201E 0%, ${LUXE.charcoal} 100%)`,
 };
 
 export const getTheme = (mode = 'dark') => {
@@ -69,7 +69,7 @@ export const getTheme = (mode = 'dark') => {
 
   // Card / Paper surface — clean solid, NOT glassmorphic
   const surface = {
-    bg: isLight ? '#FFFFFF' : '#1E1B16',
+    bg: isLight ? '#FFFFFF' : '#24201E',
     border: isLight ? LUXE.beige : 'rgba(216,202,186,0.10)',
     shadow: isLight ? '0 1px 3px rgba(0,0,0,0.06)' : '0 1px 3px rgba(0,0,0,0.20)',
     shadowHover: isLight ? '0 4px 12px rgba(0,0,0,0.08)' : '0 4px 12px rgba(0,0,0,0.30)',
@@ -95,7 +95,7 @@ export const getTheme = (mode = 'dark') => {
       error:   { main: STATUS.critical, light: '#F87171', dark: '#DC2626' },
       info:    { main: STATUS.delivery, light: '#7DD3FC', dark: '#0EA5E9' },
       background: {
-        default: isLight ? LUXE.linen : '#161209',
+        default: isLight ? LUXE.linen : LUXE.charcoal,
         paper: surface.bg,
       },
       text: {
@@ -107,7 +107,7 @@ export const getTheme = (mode = 'dark') => {
       glass,
       surface,
       sidebar: {
-        bg: isLight ? 'rgba(255,255,255,0.90)' : 'rgba(20,18,16,0.90)',
+        bg: isLight ? 'rgba(255,255,255,0.90)' : 'rgba(36,32,30,0.90)',
         active: isLight ? `${LUXE.burgundy}14` : `${LUXE.burgundy}22`,
       },
       brand: {
@@ -185,7 +185,7 @@ export const getTheme = (mode = 'dark') => {
         styleOverrides: {
           root: {
             backgroundImage: 'none',
-            backgroundColor: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(20,18,16,0.85)',
+            backgroundColor: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(36,32,30,0.85)',
             backdropFilter: glass.blur,
             WebkitBackdropFilter: glass.blur,
             boxShadow: 'none',
@@ -199,7 +199,7 @@ export const getTheme = (mode = 'dark') => {
           paper: {
             border: 'none',
             backgroundImage: 'none',
-            backgroundColor: isLight ? 'rgba(255,255,255,0.90)' : 'rgba(20,18,16,0.90)',
+            backgroundColor: isLight ? 'rgba(255,255,255,0.90)' : 'rgba(36,32,30,0.90)',
             backdropFilter: glass.blur,
             WebkitBackdropFilter: glass.blur,
             borderRight: `1px solid ${surface.border}`,
