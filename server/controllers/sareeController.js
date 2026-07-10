@@ -48,7 +48,9 @@ const getSarees = async (req, res) => {
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const pageSize = parseInt(limit);
 
-    // Fetch all sarees with beams → combinations → colors
+    const ownerId = req.user.id;
+
+    // Fetch all sarees with beams → combinations → colors (owner-scoped)
     let query = supabase
       .from('sarees')
       .select(`
@@ -60,13 +62,14 @@ const getSarees = async (req, res) => {
             combination_colors ( id, f_number, color_name, company_name, sort_order )
           )
         )
-      `, { count: 'exact' });
+      `, { count: 'exact' })
+      .eq('owner_id', ownerId);
 
     // Brand filter
     if (brand) {
       const { data: brandCombos } = await supabase
         .from('combinations')
-        .select('beam_id, beams(saree_id)')
+        .select('beam_id, beams(saree_id, sarees(owner_id))')
         .eq('brand', brand);
       const brandSareeIds = (brandCombos || []).map(c => c.beams?.saree_id).filter(Boolean);
       query = query.in('id', brandSareeIds.length > 0 ? brandSareeIds : ['00000000-0000-0000-0000-000000000000']);
@@ -106,17 +109,17 @@ const getSarees = async (req, res) => {
       query = query.in('id', colorSareeIds.length > 0 ? colorSareeIds : ['00000000-0000-0000-0000-000000000000']);
     }
 
-    // Search
+    // Search — only within this owner's sarees
     if (search) {
-      // Also search via beams/colors - fetch matching IDs first
+      // Fetch matching child IDs that belong to this owner's sarees
       const { data: colorMatches } = await supabase
         .from('combination_colors')
-        .select('combination_id, combinations(beam_id, beams(saree_id))')
+        .select('combination_id, combinations(beam_id, beams(saree_id, sarees(owner_id)))')
         .or(`color_name.ilike.%${search}%,company_name.ilike.%${search}%`);
 
       const { data: beamMatches } = await supabase
         .from('beams')
-        .select('saree_id')
+        .select('saree_id, sarees(owner_id)')
         .ilike('beam_name', `%${search}%`);
 
       const sareeIdsFromColors = (colorMatches || [])
@@ -200,6 +203,7 @@ const getSareeById = async (req, res) => {
         )
       `)
       .eq('id', id)
+      .eq('owner_id', req.user.id)
       .single();
 
     if (error || !saree) return res.status(404).json({ error: 'Saree not found' });
@@ -215,6 +219,7 @@ const getSareeById = async (req, res) => {
       .from('stock_history')
       .select('*')
       .eq('saree_id', id)
+      .eq('owner_id', req.user.id)
       .order('created_at', { ascending: false })
       .limit(30);
 
@@ -240,11 +245,12 @@ const createSaree = async (req, res) => {
 
     const seriesCode = (series_base.trim() + series_letter.trim()).toUpperCase();
 
-    // Check database for duplicate Series Code
+    // Check database for duplicate Series Code — scoped to this owner
     const { data: dupSaree } = await supabase
       .from('sarees')
       .select('id')
       .eq('series_code', seriesCode)
+      .eq('owner_id', req.user.id)
       .limit(1);
     if (dupSaree && dupSaree.length > 0) {
       return res.status(400).json({ error: `Series Code ${seriesCode} already exists.` });
@@ -284,6 +290,7 @@ const createSaree = async (req, res) => {
         description,
         price: price != null ? parseFloat(price) : null,
         image_url,
+        owner_id: req.user.id,
         created_by: req.user.id,
         updated_by: req.user.id
       })
@@ -346,6 +353,7 @@ const createSaree = async (req, res) => {
             new_stock: parseInt(c.current_stock),
             action: 'Manual Edit',
             reason: 'Initial stock on creation',
+            owner_id: req.user.id,
             changed_by: req.user.id,
             changed_by_name: req.user.full_name
           });
@@ -385,7 +393,7 @@ const updateSaree = async (req, res) => {
     const { id } = req.params;
     const { series_base, series_letter, sari_name, description, price, image_url } = req.body;
 
-    const { data: existing } = await supabase.from('sarees').select('*').eq('id', id).single();
+    const { data: existing } = await supabase.from('sarees').select('*').eq('id', id).eq('owner_id', req.user.id).single();
     if (!existing) return res.status(404).json({ error: 'Saree not found' });
 
     const newBase = series_base !== undefined ? series_base.trim().toUpperCase() : existing.series_base;
@@ -397,6 +405,7 @@ const updateSaree = async (req, res) => {
         .from('sarees')
         .select('id')
         .eq('series_code', newSeriesCode)
+        .eq('owner_id', req.user.id)
         .neq('id', id)
         .limit(1);
       if (dupSaree && dupSaree.length > 0) {
@@ -442,7 +451,7 @@ const updateSaree = async (req, res) => {
 const deleteSaree = async (req, res) => {
   try {
     const { id } = req.params;
-    const { data: existing } = await supabase.from('sarees').select('*').eq('id', id).single();
+    const { data: existing } = await supabase.from('sarees').select('*').eq('id', id).eq('owner_id', req.user.id).single();
     if (!existing) return res.status(404).json({ error: 'Saree not found' });
 
     // 1. Fetch beams and combinations to delete related records
@@ -529,7 +538,7 @@ const deleteSaree = async (req, res) => {
 const nextSeries = async (req, res) => {
   try {
     const { id } = req.params;
-    const { data: saree } = await supabase.from('sarees').select('*').eq('id', id).single();
+    const { data: saree } = await supabase.from('sarees').select('*').eq('id', id).eq('owner_id', req.user.id).single();
     if (!saree) return res.status(404).json({ error: 'Saree not found' });
 
     const nextLetter = String.fromCharCode(saree.series_letter.charCodeAt(0) + 1);

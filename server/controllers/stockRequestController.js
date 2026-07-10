@@ -13,6 +13,7 @@ const getStockRequests = async (req, res) => {
     let query = supabase
       .from('stock_requests')
       .select('*, suppliers(id, name, company_name, mobile)', { count: 'exact' })
+      .eq('owner_id', req.user.id)
       .order('created_at', { ascending: false });
 
     if (status) query = query.eq('status', status);
@@ -113,6 +114,7 @@ const createStockRequest = async (req, res) => {
         new_stock: newStock,
         action: isDelivery ? 'Decrease' : 'Increase',
         reason: JSON.stringify(transactionDetails),
+        owner_id: req.user.id,
         changed_by: req.user.id,
         changed_by_name: userName
       });
@@ -149,11 +151,12 @@ const createStockRequest = async (req, res) => {
         combination_name: combination_name || null,
         series_code: series_code || null,
         requested_qty: parseInt(requested_qty),
-        current_stock: oldStock, // log original stock at request time
+        current_stock: oldStock,
         minimum_stock: parseInt(minimum_stock) || 20,
         whatsapp_message: whatsapp_message || null,
         notes: finalNotes,
         status: 'Requested',
+        owner_id: req.user.id,
         requested_by: req.user.id,
         requested_by_name: userName
       })
@@ -185,6 +188,7 @@ const updateRequestStatus = async (req, res) => {
       .from('stock_requests')
       .update(updateData)
       .eq('id', id)
+      .eq('owner_id', req.user.id)
       .select('*, suppliers(id, name, company_name, mobile)')
       .single();
 
@@ -201,7 +205,7 @@ const updateRequestStatus = async (req, res) => {
 const deleteStockRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { error } = await supabase.from('stock_requests').delete().eq('id', id);
+    const { error } = await supabase.from('stock_requests').delete().eq('id', id).eq('owner_id', req.user.id);
     if (error) throw error;
     res.json({ message: 'Stock request deleted' });
   } catch (error) {

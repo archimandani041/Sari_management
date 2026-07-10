@@ -228,28 +228,33 @@ const getDashboard = async (req, res) => {
     const { range = '30days', customStart, customEnd, grouping = 'daily' } = req.query;
     const periods = getDatePeriods(range, customStart, customEnd);
     
-    // 1. Core Counts & Dynamic details
+    const ownerId = req.user.id;
+
+    // 1. Core Counts & Dynamic details — all scoped to this owner
     const { count: totalSarees } = await supabase
-      .from('sarees').select('*', { count: 'exact', head: true });
+      .from('sarees').select('*', { count: 'exact', head: true }).eq('owner_id', ownerId);
 
     const { data: combos } = await supabase
       .from('combinations')
-      .select('id, combination_name, current_stock, minimum_stock, brand, status, beam_id, beams(saree_id, beam_name, sarees(series_code, price))');
+      .select('id, combination_name, current_stock, minimum_stock, brand, status, beam_id, beams(saree_id, beam_name, sarees(series_code, price, owner_id))')
+      .filter('beams.sarees.owner_id', 'eq', ownerId);
 
-    const totalStock = (combos || []).reduce((sum, c) => sum + (c.current_stock || 0), 0);
-    const lowStockCount = (combos || []).filter(c => (c.current_stock ?? 0) <= (c.minimum_stock ?? 20)).length;
-    const outOfStock = (combos || []).filter(c => (c.current_stock ?? 0) === 0).length;
+    const totalStock = (combos || []).filter(c => c.beams?.sarees?.owner_id === ownerId).reduce((sum, c) => sum + (c.current_stock || 0), 0);
+    const ownedCombos = (combos || []).filter(c => c.beams?.sarees?.owner_id === ownerId);
+    const lowStockCount = ownedCombos.filter(c => (c.current_stock ?? 0) <= (c.minimum_stock ?? 20)).length;
+    const outOfStock = ownedCombos.filter(c => (c.current_stock ?? 0) === 0).length;
 
     const { count: pendingRequests } = await supabase
-      .from('stock_requests').select('*', { count: 'exact', head: true }).eq('status', 'Requested');
+      .from('stock_requests').select('*', { count: 'exact', head: true }).eq('status', 'Requested').eq('owner_id', ownerId);
     
     const { count: completedRequests } = await supabase
-      .from('stock_requests').select('*', { count: 'exact', head: true }).eq('status', 'Received');
+      .from('stock_requests').select('*', { count: 'exact', head: true }).eq('status', 'Received').eq('owner_id', ownerId);
 
-    // Fetch history for comparison (current period + previous period)
+    // Fetch history for comparison (current period + previous period) — scoped to owner
     const { data: rawHistory } = await supabase
       .from('stock_history')
       .select('*, sarees(series_code, sari_name, price)')
+      .eq('owner_id', ownerId)
       .gte('created_at', periods.prevStartDate.toISOString());
 
     const parsedHistory = (rawHistory || []).map(h => {
@@ -695,11 +700,12 @@ const getPrediction = async (req, res) => {
 
     const hDays = parseInt(horizon) || 30;
 
-    // Fetch Saree details with full hierarchy
+    // Fetch Saree details with full hierarchy (scoped to owner)
     const { data: saree, error: sareeError } = await supabase
       .from('sarees')
       .select('*, beams(*, combinations(*, combination_colors(*)))')
       .eq('id', sareeId)
+      .eq('owner_id', req.user.id)
       .single();
 
     if (sareeError || !saree) {
@@ -726,6 +732,7 @@ const getPrediction = async (req, res) => {
         .from('stock_history')
         .select('*')
         .in('combination_id', comboIds)
+        .eq('owner_id', req.user.id)
         .order('created_at', { ascending: true });
       history = rawHist || [];
     }

@@ -283,6 +283,50 @@ const handleWhatsAppWebhook = async (req, res) => {
       return res.status(400).json({ error: 'Message body is required' });
     }
 
+    // Resolve ownerId based on the sender's mobile number
+    let fromNumber = req.body.From || req.body.from;
+    if (!fromNumber && req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]?.from) {
+      fromNumber = req.body.entry[0].changes[0].value.messages[0].from;
+    }
+
+    let ownerId = null;
+    if (fromNumber) {
+      const cleanPhone = fromNumber.replace(/\D/g, '');
+      if (cleanPhone) {
+        const last10 = cleanPhone.slice(-10);
+        // Query suppliers with matching mobile ending in last10
+        const { data: matchedSuppliers } = await supabase
+          .from('suppliers')
+          .select('owner_id')
+          .like('mobile', `%${last10}`)
+          .limit(1);
+        if (matchedSuppliers && matchedSuppliers.length > 0) {
+          ownerId = matchedSuppliers[0].owner_id;
+        }
+      }
+    }
+
+    // Fallback if no supplier is matched (for backward compatibility)
+    if (!ownerId) {
+      const { data: firstAdmin } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'admin')
+        .eq('is_active', true)
+        .limit(1);
+      if (firstAdmin && firstAdmin.length > 0) {
+        ownerId = firstAdmin[0].id;
+      } else {
+        const { data: anyUser } = await supabase
+          .from('users')
+          .select('id')
+          .limit(1);
+        if (anyUser && anyUser.length > 0) {
+          ownerId = anyUser[0].id;
+        }
+      }
+    }
+
     // Clean and split lines
     const rawLines = messageText.split('\n');
     const lines = rawLines
@@ -314,10 +358,11 @@ const handleWhatsAppWebhook = async (req, res) => {
         continue;
       }
 
-      // 1. Find the Saree by series_code (case-insensitive)
+      // 1. Find the Saree by series_code (case-insensitive) and ownerId
       const { data: sarees, error: sareeError } = await supabase
         .from('sarees')
         .select('id, series_code, sari_name')
+        .eq('owner_id', ownerId)
         .ilike('series_code', entry.series_code.trim())
         .limit(1);
 
@@ -494,6 +539,7 @@ const handleWhatsAppWebhook = async (req, res) => {
         new_stock: finalStock,
         action: actionType,
         reason: JSON.stringify(transactionDetails),
+        owner_id: ownerId,
         changed_by_name: userDisplayName
       });
 

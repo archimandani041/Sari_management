@@ -10,6 +10,7 @@ const getSuppliers = async (req, res) => {
     const { data, error } = await supabase
       .from('suppliers')
       .select('*')
+      .eq('owner_id', req.user.id)
       .eq('is_active', true)
       .order('name', { ascending: true });
     if (error) throw error;
@@ -28,6 +29,7 @@ const getSupplierById = async (req, res) => {
       .from('suppliers')
       .select('*')
       .eq('id', id)
+      .eq('owner_id', req.user.id)
       .single();
     if (error || !data) return res.status(404).json({ error: 'Supplier not found' });
     res.json({ supplier: data });
@@ -53,6 +55,7 @@ const createSupplier = async (req, res) => {
         email: email?.trim() || null,
         address: address?.trim() || null,
         notes: notes?.trim() || null,
+        owner_id: req.user.id,
         created_by: req.user.id
       })
       .select()
@@ -72,6 +75,10 @@ const updateSupplier = async (req, res) => {
     const { id } = req.params;
     const { name, company_name, mobile, email, address, notes, is_active } = req.body;
 
+    // Verify ownership before update
+    const { data: existing } = await supabase.from('suppliers').select('id').eq('id', id).eq('owner_id', req.user.id).single();
+    if (!existing) return res.status(404).json({ error: 'Supplier not found' });
+
     const updateData = { updated_at: new Date().toISOString() };
     if (name !== undefined) updateData.name = name.trim();
     if (company_name !== undefined) updateData.company_name = company_name?.trim() || null;
@@ -85,6 +92,7 @@ const updateSupplier = async (req, res) => {
       .from('suppliers')
       .update(updateData)
       .eq('id', id)
+      .eq('owner_id', req.user.id)
       .select()
       .single();
 
@@ -101,7 +109,10 @@ const updateSupplier = async (req, res) => {
 const deleteSupplier = async (req, res) => {
   try {
     const { id } = req.params;
-    const { error } = await supabase.from('suppliers').update({ is_active: false }).eq('id', id);
+    // Verify ownership before delete
+    const { data: existing } = await supabase.from('suppliers').select('id').eq('id', id).eq('owner_id', req.user.id).single();
+    if (!existing) return res.status(404).json({ error: 'Supplier not found' });
+    const { error } = await supabase.from('suppliers').update({ is_active: false }).eq('id', id).eq('owner_id', req.user.id);
     if (error) throw error;
     res.json({ message: 'Supplier deactivated' });
   } catch (error) {

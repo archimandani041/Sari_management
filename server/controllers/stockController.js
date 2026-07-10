@@ -15,11 +15,16 @@ const updateStock = async (req, res) => {
 
     const { data: combo, error: fetchError } = await supabase
       .from('combinations')
-      .select('*, beams(saree_id, beam_name, sarees(series_code))')
+      .select('*, beams(saree_id, beam_name, sarees(series_code, owner_id))')
       .eq('id', combination_id)
       .single();
 
     if (fetchError || !combo) return res.status(404).json({ error: 'Combination not found' });
+
+    // Ownership check: ensure the combination belongs to the authenticated user
+    if (combo.beams?.sarees?.owner_id !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied: this stock does not belong to your account.' });
+    }
 
     let newStock;
     const oldStock = combo.current_stock;
@@ -70,6 +75,7 @@ const updateStock = async (req, res) => {
       new_stock: newStock,
       action,
       reason: JSON.stringify(transactionDetails),
+      owner_id: req.user.id,
       changed_by: req.user.id,
       changed_by_name: req.user.full_name
     }).select().single();
@@ -101,7 +107,7 @@ const undoStockChange = async (req, res) => {
   try {
     const { historyId } = req.params;
     const { data: entry } = await supabase
-      .from('stock_history').select('*').eq('id', historyId).eq('is_undone', false).single();
+      .from('stock_history').select('*').eq('id', historyId).eq('owner_id', req.user.id).eq('is_undone', false).single();
 
     if (!entry) return res.status(404).json({ error: 'History entry not found or already undone' });
     if (!entry.combination_id) return res.status(400).json({ error: 'Cannot undo: combination no longer exists' });
@@ -126,6 +132,7 @@ const undoStockChange = async (req, res) => {
       new_stock: entry.old_stock,
       action: 'Undo',
       reason: `Undo: ${entry.action}`,
+      owner_id: req.user.id,
       changed_by: req.user.id,
       changed_by_name: req.user.full_name
     });
@@ -148,7 +155,8 @@ const getHistory = async (req, res) => {
     const limitVal = parseInt(limit);
 
     let query = supabase.from('stock_history')
-      .select('*, sarees(sari_name, series_code, image_url)', { count: 'exact' });
+      .select('*, sarees(sari_name, series_code, image_url)', { count: 'exact' })
+      .eq('owner_id', req.user.id);
 
     if (saree_id) {
       query = query.eq('saree_id', saree_id);

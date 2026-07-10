@@ -130,8 +130,12 @@ export const AuthProvider = ({ children }) => {
     }
     localStorage.removeItem('sari_token');
     localStorage.removeItem('sari_user');
+    localStorage.removeItem('pending_whatsapp_import');
+    localStorage.removeItem('sari_recent');
+    localStorage.removeItem('sari_favorites');
     setToken(null);
     setUser(null);
+    window.location.href = '/login';
   }, []);
 
   const isAuthenticated = !!user && !!token;
