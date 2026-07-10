@@ -63,15 +63,20 @@ const createStockRequest = async (req, res) => {
     const isDelivery = movement_type === 'DELIVERY_OUT';
     const oldStock = combo.current_stock || 0;
     const newStock = isDelivery ? (oldStock - parseInt(requested_qty)) : (oldStock + parseInt(requested_qty));
+    const newStatus = isDelivery ? 'In Delivery' : 'In Stock';
 
     if (isDelivery && newStock < 0) {
       return res.status(400).json({ error: 'Delivery quantity cannot exceed available stock.' });
     }
 
-    // 1. Update combination stock
+    // 1. Update combination stock and status
     const { error: updateErr } = await supabase
       .from('combinations')
-      .update({ current_stock: newStock, updated_at: new Date().toISOString() })
+      .update({ 
+        current_stock: newStock, 
+        status: newStatus, 
+        updated_at: new Date().toISOString() 
+      })
       .eq('id', combination_id);
     if (updateErr) throw updateErr;
 

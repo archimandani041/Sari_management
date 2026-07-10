@@ -1,7 +1,7 @@
 /**
- * Redesigned Login/Signup Page
- * Modern, high-end split layout with geometric branding, interactive slider,
- * and email authentication powered by Supabase.
+ * Redesigned Login/Signup Page — KP Creation
+ * Light-themed premium layout with sliding saree photography,
+ * serif luxury typography, and email authentication.
  */
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -18,36 +18,23 @@ import {
   IconButton,
   CircularProgress
 } from '@mui/material';
-import { Visibility, VisibilityOff, Email, Lock, ArrowForward, Check } from '@mui/icons-material';
-
-// High-fidelity custom SVG icons for Google & Apple
-const GoogleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" style={{ marginRight: 8 }}>
-    <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.64l3.15-3.15C17.45 1.68 14.9 1 12 1 7.35 1 3.39 3.65 1.48 7.5l3.6 2.8C6.01 7.15 8.78 5.04 12 5.04z" />
-    <path fill="#4285F4" d="M23.45 12.3c0-.82-.07-1.6-.2-2.3H12v4.4h6.43c-.28 1.44-1.1 2.66-2.33 3.48l3.6 2.8c2.1-1.94 3.32-4.8 3.32-8.38z" />
-    <path fill="#FBBC05" d="M5.08 14.7c-.23-.68-.36-1.42-.36-2.2s.13-1.52.36-2.2L1.48 7.5C.54 9.4 0 11.53 0 13.8s.54 4.4 1.48 6.3l3.6-2.8c-.23-.6-.36-1.3-.36-2.2z" />
-    <path fill="#34A853" d="M12 23c3.24 0 5.97-1.08 7.96-2.92l-3.6-2.8c-1.1.74-2.5 1.18-4.36 1.18-3.22 0-6-2.11-6.97-5.26l-3.6 2.8C3.39 20.35 7.35 23 12 23z" />
-  </svg>
-);
-
-const AppleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="#FFFFFF" style={{ marginRight: 8 }}>
-    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.21.67-2.93 1.49-.62.69-1.16 1.84-1.01 2.96 1.12.09 2.27-.57 2.95-1.39z" />
-  </svg>
-);
+import { Visibility, VisibilityOff, Email, Lock, Check } from '@mui/icons-material';
 
 const SLIDES = [
   {
-    title: "SariStock Manager",
-    description: "Streamlined inventory tracking and analytics for modern textile enterprises.",
+    title: "KP Creation Portal",
+    description: "Premium handloom saree inventory management and real-time stock tracking.",
+    image: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800"
   },
   {
-    title: "AI-Powered Predictions",
-    description: "Forecast saree demand and optimize inventory using Google Gemini.",
+    title: "Artisanal Silk Textures",
+    description: "Explore exquisite details of premium Banarasi, Kanchipuram and designer silks.",
+    image: "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&q=80&w=800"
   },
   {
-    title: "Supplier Collaboration",
-    description: "Coordinate orders and imports directly with suppliers via WhatsApp parsing.",
+    title: "Efficient Coordination",
+    description: "Instantly coordinate stock requests with weavers and suppliers via WhatsApp integration.",
+    image: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800"
   }
 ];
 
@@ -123,7 +110,6 @@ const Login = () => {
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
       const data = await signUp(email.trim(), password, fullName);
 
-      // If email verification is enabled, Supabase won't return a session
       if (data && !data.session) {
         setSuccess('Verification email sent! Please check your inbox and confirm your email before logging in.');
         setFirstName('');
@@ -131,7 +117,7 @@ const Login = () => {
         setEmail('');
         setPassword('');
         setTermsAccepted(false);
-        setIsSignUp(false); // Switch to login screen
+        setIsSignUp(false);
       } else {
         navigate('/');
       }
@@ -149,36 +135,40 @@ const Login = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      bgcolor: '#13111A', // Dark purple/black page background
+      background: 'linear-gradient(135deg, #EFE9E1 0%, #D1C7BD 100%)',
       px: { xs: 2, sm: 4 },
       py: 2
     }}>
-      {/* Global CSS to style the input fields to match the reference image */}
+      {/* Custom Styles for light mode inputs and fade animation */}
       <style>{`
         .custom-input .MuiOutlinedInput-root {
-          background-color: #2F2D3F !important;
-          border-radius: 8px !important;
-          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+          background-color: #FFFFFF !important;
+          border-radius: 10px !important;
+          border: 1px solid #D1C7BD !important;
           transition: all 0.25s ease-in-out !important;
         }
         .custom-input .MuiOutlinedInput-root:hover {
-          border-color: rgba(255, 255, 255, 0.16) !important;
+          border-color: #AC9C8D !important;
         }
         .custom-input .MuiOutlinedInput-root.Mui-focused {
-          border-color: #7F56D9 !important;
-          box-shadow: 0 0 0 3px rgba(127, 86, 217, 0.24) !important;
+          border-color: #72383D !important;
+          box-shadow: 0 0 0 3px rgba(114, 56, 61, 0.18) !important;
         }
         .custom-input .MuiOutlinedInput-notchedOutline {
           border: none !important;
         }
         .custom-input input {
-          color: #FFFFFF !important;
+          color: #322D29 !important;
           font-size: 0.92rem !important;
           padding: 12.5px 14px !important;
         }
         .custom-input input::placeholder {
-          color: #8C8A9E !important;
+          color: #AC9C8D !important;
           opacity: 1 !important;
+        }
+        @keyframes slideFadeIn {
+          from { opacity: 0.4; }
+          to { opacity: 1; }
         }
       `}</style>
 
@@ -189,11 +179,13 @@ const Login = () => {
         height: { xs: 'auto', md: 560 },
         display: 'flex',
         flexDirection: { xs: 'column', md: 'row' },
-        bgcolor: '#1C1A27', // Dark purple slate card background
+        bgcolor: 'rgba(255, 255, 255, 0.74)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         borderRadius: 5,
         overflow: 'hidden',
-        boxShadow: '0 24px 80px rgba(0, 0, 0, 0.65)',
-        border: '1px solid rgba(255, 255, 255, 0.06)'
+        boxShadow: '0 24px 64px rgba(50, 45, 41, 0.08)',
+        border: '1px solid rgba(209, 199, 189, 0.5)'
       }}>
 
         {/* LEFT PANEL: Cover image & Slider */}
@@ -205,32 +197,28 @@ const Login = () => {
           p: 4.5,
           position: 'relative',
           overflow: 'hidden',
-          // Purple dune gradient overlay
-          background: `
-            linear-gradient(180deg, rgba(29, 21, 57, 0.35) 0%, rgba(20, 12, 40, 0.85) 100%),
-            url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=800')
-          `,
+          backgroundImage: `linear-gradient(180deg, rgba(50, 45, 41, 0.2) 0%, rgba(114, 56, 61, 0.75) 100%), url('${SLIDES[activeSlide].image}')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           borderRadius: 4,
-          m: 1.2
+          m: 1.2,
+          animation: 'slideFadeIn 0.8s ease-in-out'
         }}>
           {/* Logo row */}
           <Box sx={{ display: 'flex', alignItems: 'center', zIndex: 2 }}>
             <Typography variant="h5" sx={{
-              fontWeight: 800,
+              fontWeight: 900,
               color: '#FFF',
-              letterSpacing: '0.12em',
-              fontFamily: '"Plus Jakarta Sans", sans-serif',
-              fontSize: '1.25rem'
+              letterSpacing: '0.04em',
+              fontFamily: '"Playfair Display", Georgia, serif',
+              fontSize: '1.45rem'
             }}>
-              SΛRI<Box component="span" sx={{ color: '#7F56D9' }}>ST0CK</Box>
+              KP<Box component="span" sx={{ color: '#EFE9E1' }}> Creation</Box>
             </Typography>
           </Box>
 
           {/* Slider Content & Dots */}
           <Box sx={{ zIndex: 2 }}>
-            {/* Sliding text frame */}
             <Box sx={{ minHeight: 90, mb: 3 }}>
               {SLIDES.map((slide, idx) => (
                 <Box
@@ -245,17 +233,18 @@ const Login = () => {
                   }}
                 >
                   <Typography variant="h3" sx={{
+                    fontFamily: '"Playfair Display", Georgia, serif',
                     color: '#FFF',
-                    fontWeight: 700,
-                    fontSize: '1.5rem',
+                    fontWeight: 800,
+                    fontSize: '1.65rem',
                     mb: 1.2,
-                    letterSpacing: '-0.02em',
+                    letterSpacing: '-0.01em',
                     lineHeight: 1.25
                   }}>
                     {slide.title}
                   </Typography>
                   <Typography variant="body2" sx={{
-                    color: '#C3C0D6',
+                    color: '#EFE9E1',
                     fontSize: '0.85rem',
                     lineHeight: 1.5,
                     fontWeight: 400
@@ -298,9 +287,10 @@ const Login = () => {
           {/* Header */}
           <Box sx={{ mb: 3.5 }}>
             <Typography variant="h2" sx={{
-              color: '#FFF',
-              fontWeight: 700,
-              fontSize: '1.75rem',
+              fontFamily: '"Playfair Display", Georgia, serif',
+              color: '#322D29',
+              fontWeight: 800,
+              fontSize: '1.85rem',
               mb: 1,
               letterSpacing: '-0.02em'
             }}>
@@ -308,7 +298,7 @@ const Login = () => {
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <Typography variant="body2" sx={{ color: '#8C8A9E', fontSize: '0.85rem' }}>
+              <Typography variant="body2" sx={{ color: '#AC9C8D', fontSize: '0.85rem' }}>
                 {isSignUp ? 'Already have an account?' : "Don't have an account?"}
               </Typography>
               <Typography
@@ -319,12 +309,12 @@ const Login = () => {
                   setSuccess('');
                 }}
                 sx={{
-                  color: '#7F56D9',
+                  color: '#72383D',
                   fontSize: '0.85rem',
                   fontWeight: 600,
                   cursor: 'pointer',
                   textDecoration: 'underline',
-                  '&:hover': { color: '#9B7BF6' }
+                  '&:hover': { color: '#592B2F' }
                 }}
               >
                 {isSignUp ? 'Log in' : 'Sign up'}
@@ -334,17 +324,17 @@ const Login = () => {
 
           {/* Feedback Messages */}
           {sessionReset && (
-            <Alert severity="warning" sx={{ mb: 2.5, bgcolor: 'rgba(245, 158, 11, 0.1)', color: '#FBBF24', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: 2 }}>
+            <Alert severity="warning" sx={{ mb: 2.5, bgcolor: 'rgba(114, 56, 61, 0.06)', color: '#72383D', border: '1px solid rgba(114, 56, 61, 0.15)', borderRadius: 2 }}>
               Database was reset — please log in again with email.
             </Alert>
           )}
           {error && (
-            <Alert severity="error" sx={{ mb: 2.5, bgcolor: 'rgba(239, 68, 68, 0.1)', color: '#F87171', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: 2 }}>
+            <Alert severity="error" sx={{ mb: 2.5, bgcolor: 'rgba(114, 56, 61, 0.08)', color: '#72383D', border: '1px solid rgba(114, 56, 61, 0.2)', borderRadius: 2 }}>
               {error}
             </Alert>
           )}
           {success && (
-            <Alert severity="success" icon={<Check sx={{ color: '#4ADE80' }} />} sx={{ mb: 2.5, bgcolor: 'rgba(34, 197, 94, 0.1)', color: '#4ADE80', border: '1px solid rgba(34, 197, 94, 0.25)', borderRadius: 2 }}>
+            <Alert severity="success" icon={<Check sx={{ color: '#22C55E' }} />} sx={{ mb: 2.5, bgcolor: 'rgba(34, 197, 94, 0.08)', color: '#16A34A', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: 2 }}>
               {success}
             </Alert>
           )}
@@ -392,7 +382,7 @@ const Login = () => {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Email sx={{ color: '#8C8A9E', fontSize: 18, mr: 0.5 }} />
+                      <Email sx={{ color: '#AC9C8D', fontSize: 18, mr: 0.5 }} />
                     </InputAdornment>
                   ),
                 },
@@ -413,7 +403,7 @@ const Login = () => {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Lock sx={{ color: '#8C8A9E', fontSize: 18, mr: 0.5 }} />
+                      <Lock sx={{ color: '#AC9C8D', fontSize: 18, mr: 0.5 }} />
                     </InputAdornment>
                   ),
                   endAdornment: (
@@ -421,7 +411,7 @@ const Login = () => {
                       <IconButton
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
-                        sx={{ color: '#8C8A9E' }}
+                        sx={{ color: '#AC9C8D' }}
                       >
                         {showPassword ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
                       </IconButton>
@@ -439,15 +429,15 @@ const Login = () => {
                     checked={termsAccepted}
                     onChange={(e) => setTermsAccepted(e.target.checked)}
                     sx={{
-                      color: 'rgba(255, 255, 255, 0.25)',
-                      '&.Mui-checked': { color: '#7F56D9' }
+                      color: '#D1C7BD',
+                      '&.Mui-checked': { color: '#72383D' }
                     }}
                   />
                 }
                 label={
-                  <Typography variant="body2" sx={{ color: '#8C8A9E', fontSize: '0.78rem' }}>
+                  <Typography variant="body2" sx={{ color: '#AC9C8D', fontSize: '0.78rem' }}>
                     I agree to the{' '}
-                    <span style={{ color: '#7F56D9', fontWeight: 600, cursor: 'pointer' }}>Terms & Conditions</span>
+                    <span style={{ color: '#72383D', fontWeight: 600, cursor: 'pointer' }}>Terms & Conditions</span>
                   </Typography>
                 }
                 sx={{ ml: -0.5, mt: -0.5 }}
@@ -462,7 +452,7 @@ const Login = () => {
               fullWidth
               disabled={loading}
               sx={{
-                bgcolor: '#7F56D9',
+                bgcolor: '#72383D',
                 color: '#FFF',
                 borderRadius: '8px',
                 py: 1.5,
@@ -472,18 +462,17 @@ const Login = () => {
                 boxShadow: 'none',
                 mt: 1,
                 '&:hover': {
-                  bgcolor: '#6A45C0',
+                  bgcolor: '#592B2F',
                   boxShadow: 'none'
                 },
                 '&.Mui-disabled': {
-                  bgcolor: 'rgba(127, 86, 217, 0.4)',
+                  bgcolor: 'rgba(114, 56, 61, 0.4)',
                   color: 'rgba(255, 255, 255, 0.5)'
                 }
               }}
             >
               {loading ? <CircularProgress size={20} color="inherit" /> : (isSignUp ? 'Create account' : 'Log in')}
             </Button>
-
           </Box>
         </Box>
       </Box>

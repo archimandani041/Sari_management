@@ -7,12 +7,12 @@ import { createTheme } from '@mui/material/styles';
 
 // ── Brand palette (unchanged) ──────────────────────────────────
 export const PALETTE = {
-  EARTH:    '#A16D47',  // warm brown  — primary brand color
-  SAND:     '#D8CABA',  // light beige — surfaces / borders
-  LATTE:    '#C0AD8D',  // medium tan  — accent / hover
-  OLIVE:    '#776F4F',  // dark olive  — secondary accent / dark primary
-  MIDNIGHT: '#1D1D1D',  // near black  — dark bg / text
-  LINEN:    '#F7F3EB',  // off-white   — light bg
+  EARTH: '#72383D',  // deep burgundy / maroon — primary brand color
+  SAND: '#D1C7BD',  // light sand grey — surfaces / borders
+  LATTE: '#AC9C8D',  // muted warm taupe — accent / hover
+  OLIVE: '#322D29',  // dark charcoal brown — secondary accent / dark primary
+  MIDNIGHT: '#322D29',  // dark charcoal brown — dark bg / text
+  LINEN: '#EFE9E1',  // off-white / cream — light bg
 };
 
 // Sidebar background per mode (exported for the Sidebar component)
@@ -31,15 +31,15 @@ export const CHART_COLORS = [
 // Ambient page gradient (frosted glass needs something to distort behind it)
 export const APP_BACKGROUND = {
   light: `
-    radial-gradient(900px 520px at 10% -8%, rgba(192,173,141,0.55), transparent 60%),
-    radial-gradient(760px 520px at 100% 0%, rgba(161,109,71,0.28), transparent 55%),
-    radial-gradient(720px 620px at 50% 118%, rgba(216,202,186,0.55), transparent 60%),
-    linear-gradient(135deg, #F7F3EB 0%, #EFE6D8 100%)`,
+    radial-gradient(900px 520px at 10% -8%, rgba(172,156,141,0.35), transparent 60%),
+    radial-gradient(760px 520px at 100% 0%, rgba(114,56,61,0.18), transparent 55%),
+    radial-gradient(720px 620px at 50% 118%, rgba(209,199,189,0.40), transparent 60%),
+    linear-gradient(135deg, #EFE9E1 0%, #D1C7BD 100%)`,
   dark: `
-    radial-gradient(900px 520px at 10% -8%, rgba(161,109,71,0.30), transparent 60%),
-    radial-gradient(760px 520px at 100% 0%, rgba(119,111,79,0.24), transparent 55%),
-    radial-gradient(720px 620px at 50% 118%, rgba(161,109,71,0.16), transparent 60%),
-    linear-gradient(135deg, #14110B 0%, #1C1811 100%)`,
+    radial-gradient(900px 520px at 10% -8%, rgba(114,56,61,0.20), transparent 60%),
+    radial-gradient(760px 520px at 100% 0%, rgba(172,156,141,0.12), transparent 55%),
+    radial-gradient(720px 620px at 50% 118%, rgba(114,56,61,0.10), transparent 60%),
+    linear-gradient(135deg, #1A1816 0%, #322D29 100%)`,
 };
 
 export const getTheme = (mode = 'dark') => {
@@ -48,14 +48,14 @@ export const getTheme = (mode = 'dark') => {
   // ── Glass surface tokens ─────────────────────────────────────
   const glass = {
     // decorative cards — more translucent for depth
-    bg:       isLight ? 'rgba(255,255,255,0.58)' : 'rgba(38,32,23,0.52)',
+    bg: isLight ? 'rgba(255,255,255,0.58)' : 'rgba(38,32,23,0.52)',
     // readable surfaces (tables, menus, dialogs, drawer, header) — higher opacity
     bgStrong: isLight ? 'rgba(255,255,255,0.74)' : 'rgba(32,27,19,0.74)',
-    border:   isLight ? 'rgba(255,255,255,0.65)' : 'rgba(216,202,186,0.09)',
+    border: isLight ? 'rgba(255,255,255,0.65)' : 'rgba(216,202,186,0.09)',
     borderStrong: isLight ? 'rgba(255,255,255,0.75)' : 'rgba(216,202,186,0.12)',
-    blur:     'blur(16px) saturate(140%)',
+    blur: 'blur(16px) saturate(140%)',
     blurStrong: 'blur(20px) saturate(150%)',
-    shadow:   isLight ? '0 8px 32px rgba(29,29,29,0.10)' : '0 8px 32px rgba(0,0,0,0.45)',
+    shadow: isLight ? '0 8px 32px rgba(29,29,29,0.10)' : '0 8px 32px rgba(0,0,0,0.45)',
     shadowHover: isLight ? '0 16px 44px rgba(29,29,29,0.16)' : '0 18px 48px rgba(0,0,0,0.60)',
   };
 
@@ -63,59 +63,59 @@ export const getTheme = (mode = 'dark') => {
     palette: {
       mode,
       primary: {
-        main:          PALETTE.EARTH,
-        light:         PALETTE.LATTE,
-        dark:          PALETTE.OLIVE,
-        contrastText:  '#FFFFFF',
+        main: PALETTE.EARTH,
+        light: PALETTE.LATTE,
+        dark: PALETTE.OLIVE,
+        contrastText: '#FFFFFF',
       },
       secondary: {
-        main:          isLight ? PALETTE.OLIVE  : PALETTE.SAND,
-        light:         isLight ? PALETTE.LATTE  : PALETTE.LINEN,
-        dark:          isLight ? '#5A5036'       : PALETTE.LATTE,
-        contrastText:  isLight ? '#FFFFFF'       : PALETTE.MIDNIGHT,
+        main: isLight ? PALETTE.OLIVE : PALETTE.SAND,
+        light: isLight ? PALETTE.LATTE : PALETTE.LINEN,
+        dark: isLight ? '#5A5036' : PALETTE.LATTE,
+        contrastText: isLight ? '#FFFFFF' : PALETTE.MIDNIGHT,
       },
       success: { main: '#22C55E', light: '#4ADE80', dark: '#16A34A' },
       warning: { main: '#F59E0B', light: '#FBBF24', dark: '#D97706' },
-      error:   { main: '#EF4444', light: '#F87171', dark: '#DC2626' },
-      info:    { main: '#38BDF8', light: '#7DD3FC', dark: '#0EA5E9' },
+      error: { main: '#EF4444', light: '#F87171', dark: '#DC2626' },
+      info: { main: '#38BDF8', light: '#7DD3FC', dark: '#0EA5E9' },
       background: {
         // kept for any explicit reference, but the real canvas is the gradient on <body>
         default: isLight ? PALETTE.LINEN : '#161209',
-        paper:   isLight ? '#FFFFFF'      : '#221E16',
+        paper: isLight ? '#FFFFFF' : '#221E16',
       },
       text: {
-        primary:   isLight ? PALETTE.MIDNIGHT : PALETTE.LINEN,
-        secondary: isLight ? PALETTE.OLIVE    : PALETTE.SAND,
+        primary: isLight ? PALETTE.MIDNIGHT : PALETTE.LINEN,
+        secondary: isLight ? PALETTE.OLIVE : PALETTE.SAND,
       },
       divider: isLight ? 'rgba(119,111,79,0.18)' : 'rgba(216,202,186,0.12)',
       // Custom tokens
       glass,
       sidebar: {
-        bg:     glass.bgStrong,
+        bg: glass.bgStrong,
         active: isLight ? 'rgba(161,109,71,0.14)' : 'rgba(192,173,141,0.16)',
       },
       brand: {
-        main:  PALETTE.EARTH,
+        main: PALETTE.EARTH,
         light: PALETTE.LATTE,
-        dark:  PALETTE.OLIVE,
-        sand:  PALETTE.SAND,
+        dark: PALETTE.OLIVE,
+        sand: PALETTE.SAND,
         linen: PALETTE.LINEN,
-        soft:  'rgba(161,109,71,0.12)',
+        soft: 'rgba(161,109,71,0.12)',
       },
     },
     typography: {
-      // Clean modern sans everywhere — legible on frosted glass
+      // Clean modern sans body, elegant serif headings
       fontFamily: '"Plus Jakarta Sans", "Outfit", "Inter", system-ui, -apple-system, sans-serif',
-      h1: { fontWeight: 800, fontSize: '2.4rem',  letterSpacing: '-0.025em', lineHeight: 1.12 },
-      h2: { fontWeight: 800, fontSize: '1.95rem', letterSpacing: '-0.02em',  lineHeight: 1.15 },
-      h3: { fontWeight: 800, fontSize: '1.55rem', letterSpacing: '-0.02em',  lineHeight: 1.2 },
-      h4: { fontWeight: 700, fontSize: '1.3rem',  letterSpacing: '-0.015em' },
-      h5: { fontWeight: 700, fontSize: '1.1rem',  letterSpacing: '-0.01em' },
-      h6: { fontWeight: 700, fontSize: '1rem',    letterSpacing: '-0.01em' },
+      h1: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 800, fontSize: '2.4rem', letterSpacing: '-0.025em', lineHeight: 1.12 },
+      h2: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 800, fontSize: '1.95rem', letterSpacing: '-0.02em', lineHeight: 1.15 },
+      h3: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 800, fontSize: '1.55rem', letterSpacing: '-0.02em', lineHeight: 1.2 },
+      h4: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '1.3rem', letterSpacing: '-0.015em' },
+      h5: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '1.1rem', letterSpacing: '-0.01em' },
+      h6: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em' },
       subtitle1: { fontWeight: 500, fontSize: '0.95rem' },
       subtitle2: { fontWeight: 600, fontSize: '0.85rem' },
-      body1:  { fontSize: '0.9rem',  lineHeight: 1.6 },
-      body2:  { fontSize: '0.85rem', lineHeight: 1.5 },
+      body1: { fontSize: '0.9rem', lineHeight: 1.6 },
+      body2: { fontSize: '0.85rem', lineHeight: 1.5 },
       button: { textTransform: 'none', fontWeight: 600, letterSpacing: '0.01em' },
     },
     shape: { borderRadius: 14 },

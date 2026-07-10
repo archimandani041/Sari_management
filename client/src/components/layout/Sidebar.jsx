@@ -94,18 +94,18 @@ const Sidebar = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
           <Box sx={{
             width: 38, height: 38, borderRadius: '11px',
-            background: 'linear-gradient(135deg, #C0AD8D 0%, #A16D47 100%)',
+            background: 'linear-gradient(135deg, #AC9C8D 0%, #72383D 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(161,109,71,0.40)',
+            boxShadow: '0 4px 12px rgba(114,56,61,0.40)',
           }}>
             <StorefrontIcon sx={{ color: '#fff', fontSize: '1.25rem' }} />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: '1.05rem', fontWeight: 800, lineHeight: 1.1, color: 'text.primary', letterSpacing: '-0.02em' }}>
-              Sari<Box component="span" sx={{ color: 'primary.main' }}>Stock</Box>
+            <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '1.25rem', fontWeight: 900, lineHeight: 1.1, color: 'text.primary', letterSpacing: '-0.01em' }}>
+              KP<Box component="span" sx={{ color: 'primary.main' }}> Creation</Box>
             </Typography>
             <Typography sx={{ fontSize: '0.62rem', color: mutedText, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Management
+              Inventory Portal
             </Typography>
           </Box>
         </Box>
@@ -125,7 +125,7 @@ const Sidebar = () => {
       }}>
         <Avatar sx={{
           width: 38, height: 38, fontSize: '0.9rem', fontWeight: 700, color: '#fff',
-          background: 'linear-gradient(135deg, #C0AD8D 0%, #A16D47 100%)',
+          background: 'linear-gradient(135deg, #AC9C8D 0%, #72383D 100%)',
         }}>
           {user?.full_name?.charAt(0) || 'U'}
         </Avatar>

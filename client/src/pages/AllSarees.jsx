@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sareeAPI } from '../services/api';
+import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useDebounce } from '../hooks/useDebounce';
 import {
@@ -279,6 +280,28 @@ const AllSarees = () => {
 
   useEffect(() => {
     fetchSarees();
+  }, [fetchSarees]);
+
+  // Real-time Supabase subscriptions
+  useEffect(() => {
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel('realtime-sarees-list-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, () => {
+        fetchSarees();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'beams' }, () => {
+        fetchSarees();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sarees' }, () => {
+        fetchSarees();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchSarees]);
 
   // Sync URL search parameters

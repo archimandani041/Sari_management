@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { sareeAPI } from '../services/api';
+import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
 import RequestStockDialog from '../components/common/RequestStockDialog';
@@ -70,6 +71,28 @@ const SareeDetail = () => {
 
   useEffect(() => {
     fetchSareeDetails();
+  }, [id]);
+
+  // Real-time Supabase subscriptions
+  useEffect(() => {
+    if (!supabase || !id) return;
+
+    const channel = supabase
+      .channel(`realtime-saree-detail-${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, () => {
+        fetchSareeDetails();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'beams' }, () => {
+        fetchSareeDetails();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sarees', filter: `id=eq.${id}` }, () => {
+        fetchSareeDetails();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id]);
 
 

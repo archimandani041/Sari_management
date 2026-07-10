@@ -1,5 +1,5 @@
 /**
- * Sari Stock Management System - Express Server
+ * KP Creation System - Express Server
  * Main entry point for the backend API
  */
 require('dotenv').config();
@@ -89,7 +89,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Sari Stock Management Server running on port ${PORT}`);
+  console.log(`🚀 KP Creation Server running on port ${PORT}`);
   console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 

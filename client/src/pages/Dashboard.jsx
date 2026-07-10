@@ -32,6 +32,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   Legend, ReferenceLine
 } from 'recharts';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import RequestStockDialog from '../components/common/RequestStockDialog';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -55,6 +57,45 @@ const Dashboard = () => {
   const [loadingPrediction, setLoadingPrediction] = useState(false);
   const [expandedBeam, setExpandedBeam] = useState(null);
   const [showPredictionBreakdown, setShowPredictionBreakdown] = useState(false);
+
+  // Request Stock Dialog States
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [selectedCombo, setSelectedCombo] = useState(null);
+  const [selectedBeamName, setSelectedBeamName] = useState('');
+  const [selectedSeriesCode, setSelectedSeriesCode] = useState('');
+  const [selectedSareeId, setSelectedSareeId] = useState('');
+  const [requestMovementType, setRequestMovementType] = useState('STOCK_IN');
+
+  const handleActionableRequestStock = async (item) => {
+    try {
+      if (!item.sareeId || !item.id) return;
+      const res = await sareeAPI.getById(item.sareeId);
+      const saree = res.data;
+      
+      let matchedBeam = null;
+      let matchedCombo = null;
+      for (const b of saree.beams || []) {
+        for (const c of b.combinations || []) {
+          if (c.id === item.id) {
+            matchedBeam = b;
+            matchedCombo = c;
+            break;
+          }
+        }
+      }
+      
+      if (matchedCombo) {
+        setSelectedCombo(matchedCombo);
+        setSelectedBeamName(matchedBeam?.beam_name || 'Beam');
+        setSelectedSeriesCode(saree.series_code || 'Saree');
+        setSelectedSareeId(saree.id);
+        setRequestMovementType(item.type === 'Out of Stock' || item.type === 'Low Stock' ? 'STOCK_IN' : 'DELIVERY_OUT');
+        setRequestDialogOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to trigger stock request from card:', err);
+    }
+  };
 
   // Fetch Dashboard Stats
   const fetchDashboardData = useCallback(async () => {
@@ -471,74 +512,163 @@ const Dashboard = () => {
 
           {/* NEEDS ATTENTION + OPPORTUNITIES */}
           <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
+            {/* Needs Attention */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <Paper sx={{ ...glassCard, p: 3, minHeight: 320 }} elevation={0}>
-                <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, color: 'error.main' }}>Needs Attention</Typography>
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 800 }}>Item</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>Risk</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }} align="right">Action</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {needsAttention.map((item) => (
-                        <TableRow key={item.id} hover>
-                          <TableCell sx={{ fontWeight: 700, fontSize: '0.78rem' }}>
-                            {item.name}
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 500 }}>{item.detail}</Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip label={item.type} color={item.severity === 'error' ? 'error' : item.severity === 'warning' ? 'warning' : 'info'} size="small" sx={{ fontSize: '0.63rem', fontWeight: 800 }} />
-                          </TableCell>
-                          <TableCell align="right">
-                            <Button size="small" variant="text" onClick={() => navigate(`/sarees/${item.sareeId}`)} sx={{ fontWeight: 700 }}>View</Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {needsAttention.length === 0 && (
-                        <TableRow><TableCell colSpan={3} align="center" sx={{ py: 5, color: 'text.secondary' }}>Nothing needs attention right now.</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+              <Paper sx={{ ...glassCard, p: 3, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 340 }} elevation={0}>
+                <Typography variant="h6" sx={{ fontWeight: 800, mb: 2.5, color: 'error.main' }}>
+                  Needs Attention
+                </Typography>
+                
+                {needsAttention.length === 0 ? (
+                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 6, color: 'text.secondary' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Nothing needs attention right now.</Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75, flexGrow: 1 }}>
+                    {needsAttention.map((item) => {
+                      const borderColor = item.severity === 'error' ? theme.palette.error.main : item.severity === 'warning' ? theme.palette.warning.main : theme.palette.info.main;
+                      return (
+                        <Box
+                          key={item.id}
+                          sx={{
+                            p: 2,
+                            borderRadius: 3,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderLeft: `4px solid ${borderColor}`,
+                            bgcolor: 'background.paper',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1.5,
+                            transition: 'transform 0.15s, box-shadow 0.15s',
+                            '&:hover': {
+                              transform: 'translateY(-2px)',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                              borderColor: 'primary.light'
+                            }
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 800 }} noWrap>
+                                {item.name}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 500, mt: 0.5 }}>
+                                {item.detail}
+                              </Typography>
+                            </Box>
+                            <Chip
+                              label={item.type}
+                              color={item.severity === 'error' ? 'error' : item.severity === 'warning' ? 'warning' : 'info'}
+                              size="small"
+                              sx={{ height: 20, fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase' }}
+                            />
+                          </Box>
+                          
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => navigate(`/sarees/${item.sareeId}`)}
+                              sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 1.5 }}
+                            >
+                              View Saree
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="success"
+                              startIcon={<WhatsAppIcon fontSize="small" />}
+                              onClick={() => handleActionableRequestStock(item)}
+                              sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 1.5 }}
+                            >
+                              Request Stock
+                            </Button>
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                )}
               </Paper>
             </Grid>
+
+            {/* Opportunities */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <Paper sx={{ ...glassCard, p: 3, minHeight: 320 }} elevation={0}>
-                <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, color: 'success.main' }}>Opportunities</Typography>
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 800 }}>Item</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>Metric</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }} align="right">Action</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {opportunities.map((item) => (
-                        <TableRow key={item.id} hover>
-                          <TableCell sx={{ fontWeight: 700, fontSize: '0.78rem' }}>
-                            {item.name}
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 500 }}>{item.detail}</Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip label={item.type} color="success" variant="outlined" size="small" sx={{ fontSize: '0.63rem', fontWeight: 800 }} />
-                          </TableCell>
-                          <TableCell align="right">
-                            <Button size="small" variant="text" onClick={() => navigate(`/sarees/${item.sareeId}`)} sx={{ fontWeight: 700 }}>View</Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {opportunities.length === 0 && (
-                        <TableRow><TableCell colSpan={3} align="center" sx={{ py: 5, color: 'text.secondary' }}>No opportunities in this range.</TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+              <Paper sx={{ ...glassCard, p: 3, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 340 }} elevation={0}>
+                <Typography variant="h6" sx={{ fontWeight: 800, mb: 2.5, color: 'success.main' }}>
+                  Opportunities
+                </Typography>
+                
+                {opportunities.length === 0 ? (
+                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 6, color: 'text.secondary' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>No opportunities in this range.</Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75, flexGrow: 1 }}>
+                    {opportunities.map((item) => (
+                      <Box
+                        key={item.id}
+                        sx={{
+                          p: 2,
+                          borderRadius: 3,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderLeft: `4px solid ${theme.palette.success.main}`,
+                          bgcolor: 'background.paper',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 1.5,
+                          transition: 'transform 0.15s, box-shadow 0.15s',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                            borderColor: 'primary.light'
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800 }} noWrap>
+                              {item.name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 500, mt: 0.5 }}>
+                              {item.detail}
+                            </Typography>
+                          </Box>
+                          <Chip
+                            label={item.type}
+                            color="success"
+                            variant="outlined"
+                            size="small"
+                            sx={{ height: 20, fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase' }}
+                          />
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => navigate(`/sarees/${item.sareeId}`)}
+                            sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 1.5 }}
+                          >
+                            View Saree
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="success"
+                            startIcon={<WhatsAppIcon fontSize="small" />}
+                            onClick={() => handleActionableRequestStock(item)}
+                            sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 1.5 }}
+                          >
+                            Request/Deliver
+                          </Button>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
               </Paper>
             </Grid>
           </Grid>
@@ -843,6 +973,19 @@ const Dashboard = () => {
         </Box>
       )}
 
+      <RequestStockDialog
+        open={requestDialogOpen}
+        onClose={() => setRequestDialogOpen(false)}
+        combination={selectedCombo}
+        beamName={selectedBeamName}
+        seriesCode={selectedSeriesCode}
+        sareeId={selectedSareeId}
+        initialMovementType={requestMovementType}
+        onSuccess={() => {
+          fetchDashboardData();
+          setRequestDialogOpen(false);
+        }}
+      />
     </Box>
   );
 };

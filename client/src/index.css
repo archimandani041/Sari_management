@@ -18,7 +18,10 @@ body {
 
 /* Respect reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {
-  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 /* Custom Scrollbar for modern look */
@@ -46,7 +49,7 @@ body {
     background: white !important;
     color: black !important;
   }
-  
+
   .MuiDrawer-root,
   header,
   .MuiAppBar-root,
@@ -70,7 +73,8 @@ body {
     background: transparent !important;
   }
 
-  svg, canvas {
+  svg,
+  canvas {
     max-width: 100% !important;
   }
 }

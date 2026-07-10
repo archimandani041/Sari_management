@@ -4,6 +4,7 @@
  * Shows supplier selection, quantity input, auto-generated message, and opens WhatsApp.
  */
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Box, Typography, TextField, Chip, Divider,
@@ -33,17 +34,12 @@ const buildWhatsAppMessage = ({ brand, movementType, seriesCode, beamName, color
 
   const isStockIn = movementType === 'STOCK_IN';
   const statusLabel = isStockIn ? '( IN STOCK )' : '( DELIVERY )';
-  const expectedStock = isStockIn ? (currentStock + requestedQty) : (currentStock - requestedQty);
-
-  const stockLines = isStockIn
-    ? `\n\nPrevious Stock: ${currentStock} pcs\nStock Quantity: ${requestedQty} pcs\nExpected Stock: ${expectedStock} pcs`
-    : '';
 
   return `${brandHeader}${beamHeader}
 
 ${seriesCode ? `${seriesCode} ${statusLabel}` : statusLabel}
 
-${colorLines || '(No color details)'}${stockLines}
+${colorLines || '(No color details)'}
 
 ${requestedQty} pcs/-`;
 };
@@ -57,6 +53,7 @@ const normalizeMobile = (mobile) => {
 };
 
 const RequestStockDialog = ({ open, onClose, combination, beamName, seriesCode, sareeId, onSuccess, initialMovementType = 'STOCK_IN' }) => {
+  const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
   const [requestedQty, setRequestedQty] = useState(100);
@@ -156,6 +153,9 @@ const RequestStockDialog = ({ open, onClose, combination, beamName, seriesCode, 
       setSnack(isDelivery ? 'Delivery prepared successfully! WhatsApp opened.' : 'Stock request prepared successfully! WhatsApp opened.');
       if (onSuccess) {
         onSuccess();
+      }
+      if (sareeId) {
+        navigate(`/sarees/${sareeId}`);
       }
     } catch (e) {
       setError(e.response?.data?.error || 'Failed to save request');

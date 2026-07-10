@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sareeAPI } from '../services/api';
+import { supabase } from '../services/supabase';
 import {
   Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Typography, Chip, Avatar, Button, Alert, CircularProgress
@@ -33,6 +34,28 @@ const LowStock = () => {
 
   useEffect(() => {
     fetchLowStockSarees();
+  }, []);
+
+  // Real-time Supabase subscriptions
+  useEffect(() => {
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel('realtime-low-stock-list-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, () => {
+        fetchLowStockSarees();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'beams' }, () => {
+        fetchLowStockSarees();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sarees' }, () => {
+        fetchLowStockSarees();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   if (loading) {
