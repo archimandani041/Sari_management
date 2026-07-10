@@ -1,136 +1,150 @@
 /**
- * Material UI Theme Configuration — "SariStock" · Premium Glassmorphism
- * Palette: Earth / Sand / Latte / Olive / Midnight / Linen  (unchanged)
- * Surfaces are frosted glass floating over an ambient earth-toned gradient.
+ * KP Creation — MUI Theme Configuration
+ * LUXE Design System: Charcoal · Burgundy · Taupe · Beige · Linen
+ *
+ * Rules (from spec §2):
+ * - Burgundy = primary action only (buttons, active nav, critical badges)
+ * - Glassmorphism ONLY for modals/dialogs, not every card
+ * - Cards use subtle 1px taupe/beige border + soft shadow on linen
+ * - Playfair Display for headings, Lora/sans for body, system-ui for dense data
  */
 import { createTheme } from '@mui/material/styles';
 
-// ── Brand palette (unchanged) ──────────────────────────────────
-export const PALETTE = {
-  EARTH: '#72383D',  // deep burgundy / maroon — primary brand color
-  SAND: '#D1C7BD',  // light sand grey — surfaces / borders
-  LATTE: '#AC9C8D',  // muted warm taupe — accent / hover
-  OLIVE: '#322D29',  // dark charcoal brown — secondary accent / dark primary
-  MIDNIGHT: '#322D29',  // dark charcoal brown — dark bg / text
-  LINEN: '#EFE9E1',  // off-white / cream — light bg
+// ── LUXE palette tokens ────────────────────────────────────────
+export const LUXE = {
+  charcoal:  '#322D29',
+  burgundy:  '#72383D',
+  taupe:     '#AC9C8D',
+  grey:      '#D9D9D9',
+  beige:     '#D1C7BD',
+  linen:     '#EFE9E1',
 };
 
-// Sidebar background per mode (exported for the Sidebar component)
+// Status colors (separate from primary burgundy)
+export const STATUS = {
+  healthy:  '#22C55E',
+  low:      '#F59E0B',
+  critical: '#EF4444',
+  delivery: '#38BDF8',
+};
+
+// Backwards-compatible alias
+export const PALETTE = {
+  EARTH: LUXE.burgundy,
+  SAND: LUXE.beige,
+  LATTE: LUXE.taupe,
+  OLIVE: LUXE.charcoal,
+  MIDNIGHT: LUXE.charcoal,
+  LINEN: LUXE.linen,
+};
+
 export const SIDEBAR_BG = { light: '#FFFFFF', dark: '#141210' };
 
-// Categorical chart palette (earth family)
 export const CHART_COLORS = [
-  PALETTE.EARTH,
-  PALETTE.LATTE,
-  PALETTE.SAND,
-  PALETTE.OLIVE,
-  '#8B5E3C',   // deeper earth
-  '#D2B896',   // lighter latte
+  LUXE.burgundy, LUXE.taupe, LUXE.beige, LUXE.charcoal, '#8B5E3C', '#D2B896',
 ];
 
-// Ambient page gradient (frosted glass needs something to distort behind it)
+// Ambient page gradient (subtle, not heavy)
 export const APP_BACKGROUND = {
   light: `
-    radial-gradient(900px 520px at 10% -8%, rgba(172,156,141,0.35), transparent 60%),
-    radial-gradient(760px 520px at 100% 0%, rgba(114,56,61,0.18), transparent 55%),
-    radial-gradient(720px 620px at 50% 118%, rgba(209,199,189,0.40), transparent 60%),
-    linear-gradient(135deg, #EFE9E1 0%, #D1C7BD 100%)`,
+    radial-gradient(900px 520px at 10% -8%, rgba(172,156,141,0.25), transparent 60%),
+    radial-gradient(760px 520px at 100% 0%, rgba(114,56,61,0.10), transparent 55%),
+    ${LUXE.linen}`,
   dark: `
-    radial-gradient(900px 520px at 10% -8%, rgba(114,56,61,0.20), transparent 60%),
-    radial-gradient(760px 520px at 100% 0%, rgba(172,156,141,0.12), transparent 55%),
-    radial-gradient(720px 620px at 50% 118%, rgba(114,56,61,0.10), transparent 60%),
-    linear-gradient(135deg, #1A1816 0%, #322D29 100%)`,
+    radial-gradient(900px 520px at 10% -8%, rgba(114,56,61,0.15), transparent 60%),
+    radial-gradient(760px 520px at 100% 0%, rgba(172,156,141,0.08), transparent 55%),
+    linear-gradient(135deg, #1A1816 0%, ${LUXE.charcoal} 100%)`,
 };
 
 export const getTheme = (mode = 'dark') => {
   const isLight = mode === 'light';
 
-  // ── Glass surface tokens ─────────────────────────────────────
+  // Glass tokens — used ONLY for dialogs/modals/popover overlays
   const glass = {
-    // decorative cards — more translucent for depth
-    bg: isLight ? 'rgba(255,255,255,0.58)' : 'rgba(38,32,23,0.52)',
-    // readable surfaces (tables, menus, dialogs, drawer, header) — higher opacity
-    bgStrong: isLight ? 'rgba(255,255,255,0.74)' : 'rgba(32,27,19,0.74)',
+    bg: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(32,27,19,0.82)',
     border: isLight ? 'rgba(255,255,255,0.65)' : 'rgba(216,202,186,0.09)',
-    borderStrong: isLight ? 'rgba(255,255,255,0.75)' : 'rgba(216,202,186,0.12)',
     blur: 'blur(16px) saturate(140%)',
-    blurStrong: 'blur(20px) saturate(150%)',
     shadow: isLight ? '0 8px 32px rgba(29,29,29,0.10)' : '0 8px 32px rgba(0,0,0,0.45)',
-    shadowHover: isLight ? '0 16px 44px rgba(29,29,29,0.16)' : '0 18px 48px rgba(0,0,0,0.60)',
+  };
+
+  // Card / Paper surface — clean solid, NOT glassmorphic
+  const surface = {
+    bg: isLight ? '#FFFFFF' : '#1E1B16',
+    border: isLight ? LUXE.beige : 'rgba(216,202,186,0.10)',
+    shadow: isLight ? '0 1px 3px rgba(0,0,0,0.06)' : '0 1px 3px rgba(0,0,0,0.20)',
+    shadowHover: isLight ? '0 4px 12px rgba(0,0,0,0.08)' : '0 4px 12px rgba(0,0,0,0.30)',
   };
 
   return createTheme({
     palette: {
       mode,
       primary: {
-        main: PALETTE.EARTH,
-        light: PALETTE.LATTE,
-        dark: PALETTE.OLIVE,
+        main: LUXE.burgundy,
+        light: LUXE.taupe,
+        dark: LUXE.charcoal,
         contrastText: '#FFFFFF',
       },
       secondary: {
-        main: isLight ? PALETTE.OLIVE : PALETTE.SAND,
-        light: isLight ? PALETTE.LATTE : PALETTE.LINEN,
-        dark: isLight ? '#5A5036' : PALETTE.LATTE,
-        contrastText: isLight ? '#FFFFFF' : PALETTE.MIDNIGHT,
+        main: isLight ? LUXE.charcoal : LUXE.beige,
+        light: isLight ? LUXE.taupe : LUXE.linen,
+        dark: isLight ? '#5A5036' : LUXE.taupe,
+        contrastText: isLight ? '#FFFFFF' : LUXE.charcoal,
       },
-      success: { main: '#22C55E', light: '#4ADE80', dark: '#16A34A' },
-      warning: { main: '#F59E0B', light: '#FBBF24', dark: '#D97706' },
-      error: { main: '#EF4444', light: '#F87171', dark: '#DC2626' },
-      info: { main: '#38BDF8', light: '#7DD3FC', dark: '#0EA5E9' },
+      success: { main: STATUS.healthy, light: '#4ADE80', dark: '#16A34A' },
+      warning: { main: STATUS.low, light: '#FBBF24', dark: '#D97706' },
+      error:   { main: STATUS.critical, light: '#F87171', dark: '#DC2626' },
+      info:    { main: STATUS.delivery, light: '#7DD3FC', dark: '#0EA5E9' },
       background: {
-        // kept for any explicit reference, but the real canvas is the gradient on <body>
-        default: isLight ? PALETTE.LINEN : '#161209',
-        paper: isLight ? '#FFFFFF' : '#221E16',
+        default: isLight ? LUXE.linen : '#161209',
+        paper: surface.bg,
       },
       text: {
-        primary: isLight ? PALETTE.MIDNIGHT : PALETTE.LINEN,
-        secondary: isLight ? PALETTE.OLIVE : PALETTE.SAND,
+        primary: isLight ? LUXE.charcoal : LUXE.linen,
+        secondary: isLight ? LUXE.taupe : LUXE.beige,
       },
-      divider: isLight ? 'rgba(119,111,79,0.18)' : 'rgba(216,202,186,0.12)',
-      // Custom tokens
+      divider: isLight ? `${LUXE.beige}` : 'rgba(216,202,186,0.10)',
+      // Custom tokens accessible via theme.palette.*
       glass,
+      surface,
       sidebar: {
-        bg: glass.bgStrong,
-        active: isLight ? 'rgba(161,109,71,0.14)' : 'rgba(192,173,141,0.16)',
+        bg: isLight ? 'rgba(255,255,255,0.90)' : 'rgba(20,18,16,0.90)',
+        active: isLight ? `${LUXE.burgundy}14` : `${LUXE.burgundy}22`,
       },
       brand: {
-        main: PALETTE.EARTH,
-        light: PALETTE.LATTE,
-        dark: PALETTE.OLIVE,
-        sand: PALETTE.SAND,
-        linen: PALETTE.LINEN,
-        soft: 'rgba(161,109,71,0.12)',
+        main: LUXE.burgundy,
+        light: LUXE.taupe,
+        dark: LUXE.charcoal,
+        sand: LUXE.beige,
+        linen: LUXE.linen,
       },
     },
     typography: {
-      // Clean modern sans body, elegant serif headings
-      fontFamily: '"Plus Jakarta Sans", "Outfit", "Inter", system-ui, -apple-system, sans-serif',
-      h1: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 800, fontSize: '2.4rem', letterSpacing: '-0.025em', lineHeight: 1.12 },
-      h2: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 800, fontSize: '1.95rem', letterSpacing: '-0.02em', lineHeight: 1.15 },
-      h3: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 800, fontSize: '1.55rem', letterSpacing: '-0.02em', lineHeight: 1.2 },
-      h4: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '1.3rem', letterSpacing: '-0.015em' },
-      h5: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '1.1rem', letterSpacing: '-0.01em' },
-      h6: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em' },
-      subtitle1: { fontWeight: 500, fontSize: '0.95rem' },
+      // Body: clean sans-serif for legibility
+      fontFamily: '"Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif',
+      h1: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 800, fontSize: '2rem', letterSpacing: '-0.025em', lineHeight: 1.15 },
+      h2: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 800, fontSize: '1.6rem', letterSpacing: '-0.02em', lineHeight: 1.2 },
+      h3: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '1.35rem', letterSpacing: '-0.015em', lineHeight: 1.25 },
+      h4: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '1.15rem', letterSpacing: '-0.01em', lineHeight: 1.3 },
+      h5: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em' },
+      h6: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '0.9rem' },
+      subtitle1: { fontFamily: '"Lora", Georgia, serif', fontWeight: 500, fontSize: '0.95rem', lineHeight: 1.5 },
       subtitle2: { fontWeight: 600, fontSize: '0.85rem' },
       body1: { fontSize: '0.9rem', lineHeight: 1.6 },
       body2: { fontSize: '0.85rem', lineHeight: 1.5 },
+      caption: { fontSize: '0.75rem', lineHeight: 1.4 },
       button: { textTransform: 'none', fontWeight: 600, letterSpacing: '0.01em' },
     },
-    shape: { borderRadius: 14 },
+    shape: { borderRadius: 12 },
     shadows: [
       'none',
-      '0 1px 3px rgba(0,0,0,0.08)',
-      '0 2px 8px rgba(0,0,0,0.10)',
-      '0 6px 18px rgba(0,0,0,0.12)',
+      surface.shadow,
+      '0 2px 6px rgba(0,0,0,0.08)',
+      '0 4px 12px rgba(0,0,0,0.10)',
+      '0 6px 16px rgba(0,0,0,0.12)',
       '0 8px 24px rgba(0,0,0,0.14)',
-      '0 10px 30px rgba(0,0,0,0.16)',
-      '0 14px 38px rgba(0,0,0,0.18)',
-      ...Array(18).fill('0 16px 44px rgba(0,0,0,0.20)'),
+      ...Array(19).fill('0 10px 30px rgba(0,0,0,0.16)'),
     ],
     components: {
-      // Ambient gradient canvas behind all the glass
       MuiCssBaseline: {
         styleOverrides: {
           body: {
@@ -144,74 +158,73 @@ export const getTheme = (mode = 'dark') => {
           },
         },
       },
-      // Base surface = readable frosted glass (menus, dialogs, table containers, panels)
+      // Paper = clean solid surface with subtle border (NOT glassmorphic)
       MuiPaper: {
         styleOverrides: {
           root: {
             backgroundImage: 'none',
-            backgroundColor: glass.bgStrong,
-            backdropFilter: glass.blur,
-            WebkitBackdropFilter: glass.blur,
-            border: `1px solid ${glass.border}`,
+            backgroundColor: surface.bg,
+            border: `1px solid ${surface.border}`,
+            boxShadow: surface.shadow,
           },
         },
       },
-      // Cards inherit the frosted Paper surface; add depth via radius + lift
+      // Cards = same clean surface, moderate radius, subtle lift on hover
       MuiCard: {
         styleOverrides: {
           root: {
-            borderRadius: 18,
-            boxShadow: glass.shadow,
-            transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1), box-shadow 0.28s cubic-bezier(0.4,0,0.2,1)',
-            '&:hover': { boxShadow: glass.shadowHover, transform: 'translateY(-3px)' },
+            borderRadius: 14,
+            boxShadow: surface.shadow,
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            '&:hover': { boxShadow: surface.shadowHover, transform: 'translateY(-2px)' },
           },
         },
       },
-      // Header — frosted top bar
+      // Header bar — frosted glass (allowed per spec: persistent chrome)
       MuiAppBar: {
         styleOverrides: {
           root: {
             backgroundImage: 'none',
-            backgroundColor: glass.bgStrong,
-            backdropFilter: glass.blurStrong,
-            WebkitBackdropFilter: glass.blurStrong,
+            backgroundColor: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(20,18,16,0.85)',
+            backdropFilter: glass.blur,
+            WebkitBackdropFilter: glass.blur,
             boxShadow: 'none',
-            borderBottom: `1px solid ${glass.border}`,
+            borderBottom: `1px solid ${surface.border}`,
           },
         },
       },
-      // Sidebar — frosted floating panel
+      // Sidebar — frosted glass (allowed: persistent chrome)
       MuiDrawer: {
         styleOverrides: {
           paper: {
             border: 'none',
             backgroundImage: 'none',
-            backgroundColor: glass.bgStrong,
-            backdropFilter: glass.blurStrong,
-            WebkitBackdropFilter: glass.blurStrong,
-            borderRight: `1px solid ${glass.border}`,
+            backgroundColor: isLight ? 'rgba(255,255,255,0.90)' : 'rgba(20,18,16,0.90)',
+            backdropFilter: glass.blur,
+            WebkitBackdropFilter: glass.blur,
+            borderRight: `1px solid ${surface.border}`,
             boxShadow: glass.shadow,
           },
         },
       },
-      // Dialogs & popovers/menus — keep dense text crisp
+      // Dialogs — glassmorphic overlay (spec: modals get glass)
       MuiDialog: {
         styleOverrides: {
           paper: {
-            backgroundColor: glass.bgStrong,
-            backdropFilter: glass.blurStrong,
-            WebkitBackdropFilter: glass.blurStrong,
-            border: `1px solid ${glass.borderStrong}`,
+            backgroundColor: glass.bg,
+            backdropFilter: glass.blur,
+            WebkitBackdropFilter: glass.blur,
+            border: `1px solid ${glass.border}`,
             backgroundImage: 'none',
+            borderRadius: 16,
           },
         },
       },
       MuiPopover: {
         styleOverrides: {
           paper: {
-            backgroundColor: glass.bgStrong,
-            backdropFilter: glass.blurStrong,
-            WebkitBackdropFilter: glass.blurStrong,
+            backgroundColor: surface.bg,
+            border: `1px solid ${surface.border}`,
           },
         },
       },
@@ -221,15 +234,14 @@ export const getTheme = (mode = 'dark') => {
             borderRadius: 10,
             padding: '8px 20px',
             fontWeight: 600,
-            transition: 'all 0.2s ease',
+            transition: 'all 0.15s ease',
           },
           contained: {
-            boxShadow: '0 4px 14px rgba(161,109,71,0.35)',
-            '&:hover': { boxShadow: '0 6px 20px rgba(161,109,71,0.48)', transform: 'translateY(-1px)' },
+            boxShadow: `0 2px 8px ${LUXE.burgundy}35`,
+            '&:hover': { boxShadow: `0 4px 14px ${LUXE.burgundy}48`, transform: 'translateY(-1px)' },
           },
           outlined: {
-            borderColor: isLight ? 'rgba(119,111,79,0.35)' : 'rgba(216,202,186,0.22)',
-            backdropFilter: 'blur(6px)',
+            borderColor: isLight ? LUXE.beige : 'rgba(216,202,186,0.20)',
           },
         },
       },
@@ -238,7 +250,7 @@ export const getTheme = (mode = 'dark') => {
           root: {
             '& .MuiOutlinedInput-root': {
               borderRadius: 10,
-              backgroundColor: isLight ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.04)',
+              backgroundColor: isLight ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.03)',
             },
           },
         },
@@ -251,19 +263,21 @@ export const getTheme = (mode = 'dark') => {
       MuiTableCell: {
         styleOverrides: {
           head: {
-            fontWeight: 700, fontSize: '0.8rem',
-            textTransform: 'uppercase', letterSpacing: '0.05em',
-            backgroundColor: isLight ? 'rgba(216,202,186,0.22)' : 'rgba(216,202,186,0.06)',
+            fontWeight: 700, fontSize: '0.78rem',
+            textTransform: 'uppercase', letterSpacing: '0.04em',
+            backgroundColor: isLight ? `${LUXE.beige}22` : 'rgba(216,202,186,0.05)',
+            borderBottomColor: isLight ? LUXE.beige : 'rgba(216,202,186,0.08)',
           },
           root: {
-            borderColor: isLight ? 'rgba(119,111,79,0.14)' : 'rgba(216,202,186,0.08)',
+            borderColor: isLight ? `${LUXE.beige}80` : 'rgba(216,202,186,0.06)',
+            fontSize: '0.84rem',
           },
         },
       },
       MuiTableRow: {
         styleOverrides: {
           root: {
-            '&:hover': { backgroundColor: isLight ? 'rgba(161,109,71,0.06)' : 'rgba(192,173,141,0.06)' },
+            '&:hover': { backgroundColor: isLight ? `${LUXE.burgundy}06` : 'rgba(192,173,141,0.04)' },
           },
         },
       },
@@ -272,13 +286,13 @@ export const getTheme = (mode = 'dark') => {
           root: {
             fontWeight: 600,
             textTransform: 'none',
-            '&.Mui-selected': { color: PALETTE.EARTH },
+            '&.Mui-selected': { color: LUXE.burgundy },
           },
         },
       },
       MuiTabs: {
         styleOverrides: {
-          indicator: { backgroundColor: PALETTE.EARTH },
+          indicator: { backgroundColor: LUXE.burgundy },
         },
       },
     },

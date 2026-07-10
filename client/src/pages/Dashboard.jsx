@@ -236,7 +236,7 @@ const Dashboard = () => {
 
   // Reusable compact KPI card (no sparkline clutter)
   const KpiCard = ({ label, sublabel, value, unit, icon, tint, trendPercent }) => (
-    <Card sx={glassCard}>
+    <Card>
       <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 1.5, minHeight: 138 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
@@ -352,17 +352,17 @@ const Dashboard = () => {
                 icon={<GridIcon />} tint={theme.palette.secondary.main} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard label="Delivered" sublabel="vs prior period" value={stats.delivered.toLocaleString()} unit="pcs"
+              <KpiCard label="Delivery Out" sublabel="vs prior period" value={stats.delivered.toLocaleString()} unit="pcs"
                 icon={<DeliveryIcon />} tint={theme.palette.error.main} trendPercent={stats.comparison.deliveredPercent} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard label="Stock Added" sublabel="vs prior period" value={stats.added.toLocaleString()} unit="pcs"
+              <KpiCard label="Stock In" sublabel="vs prior period" value={stats.added.toLocaleString()} unit="pcs"
                 icon={<PurchaseIcon />} tint={theme.palette.success.main} trendPercent={stats.comparison.addedPercent} />
             </Grid>
           </Grid>
 
           {/* ALERT STRIP */}
-          <Paper sx={{ ...glassCard, py: 1.75, px: 3, mb: 2.5 }} elevation={0}>
+          <Paper sx={{ py: 1.75, px: 3, mb: 2.5 }} elevation={0}>
             <Grid container spacing={2} justifyContent="space-around" alignItems="center">
               <Grid size={{ xs: 6, sm: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/low-stock')}>
@@ -394,7 +394,7 @@ const Dashboard = () => {
           {/* STOCK MOVEMENT + HEALTH ANALYTICS */}
           <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
             <Grid size={{ xs: 12, md: 8 }}>
-              <Paper sx={{ ...glassCard, p: 3, height: 400 }} elevation={0}>
+              <Paper sx={{ p: 3, height: 400 }} elevation={0}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
                   <Typography variant="h6" sx={{ fontWeight: 800 }}>Stock In vs Stock Out</Typography>
                   <ButtonGroup size="small" variant="outlined" color="primary">
@@ -477,7 +477,7 @@ const Dashboard = () => {
 
           {/* AI INVENTORY BRIEF */}
           {aiBrief.length > 0 && (
-            <Paper sx={{ ...glassCard, p: 3, mb: 2.5 }} elevation={0}>
+            <Paper sx={{ p: 3, mb: 2.5 }} elevation={0}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
                 <SparklesIcon color="primary" />
                 <Typography variant="h6" sx={{ fontWeight: 800 }}>AI Inventory Brief</Typography>
@@ -514,7 +514,7 @@ const Dashboard = () => {
           <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
             {/* Needs Attention */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <Paper sx={{ ...glassCard, p: 3, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 340 }} elevation={0}>
+              <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 340 }} elevation={0}>
                 <Typography variant="h6" sx={{ fontWeight: 800, mb: 2.5, color: 'error.main' }}>
                   Needs Attention
                 </Typography>
@@ -595,7 +595,7 @@ const Dashboard = () => {
 
             {/* Opportunities */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <Paper sx={{ ...glassCard, p: 3, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 340 }} elevation={0}>
+              <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 340 }} elevation={0}>
                 <Typography variant="h6" sx={{ fontWeight: 800, mb: 2.5, color: 'success.main' }}>
                   Opportunities
                 </Typography>

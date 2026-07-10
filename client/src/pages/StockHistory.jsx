@@ -187,10 +187,10 @@ const StockHistory = () => {
                 onChange={(e) => { setAction(e.target.value); setPage(0); }}
               >
                 <MenuItem value="">All Actions</MenuItem>
-                <MenuItem value="Increase">Increase (+)</MenuItem>
-                <MenuItem value="Decrease">Decrease (-)</MenuItem>
-                <MenuItem value="Manual Edit">Manual Edit</MenuItem>
-                <MenuItem value="Undo">Undo</MenuItem>
+                <MenuItem value="Increase">Stock In</MenuItem>
+                <MenuItem value="Decrease">Delivery Out</MenuItem>
+                <MenuItem value="Manual Edit">Correction</MenuItem>
+                <MenuItem value="Undo">Reversal</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -226,7 +226,7 @@ const StockHistory = () => {
       {(debouncedSearch || action) && (
         <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            Showing {total} {action ? `${action === 'Increase' ? 'Increase (+)' : action === 'Decrease' ? 'Decrease (-)' : action} ` : ''}transaction{total !== 1 ? 's' : ''}
+            Showing {total} {action ? `${action === 'Increase' ? 'Stock In' : action === 'Decrease' ? 'Delivery Out' : action === 'Manual Edit' ? 'Correction' : action === 'Undo' ? 'Reversal' : action} ` : ''}transaction{total !== 1 ? 's' : ''}
             {debouncedSearch ? ` for "${debouncedSearch}"` : ''}
           </Typography>
         </Box>
@@ -319,13 +319,14 @@ const StockHistory = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={details.action || item.action}
+                        label={item.action === 'Increase' ? 'Stock In' : item.action === 'Decrease' ? 'Delivery Out' : item.action === 'Manual Edit' ? 'Correction' : item.action === 'Undo' ? 'Reversal' : item.action}
                         size="small"
                         color={
                           item.action === 'Increase' ? 'success' :
                             item.action === 'Decrease' ? 'error' :
                               item.action === 'Undo' ? 'warning' : 'default'
                         }
+                        sx={{ fontWeight: 700 }}
                       />
                     </TableCell>
                     <TableCell sx={{ fontSize: '0.8rem', maxWidth: 300 }}>
@@ -385,11 +386,11 @@ const StockHistory = () => {
                   <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                     <Typography color="text.secondary" variant="body1" sx={{ mb: 2 }}>
                       {debouncedSearch && action ? (
-                        `No ${action === 'Increase' ? 'Increase (+)' : action === 'Decrease' ? 'Decrease (-)' : action} transactions found for "${debouncedSearch}".`
+                        `No ${action === 'Increase' ? 'Stock In' : action === 'Decrease' ? 'Delivery Out' : action === 'Manual Edit' ? 'Correction' : action === 'Undo' ? 'Reversal' : action} transactions found for "${debouncedSearch}".`
                       ) : debouncedSearch ? (
                         `No history found for "${debouncedSearch}".`
                       ) : action ? (
-                        `No ${action === 'Increase' ? 'Increase (+)' : action === 'Decrease' ? 'Decrease (-)' : action} transactions found.`
+                        `No ${action === 'Increase' ? 'Stock In' : action === 'Decrease' ? 'Delivery Out' : action === 'Manual Edit' ? 'Correction' : action === 'Undo' ? 'Reversal' : action} transactions found.`
                       ) : (
                         'No transaction history found.'
                       )}

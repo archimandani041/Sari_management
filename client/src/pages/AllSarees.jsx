@@ -24,9 +24,14 @@ import {
   Clear as ClearIcon,
   FileDownload,
   KeyboardArrowDown,
-  KeyboardArrowRight
+  KeyboardArrowRight,
+  WhatsApp as WhatsAppIcon,
+  MoreVert as MoreVertIcon,
+  History as HistoryIcon
 } from '@mui/icons-material';
 import { utils as xlsxUtils, writeFile as xlsxWriteFile } from 'xlsx';
+import RequestStockDialog from '../components/common/RequestStockDialog';
+import { getStockHealth } from '../constants/terms';
 
 // Filter tabs mapped to the existing `status` filter values
 const STATUS_TABS = [
@@ -92,6 +97,23 @@ const AllSarees = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  // Request Stock Dialog
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestCombo, setRequestCombo] = useState(null);
+  const [requestBeamName, setRequestBeamName] = useState('');
+  const [requestSeriesCode, setRequestSeriesCode] = useState('');
+  const [requestSareeId, setRequestSareeId] = useState('');
+  const [requestMovementType, setRequestMovementType] = useState('STOCK_IN');
+
+  const openStockDialog = (combo, beam, saree, type = 'STOCK_IN') => {
+    setRequestCombo(combo);
+    setRequestBeamName(beam.beam_name);
+    setRequestSeriesCode(saree.series_code);
+    setRequestSareeId(saree.id);
+    setRequestMovementType(type);
+    setRequestDialogOpen(true);
+  };
 
   const debouncedSearch = useDebounce(search, 300);
   const debouncedCompany = useDebounce(company, 300);
@@ -659,63 +681,42 @@ const AllSarees = () => {
                                   {/* Combinations under this Beam */}
                                   <Box sx={{ pl: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                                     {beam.combinations?.map((combo) => {
-                                      const isLow = (combo.current_stock ?? 0) <= (combo.minimum_stock ?? 20);
+                                      const health = getStockHealth(combo.current_stock ?? 0, combo.minimum_stock ?? 20);
                                       return (
-                                        <Box key={combo.id} sx={{ p: 1.75, borderRadius: 2.5, border: '1px dashed', borderColor: 'divider', bgcolor: 'background.paper', boxShadow: 'none' }}>
-                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, mb: 1.25 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 800, color: 'primary.main' }}>
+                                        <Box key={combo.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', borderLeft: `3px solid ${health.color}`, bgcolor: 'background.paper', transition: 'box-shadow 0.15s', '&:hover': { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' } }}>
+                                          {/* Top row: name + metadata chips */}
+                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 800 }}>
                                               {combo.combination_name ? renderHighlighted(combo.combination_name) : 'Unnamed Combination'}
                                             </Typography>
-                                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                                              <Chip
-                                                label={combo.brand}
-                                                size="small"
-                                                sx={{
-                                                  height: 18, fontSize: '0.62rem', fontWeight: 800,
-                                                  bgcolor: combo.brand === 'KP' ? 'secondary.light' : 'warning.light',
-                                                  color: combo.brand === 'KP' ? 'secondary.contrastText' : 'warning.dark'
-                                                }}
-                                              />
-                                              <Chip
-                                                label={`${combo.current_stock} pcs`}
-                                                size="small"
-                                                color={isLow ? 'warning' : 'default'}
-                                                sx={{ height: 18, fontSize: '0.62rem', fontWeight: 800 }}
-                                              />
-                                              <Chip
-                                                label={combo.status}
-                                                size="small"
-                                                variant="outlined"
-                                                color={combo.status === 'In Stock' ? 'success' : 'info'}
-                                                sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700 }}
-                                              />
+                                            <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
+                                              {combo.brand && <Chip label={combo.brand} size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800, bgcolor: combo.brand === 'KP' ? 'rgba(114,56,61,0.12)' : 'rgba(245,158,11,0.14)', color: combo.brand === 'KP' ? 'primary.main' : 'warning.dark' }} />}
+                                              <Chip label={`${combo.current_stock ?? 0} pcs`} size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800, bgcolor: `${health.color}18`, color: health.color }} />
+                                              {combo.status && <Chip label={combo.status} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.62rem', fontWeight: 700, borderColor: combo.status === 'In Stock' ? 'success.main' : 'info.main', color: combo.status === 'In Stock' ? 'success.main' : 'info.main' }} />}
                                             </Box>
                                           </Box>
 
-                                          {combo.notes && (
-                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.25, fontStyle: 'italic' }}>
-                                              Note: {renderHighlighted(combo.notes)}
-                                            </Typography>
-                                          )}
-
-                                          {/* Colors under this Combination */}
-                                          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                                          {/* F-Colors inline */}
+                                          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.25 }}>
                                             {combo.combination_colors?.map((col) => (
-                                              <Chip
-                                                key={col.id}
-                                                variant="outlined"
-                                                label={
-                                                  <Box component="span" sx={{ fontSize: '0.7rem' }}>
-                                                    <strong>{col.f_number}</strong>: {renderHighlighted(col.color_name, 'color')}
-                                                    {col.company_name && (
-                                                      <span style={{ opacity: 0.8 }}> ({renderHighlighted(col.company_name, 'company')})</span>
-                                                    )}
-                                                  </Box>
-                                                }
-                                                size="small"
-                                                sx={{ height: 22, bgcolor: 'rgba(255,255,255,0.03)' }}
-                                              />
+                                              <Typography key={col.id} component="span" sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                                                <strong>{col.f_number}</strong> {renderHighlighted(col.color_name, 'color')}{col.company_name ? ` (${renderHighlighted(col.company_name, 'company')})` : ''}
+                                                {combo.combination_colors.indexOf(col) < combo.combination_colors.length - 1 ? ' · ' : ''}
+                                              </Typography>
                                             ))}
+                                          </Box>
+
+                                          {/* Action buttons */}
+                                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                            <Button size="small" variant="outlined" color="success" startIcon={<WhatsAppIcon sx={{ fontSize: 14 }} />} onClick={() => openStockDialog(combo, beam, saree, 'STOCK_IN')} sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 2, textTransform: 'none' }}>
+                                              Stock In
+                                            </Button>
+                                            <Button size="small" variant="outlined" color="warning" onClick={() => openStockDialog(combo, beam, saree, 'DELIVERY_OUT')} sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 2, textTransform: 'none' }}>
+                                              Delivery Out
+                                            </Button>
+                                            <Button size="small" variant="text" startIcon={<HistoryIcon sx={{ fontSize: 14 }} />} onClick={() => navigate('/history')} sx={{ fontSize: '0.72rem', fontWeight: 600, borderRadius: 2, textTransform: 'none', color: 'text.secondary' }}>
+                                              History
+                                            </Button>
                                           </Box>
                                         </Box>
                                       );
@@ -806,6 +807,21 @@ const AllSarees = () => {
           <Button onClick={() => setSnackbarOpen(false)} variant="contained" size="small">OK</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Request Stock Dialog */}
+      <RequestStockDialog
+        open={requestDialogOpen}
+        onClose={() => setRequestDialogOpen(false)}
+        combination={requestCombo}
+        beamName={requestBeamName}
+        seriesCode={requestSeriesCode}
+        sareeId={requestSareeId}
+        initialMovementType={requestMovementType}
+        onSuccess={() => {
+          fetchSarees();
+          setRequestDialogOpen(false);
+        }}
+      />
     </Box>
   );
 };

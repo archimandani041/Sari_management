@@ -1,7 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+/* ── KP Creation — Global Stylesheet ───────────────────────────
+   LUXE Design System: Charcoal · Burgundy · Taupe · Beige · Linen
+   ─────────────────────────────────────────────────────────────── */
 
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;0,900;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600&display=swap');
+
+/* ── LUXE Color Tokens ─────────────────────────────────────── */
 :root {
-  font-family: 'Plus Jakarta Sans', 'Outfit', system-ui, -apple-system, sans-serif;
+  --color-charcoal:  #322D29;
+  --color-burgundy:  #72383D;
+  --color-taupe:     #AC9C8D;
+  --color-grey:      #D9D9D9;
+  --color-beige:     #D1C7BD;
+  --color-linen:     #EFE9E1;
+
+  /* Status palette (distinct from burgundy primary) */
+  --status-healthy:   #22C55E;
+  --status-low:       #F59E0B;
+  --status-critical:  #EF4444;
+  --status-delivery:  #38BDF8;
+
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color-scheme: light dark;
@@ -16,7 +34,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Respect reduced-motion preference */
+/* ── Typography helpers ─────────────────────────────────────── */
+.font-serif {
+  font-family: 'Playfair Display', Georgia, serif !important;
+}
+
+/* ── Reduced-motion preference ─────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.001ms !important;
@@ -24,10 +47,10 @@ body {
   }
 }
 
-/* Custom Scrollbar for modern look */
+/* ── Custom Scrollbar ───────────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -35,15 +58,32 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(161, 109, 71, 0.35);
+  background: rgba(114, 56, 61, 0.30);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(161, 109, 71, 0.60);
+  background: rgba(114, 56, 61, 0.55);
 }
 
-/* Print CSS Stylesheet */
+/* ── Accordion / Expand row animations ─────────────────────── */
+.combo-row-enter {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.combo-row-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+/* ── Status badge helpers ───────────────────────────────────── */
+.status-healthy  { color: var(--status-healthy) !important; }
+.status-low      { color: var(--status-low) !important; }
+.status-critical { color: var(--status-critical) !important; }
+.status-delivery { color: var(--status-delivery) !important; }
+
+/* ── Print CSS ──────────────────────────────────────────────── */
 @media print {
   body {
     background: white !important;
@@ -73,8 +113,7 @@ body {
     background: transparent !important;
   }
 
-  svg,
-  canvas {
+  svg, canvas {
     max-width: 100% !important;
   }
 }

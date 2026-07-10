@@ -25,33 +25,33 @@ import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 
 const DRAWER_WIDTH = 264;
 
-// Grouped nav — sections rendered with muted uppercase headers
+// Grouped nav — spec §4 final structure
 const navSections = [
   {
     heading: 'Main',
     items: [
-      { label: 'Dashboard', path: '/', icon: <DashboardIcon />, roles: ['admin', 'staff'] },
-      { label: 'All Sarees', path: '/sarees', icon: <SareeIcon />, roles: ['admin', 'staff'] },
+      { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
+      { label: 'All Sarees', path: '/sarees', icon: <SareeIcon /> },
     ],
   },
   {
     heading: 'Inventory',
     items: [
-      { label: 'Low Stock', path: '/low-stock', icon: <LowStockIcon />, roles: ['admin', 'staff'], badge: true },
-      { label: 'Stock History', path: '/history', icon: <HistoryIcon />, roles: ['admin', 'staff'] },
+      { label: 'Low Stock', path: '/low-stock', icon: <LowStockIcon />, badge: true },
+      { label: 'Stock Requests', path: '/stock-requests', icon: <WhatsAppIcon /> },
+      { label: 'Stock History', path: '/history', icon: <HistoryIcon /> },
     ],
   },
   {
-    heading: 'Operations',
+    heading: 'Business',
     items: [
-      { label: 'Suppliers', path: '/suppliers', icon: <PeopleIcon />, roles: ['admin', 'staff'] },
-      { label: 'Stock Requests', path: '/stock-requests', icon: <WhatsAppIcon />, roles: ['admin', 'staff'] },
+      { label: 'Suppliers', path: '/suppliers', icon: <PeopleIcon /> },
     ],
   },
   {
-    heading: 'Back Office',
+    heading: 'System',
     items: [
-      { label: 'Settings', path: '/settings', icon: <SettingsIcon />, roles: ['admin'] },
+      { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
     ],
   },
 ];
