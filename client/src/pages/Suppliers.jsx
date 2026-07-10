@@ -25,7 +25,7 @@ import { useAuth } from '../contexts/AuthContext';
 const EMPTY_FORM = { name: '', company_name: '', mobile: '', email: '', address: '', notes: '' };
 
 const Suppliers = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isStaff } = useAuth();
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -104,7 +104,7 @@ const Suppliers = () => {
             Manage your fabric suppliers and link them to sari combinations
           </Typography>
         </Box>
-        {isAdmin && (
+        {(isAdmin || isStaff) && (
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate} size="large">
             Add Supplier
           </Button>
@@ -131,7 +131,7 @@ const Suppliers = () => {
                 <TableCell sx={{ fontWeight: 700 }}>Mobile</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Notes</TableCell>
-                {isAdmin && <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>}
+                {(isAdmin || isStaff) && <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -184,7 +184,7 @@ const Suppliers = () => {
                       {s.notes || '—'}
                     </Typography>
                   </TableCell>
-                  {isAdmin && (
+                  {(isAdmin || isStaff) && (
                     <TableCell align="right">
                       <Tooltip title="Edit"><IconButton size="small" color="info" onClick={() => openEdit(s)}><EditIcon fontSize="small" /></IconButton></Tooltip>
                       <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => openDelete(s.id)}><DeleteIcon fontSize="small" /></IconButton></Tooltip>

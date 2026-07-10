@@ -64,7 +64,7 @@ const StockBar = ({ total, min, max, barColor }) => {
 };
 
 const AllSarees = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isStaff } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -358,7 +358,7 @@ const AllSarees = () => {
           <Button variant="outlined" startIcon={<FileDownload />} onClick={handleExportExcel}>
             Export
           </Button>
-          {isAdmin && (
+          {(isAdmin || isStaff) && (
             <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/sarees/add')}>
               Add New Saree
             </Button>
@@ -598,7 +598,7 @@ const AllSarees = () => {
                               <Visibility fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          {isAdmin && (
+                          {(isAdmin || isStaff) && (
                             <>
                               <Tooltip title="Edit">
                                 <IconButton onClick={() => navigate(`/sarees/edit/${saree.id}`)} size="small" sx={{ color: 'primary.main' }}>

@@ -31,7 +31,7 @@ import { useSnackbar } from 'notistack';
 const SareeDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isStaff } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
   const { addRecentlyViewed, toggleFavorite, isFavorite } = useApp();
 
@@ -150,7 +150,7 @@ const SareeDetail = () => {
         </Box>
         <Box sx={{ display: 'flex', gap: 1.5 }}>
           <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()}>Print Stock Sheet</Button>
-          {isAdmin && (
+          {(isAdmin || isStaff) && (
             <>
               <Button variant="outlined" color="secondary" startIcon={<FiberNewIcon />} onClick={() => setSeriesConfirmOpen(true)}>Next Series</Button>
               <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/sarees/edit/${saree.id}`)}>Edit Saree</Button>

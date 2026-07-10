@@ -22,7 +22,7 @@ const STATUS_COLORS = { Requested: 'warning', Confirmed: 'info', Received: 'succ
 const STATUS_ICONS = { Requested: <HistoryIcon fontSize="small" />, Confirmed: <CheckCircleIcon fontSize="small" />, Received: <LocalShippingIcon fontSize="small" />, Cancelled: <CancelIcon fontSize="small" /> };
 
 const StockRequests = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isStaff } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
@@ -173,7 +173,7 @@ const StockRequests = () => {
                     />
                   </TableCell>
                   <TableCell align="center">
-                    {isAdmin ? (
+                    {(isAdmin || isStaff) ? (
                       <Select
                         value={req.status} size="small" variant="outlined"
                         onChange={e => handleStatusChange(req.id, e.target.value)}
@@ -198,7 +198,7 @@ const StockRequests = () => {
                         </IconButton>
                       </Tooltip>
                     )}
-                    {isAdmin && (
+                    {(isAdmin || isStaff) && (
                       <Tooltip title="Delete">
                         <IconButton size="small" color="error" onClick={() => setDeleteId(req.id)}>
                           <DeleteIcon fontSize="small" />

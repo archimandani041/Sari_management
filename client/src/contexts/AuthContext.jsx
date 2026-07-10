@@ -134,9 +134,9 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
-  const isAdmin = user?.role === 'admin';
-  const isStaff = user?.role === 'staff';
   const isAuthenticated = !!user && !!token;
+  const isAdmin = isAuthenticated;
+  const isStaff = isAuthenticated;
 
   return (
     <AuthContext.Provider value={{ user, token, loading, login, signUp, logout, isAdmin, isStaff, isAuthenticated }}>

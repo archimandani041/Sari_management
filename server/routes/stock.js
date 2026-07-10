@@ -5,7 +5,7 @@ const { authenticate, authorize } = require('../middleware/auth');
 const { validateStockUpdate } = require('../middleware/validation');
 
 router.patch('/update', authenticate, validateStockUpdate, updateStock);
-router.patch('/undo/:historyId', authenticate, authorize('admin'), undoStockChange);
+router.patch('/undo/:historyId', authenticate, authorize('admin', 'staff'), undoStockChange);
 router.get('/history', authenticate, getHistory);
 
 module.exports = router;

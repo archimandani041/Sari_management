@@ -23,10 +23,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    // Redirect to home if they don't have permission
-    return <Navigate to="/" replace />;
-  }
+  // Allow access to all authenticated users
 
   return children;
 };

@@ -151,7 +151,7 @@ const Sidebar = () => {
       {/* Navigation */}
       <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5, py: 0.5 }}>
         {navSections.map((section) => {
-          const items = section.items.filter(item => item.roles.includes(user?.role));
+          const items = section.items;
           if (items.length === 0) return null;
           return (
             <Box key={section.heading} sx={{ mb: 1.5 }}>

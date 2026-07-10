@@ -54,11 +54,11 @@ const AppContent = () => {
                   <Route path="/suppliers" element={<Suppliers />} />
                   <Route path="/stock-requests" element={<StockRequests />} />
 
-                  {/* Admin Only Actions */}
+                  {/* Admin & Staff Saree Mutations */}
                   <Route
                     path="/sarees/add"
                     element={
-                      <ProtectedRoute allowedRoles={['admin']}>
+                      <ProtectedRoute allowedRoles={['admin', 'staff']}>
                         <SareeForm />
                       </ProtectedRoute>
                     }
@@ -66,7 +66,7 @@ const AppContent = () => {
                   <Route
                     path="/sarees/edit/:id"
                     element={
-                      <ProtectedRoute allowedRoles={['admin']}>
+                      <ProtectedRoute allowedRoles={['admin', 'staff']}>
                         <SareeEdit />
                       </ProtectedRoute>
                     }
