@@ -17,14 +17,32 @@ app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());
-// Allow dynamic localhost ports in development
-const allowedOrigins = ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176'];
+// Build the list of allowed origins:
+// - In development: all localhost ports
+// - In production: ALLOWED_ORIGINS (comma-separated) or fallback to FRONTEND_URL
+const devOrigins = ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176'];
+
+const productionOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
+  : (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []);
+
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow server-to-server / curl with no origin header
+    if (!origin) return callback(null, true);
+
     if (process.env.NODE_ENV === 'production') {
-      callback(null, process.env.FRONTEND_URL);
+      // Allow any vercel.app preview URL belonging to this project, or any explicit allowed origin
+      const isAllowed =
+        productionOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app');
+      if (isAllowed) {
+        callback(null, origin);
+      } else {
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+      }
     } else {
-      if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
+      if (devOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
