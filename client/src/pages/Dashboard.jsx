@@ -71,7 +71,7 @@ const Dashboard = () => {
       if (!item.sareeId || !item.id) return;
       const res = await sareeAPI.getById(item.sareeId);
       const saree = res.data;
-      
+
       let matchedBeam = null;
       let matchedCombo = null;
       for (const b of saree.beams || []) {
@@ -83,7 +83,7 @@ const Dashboard = () => {
           }
         }
       }
-      
+
       if (matchedCombo) {
         setSelectedCombo(matchedCombo);
         setSelectedBeamName(matchedBeam?.beam_name || 'Beam');
@@ -518,7 +518,7 @@ const Dashboard = () => {
                 <Typography variant="h6" sx={{ fontWeight: 800, mb: 2.5, color: 'error.main' }}>
                   Needs Attention
                 </Typography>
-                
+
                 {needsAttention.length === 0 ? (
                   <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 6, color: 'text.secondary' }}>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>Nothing needs attention right now.</Typography>
@@ -564,7 +564,7 @@ const Dashboard = () => {
                               sx={{ height: 20, fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase' }}
                             />
                           </Box>
-                          
+
                           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                             <Button
                               size="small"
@@ -599,7 +599,7 @@ const Dashboard = () => {
                 <Typography variant="h6" sx={{ fontWeight: 800, mb: 2.5, color: 'success.main' }}>
                   Opportunities
                 </Typography>
-                
+
                 {opportunities.length === 0 ? (
                   <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 6, color: 'text.secondary' }}>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>No opportunities in this range.</Typography>
@@ -644,7 +644,7 @@ const Dashboard = () => {
                             sx={{ height: 20, fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase' }}
                           />
                         </Box>
-                        
+
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                           <Button
                             size="small"

@@ -12,18 +12,18 @@ import { createTheme } from '@mui/material/styles';
 
 // ── LUXE palette tokens ────────────────────────────────────────
 export const LUXE = {
-  charcoal:  '#322D29',
-  burgundy:  '#72383D',
-  taupe:     '#AC9C8D',
-  grey:      '#D9D9D9',
-  beige:     '#D1C7BD',
-  linen:     '#EFE9E1',
+  charcoal: '#322D29',
+  burgundy: '#72383D',
+  taupe: '#AC9C8D',
+  grey: '#D9D9D9',
+  beige: '#D1C7BD',
+  linen: '#EFE9E1',
 };
 
 // Status colors (separate from primary burgundy)
 export const STATUS = {
-  healthy:  '#22C55E',
-  low:      '#F59E0B',
+  healthy: '#22C55E',
+  low: '#F59E0B',
   critical: '#EF4444',
   delivery: '#38BDF8',
 };
@@ -92,8 +92,8 @@ export const getTheme = (mode = 'dark') => {
       },
       success: { main: STATUS.healthy, light: '#4ADE80', dark: '#16A34A' },
       warning: { main: STATUS.low, light: '#FBBF24', dark: '#D97706' },
-      error:   { main: STATUS.critical, light: '#F87171', dark: '#DC2626' },
-      info:    { main: STATUS.delivery, light: '#7DD3FC', dark: '#0EA5E9' },
+      error: { main: STATUS.critical, light: '#F87171', dark: '#DC2626' },
+      info: { main: STATUS.delivery, light: '#7DD3FC', dark: '#0EA5E9' },
       background: {
         default: isLight ? LUXE.linen : LUXE.charcoal,
         paper: surface.bg,
