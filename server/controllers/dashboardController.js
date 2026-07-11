@@ -325,7 +325,7 @@ const getDashboard = async (req, res) => {
 
     // Match each Saree with current stock and calculate trend/days remaining
     const sareeStockLevels = {};
-    combos.forEach(c => {
+    (combos || []).forEach(c => {
       const code = c.beams?.sarees?.series_code || 'UNKNOWN';
       sareeStockLevels[code] = (sareeStockLevels[code] || 0) + (c.current_stock || 0);
     });
@@ -361,7 +361,7 @@ const getDashboard = async (req, res) => {
     // Evaluate stockout risk and stagnant items
     const fortyFiveDaysAgo = new Date(); fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45);
 
-    combos.forEach(c => {
+    (combos || []).forEach(c => {
       const seriesCode = c.beams?.sarees?.series_code || 'UNKNOWN';
       const name = `${seriesCode} - ${c.beams?.beam_name} (${c.combination_name || 'Combo'})`;
       const isLow = (c.current_stock ?? 0) <= (c.minimum_stock ?? 20);
@@ -410,7 +410,7 @@ const getDashboard = async (req, res) => {
     }
 
     if (lowStockCount > 0) {
-      const lowC = combos.find(c => (c.current_stock ?? 0) <= (c.minimum_stock ?? 20));
+      const lowC = (combos || []).find(c => (c.current_stock ?? 0) <= (c.minimum_stock ?? 20));
       if (lowC) {
         aiBrief.push({
           id: 'safety-alert',
@@ -423,7 +423,7 @@ const getDashboard = async (req, res) => {
       }
     }
 
-    const stagnantC = combos.find(c => {
+    const stagnantC = (combos || []).find(c => {
       const hasRecent = parsedHistory.some(h => h.combination_id === c.id && h.createdDate >= fortyFiveDaysAgo);
       return !hasRecent && c.current_stock > 100;
     });
