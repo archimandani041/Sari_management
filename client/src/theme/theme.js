@@ -17,7 +17,7 @@ export const LUXE = {
   taupe: '#AC9C8D',
   grey: '#D9D9D9',
   beige: '#D1C7BD',
-  linen: '#EFE9E1',
+  linen: '#FFFFFF',
 };
 
 // Status colors (separate from primary burgundy)
@@ -46,10 +46,7 @@ export const CHART_COLORS = [
 
 // Ambient page gradient (subtle, not heavy)
 export const APP_BACKGROUND = {
-  light: `
-    radial-gradient(900px 520px at 10% -8%, rgba(172,156,141,0.25), transparent 60%),
-    radial-gradient(760px 520px at 100% 0%, rgba(114,56,61,0.10), transparent 55%),
-    ${LUXE.linen}`,
+  light: '#FFFFFF',
   dark: `
     radial-gradient(900px 520px at 10% -8%, rgba(114,56,61,0.15), transparent 60%),
     radial-gradient(760px 520px at 100% 0%, rgba(172,156,141,0.08), transparent 55%),
