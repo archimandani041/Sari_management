@@ -38,6 +38,23 @@ const authenticate = async (req, res, next) => {
       return res.status(500).json({ error: 'Internal server error checking user.' });
     }
 
+    // Self-healing: if the user exists in public.users but has role 'staff' (due to DB default trigger insertion)
+    // and is not the seed staff account, promote them to 'admin' to ensure strict data isolation.
+    if (user && user.role === 'staff' && user.email !== 'staff@saristockmanager.com') {
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update({ role: 'admin' })
+        .eq('id', user.id)
+        .select('*')
+        .single();
+
+      if (!updateError && updatedUser) {
+        user = updatedUser;
+      } else {
+        console.error('Failed to self-heal user role to admin:', updateError);
+      }
+    }
+
     // Self-healing: if the user exists in auth.users but not in public.users, create it
     if (!user) {
       const email = authUser.email;
