@@ -234,15 +234,36 @@ const getDashboard = async (req, res) => {
     const { count: totalSarees } = await supabase
       .from('sarees').select('*', { count: 'exact', head: true }).eq('owner_id', ownerId);
 
-    const { data: combos } = await supabase
-      .from('combinations')
-      .select('id, combination_name, current_stock, minimum_stock, brand, status, beam_id, beams(saree_id, beam_name, sarees(series_code, price, owner_id))')
-      .filter('beams.sarees.owner_id', 'eq', ownerId);
+    // Query via sarees (owner-scoped) → beams → combinations so we ONLY get this owner's data.
+    // DO NOT query combinations directly and use .filter() on a join — that returns all rows
+    // in combinations table and only nullifies the nested join, leaking other users' data.
+    const { data: ownerSarees } = await supabase
+      .from('sarees')
+      .select('id, series_code, price, beams(id, saree_id, beam_name, combinations(id, combination_name, current_stock, minimum_stock, brand, status))')
+      .eq('owner_id', ownerId);
 
-    const totalStock = (combos || []).filter(c => c.beams?.sarees?.owner_id === ownerId).reduce((sum, c) => sum + (c.current_stock || 0), 0);
-    const ownedCombos = (combos || []).filter(c => c.beams?.sarees?.owner_id === ownerId);
-    const lowStockCount = ownedCombos.filter(c => (c.current_stock ?? 0) <= (c.minimum_stock ?? 20)).length;
-    const outOfStock = ownedCombos.filter(c => (c.current_stock ?? 0) === 0).length;
+    // Flatten into a combos array that mirrors the old shape, strictly scoped to this owner
+    const combos = [];
+    (ownerSarees || []).forEach(saree => {
+      (saree.beams || []).forEach(beam => {
+        (beam.combinations || []).forEach(combo => {
+          combos.push({
+            ...combo,
+            beams: {
+              saree_id: saree.id,
+              beam_name: beam.beam_name,
+              sarees: { series_code: saree.series_code, price: saree.price, owner_id: ownerId }
+            }
+          });
+        });
+      });
+    });
+
+    // All combos are already owner-scoped — no further filtering needed
+    const ownedCombos = combos;
+    const totalStock = combos.reduce((sum, c) => sum + (c.current_stock || 0), 0);
+    const lowStockCount = combos.filter(c => (c.current_stock ?? 0) <= (c.minimum_stock ?? 20)).length;
+    const outOfStock = combos.filter(c => (c.current_stock ?? 0) === 0).length;
 
     const { count: pendingRequests } = await supabase
       .from('stock_requests').select('*', { count: 'exact', head: true }).eq('status', 'Requested').eq('owner_id', ownerId);
@@ -361,7 +382,8 @@ const getDashboard = async (req, res) => {
     // Evaluate stockout risk and stagnant items
     const fortyFiveDaysAgo = new Date(); fortyFiveDaysAgo.setDate(fortyFiveDaysAgo.getDate() - 45);
 
-    (combos || []).forEach(c => {
+    // combos is already owner-scoped — iterate directly
+    combos.forEach(c => {
       const seriesCode = c.beams?.sarees?.series_code || 'UNKNOWN';
       const name = `${seriesCode} - ${c.beams?.beam_name} (${c.combination_name || 'Combo'})`;
       const isLow = (c.current_stock ?? 0) <= (c.minimum_stock ?? 20);
@@ -410,7 +432,7 @@ const getDashboard = async (req, res) => {
     }
 
     if (lowStockCount > 0) {
-      const lowC = (combos || []).find(c => (c.current_stock ?? 0) <= (c.minimum_stock ?? 20));
+      const lowC = combos.find(c => (c.current_stock ?? 0) <= (c.minimum_stock ?? 20));
       if (lowC) {
         aiBrief.push({
           id: 'safety-alert',
@@ -423,7 +445,7 @@ const getDashboard = async (req, res) => {
       }
     }
 
-    const stagnantC = (combos || []).find(c => {
+    const stagnantC = combos.find(c => {
       const hasRecent = parsedHistory.some(h => h.combination_id === c.id && h.createdDate >= fortyFiveDaysAgo);
       return !hasRecent && c.current_stock > 100;
     });
@@ -439,7 +461,7 @@ const getDashboard = async (req, res) => {
     }
 
     // Additional dynamic logic
-    const totalValuation = (combos || []).reduce((acc, c) => acc + ((c.current_stock || 0) * (c.beams?.sarees?.price || 0)), 0);
+    const totalValuation = combos.reduce((acc, c) => acc + ((c.current_stock || 0) * (c.beams?.sarees?.price || 0)), 0);
     if (totalValuation > 0) {
       aiBrief.push({
         id: 'value-info',
@@ -503,7 +525,7 @@ const getDashboard = async (req, res) => {
         lowStock: lowStockCount,
         outOfStock,
         pendingRequests,
-        inDelivery: (combos || []).filter(c => c.status === 'In Delivery').length
+        inDelivery: combos.filter(c => c.status === 'In Delivery').length
       },
       sparklines: {
         sarees: sareesSparkline,
