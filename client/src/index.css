@@ -22,13 +22,14 @@
   font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  background-color: #FFFFFF;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -58,12 +59,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(114, 56, 61, 0.30);
+  background: rgba(172, 156, 141, 0.40);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(114, 56, 61, 0.55);
+  background: rgba(114, 56, 61, 0.50);
 }
 
 /* ── Accordion / Expand row animations ─────────────────────── */

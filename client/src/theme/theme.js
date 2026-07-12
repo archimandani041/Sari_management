@@ -17,7 +17,7 @@ export const LUXE = {
   taupe: '#AC9C8D',
   grey: '#D9D9D9',
   beige: '#D1C7BD',
-  linen: '#EFE9E1',
+  linen: '#FFFFFF',
 };
 
 // Status colors (separate from primary burgundy)
@@ -38,18 +38,15 @@ export const PALETTE = {
   LINEN: LUXE.linen,
 };
 
-export const SIDEBAR_BG = { light: '#FFFFFF', dark: '#141210' };
+export const SIDEBAR_BG = { light: '#FAFAFA', dark: '#141210' };
 
 export const CHART_COLORS = [
   LUXE.burgundy, LUXE.taupe, LUXE.beige, LUXE.charcoal, '#8B5E3C', '#D2B896',
 ];
 
-// Ambient page gradient (subtle, not heavy)
+// Ambient page background — pure white in light mode
 export const APP_BACKGROUND = {
-  light: `
-    radial-gradient(900px 520px at 10% -8%, rgba(172,156,141,0.25), transparent 60%),
-    radial-gradient(760px 520px at 100% 0%, rgba(114,56,61,0.10), transparent 55%),
-    ${LUXE.linen}`,
+  light: '#FFFFFF',
   dark: `
     radial-gradient(900px 520px at 10% -8%, rgba(114,56,61,0.15), transparent 60%),
     radial-gradient(760px 520px at 100% 0%, rgba(172,156,141,0.08), transparent 55%),
@@ -70,9 +67,9 @@ export const getTheme = (mode = 'dark') => {
   // Card / Paper surface — clean solid, NOT glassmorphic
   const surface = {
     bg: isLight ? '#FFFFFF' : '#24201E',
-    border: isLight ? LUXE.beige : 'rgba(216,202,186,0.10)',
-    shadow: isLight ? '0 1px 3px rgba(0,0,0,0.06)' : '0 1px 3px rgba(0,0,0,0.20)',
-    shadowHover: isLight ? '0 4px 12px rgba(0,0,0,0.08)' : '0 4px 12px rgba(0,0,0,0.30)',
+    border: isLight ? '#E8E2DC' : 'rgba(216,202,186,0.10)',
+    shadow: isLight ? '0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04)' : '0 1px 3px rgba(0,0,0,0.20)',
+    shadowHover: isLight ? '0 6px 20px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04)' : '0 4px 12px rgba(0,0,0,0.30)',
   };
 
   return createTheme({
@@ -95,27 +92,27 @@ export const getTheme = (mode = 'dark') => {
       error: { main: STATUS.critical, light: '#F87171', dark: '#DC2626' },
       info: { main: STATUS.delivery, light: '#7DD3FC', dark: '#0EA5E9' },
       background: {
-        default: isLight ? LUXE.linen : LUXE.charcoal,
+        default: '#FFFFFF',
         paper: surface.bg,
       },
       text: {
         primary: isLight ? LUXE.charcoal : LUXE.linen,
-        secondary: isLight ? LUXE.taupe : LUXE.beige,
+        secondary: isLight ? '#6B6360' : LUXE.beige,
       },
-      divider: isLight ? `${LUXE.beige}` : 'rgba(216,202,186,0.10)',
+      divider: isLight ? '#EDE8E3' : 'rgba(216,202,186,0.10)',
       // Custom tokens accessible via theme.palette.*
       glass,
       surface,
       sidebar: {
-        bg: isLight ? 'rgba(255,255,255,0.90)' : 'rgba(36,32,30,0.90)',
-        active: isLight ? `${LUXE.burgundy}14` : `${LUXE.burgundy}22`,
+        bg: isLight ? '#FAFAFA' : 'rgba(36,32,30,0.90)',
+        active: isLight ? `${LUXE.burgundy}12` : `${LUXE.burgundy}22`,
       },
       brand: {
         main: LUXE.burgundy,
         light: LUXE.taupe,
         dark: LUXE.charcoal,
         sand: LUXE.beige,
-        linen: LUXE.linen,
+        linen: '#FFFFFF',
       },
     },
     typography: {
@@ -138,11 +135,11 @@ export const getTheme = (mode = 'dark') => {
     shadows: [
       'none',
       surface.shadow,
-      '0 2px 6px rgba(0,0,0,0.08)',
-      '0 4px 12px rgba(0,0,0,0.10)',
-      '0 6px 16px rgba(0,0,0,0.12)',
-      '0 8px 24px rgba(0,0,0,0.14)',
-      ...Array(19).fill('0 10px 30px rgba(0,0,0,0.16)'),
+      isLight ? '0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.03)' : '0 2px 6px rgba(0,0,0,0.15)',
+      isLight ? '0 4px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)' : '0 4px 12px rgba(0,0,0,0.20)',
+      isLight ? '0 8px 24px rgba(0,0,0,0.09)' : '0 6px 16px rgba(0,0,0,0.25)',
+      isLight ? '0 12px 32px rgba(0,0,0,0.10)' : '0 8px 24px rgba(0,0,0,0.30)',
+      ...Array(19).fill(isLight ? '0 16px 40px rgba(0,0,0,0.12)' : '0 10px 30px rgba(0,0,0,0.35)'),
     ],
     components: {
       MuiCssBaseline: {
@@ -166,6 +163,11 @@ export const getTheme = (mode = 'dark') => {
             backgroundColor: surface.bg,
             border: `1px solid ${surface.border}`,
             boxShadow: surface.shadow,
+            transition: 'box-shadow 0.2s ease',
+          },
+          outlined: {
+            border: `1px solid ${surface.border}`,
+            boxShadow: 'none',
           },
         },
       },
@@ -175,35 +177,37 @@ export const getTheme = (mode = 'dark') => {
           root: {
             borderRadius: 14,
             boxShadow: surface.shadow,
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-            '&:hover': { boxShadow: surface.shadowHover, transform: 'translateY(-2px)' },
+            border: `1px solid ${surface.border}`,
+            backgroundImage: 'none',
+            transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+            '&:hover': { boxShadow: surface.shadowHover, transform: 'translateY(-1px)' },
           },
         },
       },
-      // Header bar — frosted glass (allowed per spec: persistent chrome)
+      // Header bar — clean white, no frosted effect
       MuiAppBar: {
         styleOverrides: {
           root: {
             backgroundImage: 'none',
-            backgroundColor: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(36,32,30,0.85)',
-            backdropFilter: glass.blur,
-            WebkitBackdropFilter: glass.blur,
-            boxShadow: 'none',
-            borderBottom: `1px solid ${surface.border}`,
+            backgroundColor: isLight ? '#FFFFFF' : 'rgba(36,32,30,0.95)',
+            backdropFilter: 'none',
+            WebkitBackdropFilter: 'none',
+            boxShadow: isLight ? '0 1px 0 #EDE8E3' : 'none',
+            borderBottom: isLight ? '1px solid #EDE8E3' : `1px solid ${surface.border}`,
           },
         },
       },
-      // Sidebar — frosted glass (allowed: persistent chrome)
+      // Sidebar — clean solid, no frosted effect
       MuiDrawer: {
         styleOverrides: {
           paper: {
             border: 'none',
             backgroundImage: 'none',
-            backgroundColor: isLight ? 'rgba(255,255,255,0.90)' : 'rgba(36,32,30,0.90)',
-            backdropFilter: glass.blur,
-            WebkitBackdropFilter: glass.blur,
-            borderRight: `1px solid ${surface.border}`,
-            boxShadow: glass.shadow,
+            backgroundColor: isLight ? '#FAFAFA' : 'rgba(36,32,30,0.97)',
+            backdropFilter: 'none',
+            WebkitBackdropFilter: 'none',
+            borderRight: isLight ? '1px solid #EDE8E3' : `1px solid ${surface.border}`,
+            boxShadow: 'none',
           },
         },
       },
@@ -250,7 +254,17 @@ export const getTheme = (mode = 'dark') => {
           root: {
             '& .MuiOutlinedInput-root': {
               borderRadius: 10,
-              backgroundColor: isLight ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.03)',
+              backgroundColor: isLight ? '#FFFFFF' : 'rgba(255,255,255,0.04)',
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: isLight ? LUXE.taupe : 'rgba(216,202,186,0.35)',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: LUXE.burgundy,
+                borderWidth: '1.5px',
+              },
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: isLight ? '#DDD7D2' : 'rgba(216,202,186,0.18)',
             },
           },
         },
@@ -265,11 +279,12 @@ export const getTheme = (mode = 'dark') => {
           head: {
             fontWeight: 700, fontSize: '0.78rem',
             textTransform: 'uppercase', letterSpacing: '0.04em',
-            backgroundColor: isLight ? `${LUXE.beige}22` : 'rgba(216,202,186,0.05)',
-            borderBottomColor: isLight ? LUXE.beige : 'rgba(216,202,186,0.08)',
+            backgroundColor: isLight ? '#F7F4F1' : 'rgba(216,202,186,0.05)',
+            borderBottomColor: isLight ? '#EDE8E3' : 'rgba(216,202,186,0.08)',
+            color: isLight ? LUXE.taupe : LUXE.beige,
           },
           root: {
-            borderColor: isLight ? `${LUXE.beige}80` : 'rgba(216,202,186,0.06)',
+            borderColor: isLight ? '#F0EBE6' : 'rgba(216,202,186,0.06)',
             fontSize: '0.84rem',
           },
         },
