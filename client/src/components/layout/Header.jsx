@@ -84,6 +84,8 @@ const Header = () => {
     navigate(`/sarees/${sareeId}`);
   };
 
+  const isLight = theme.palette.mode === 'light';
+
   return (
     <AppBar position="sticky" sx={{
       color: 'text.primary',
@@ -110,22 +112,21 @@ const Header = () => {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              bgcolor: 'background.default',
-              borderRadius: 2,
-              px: 2,
-              py: 0.5,
+              bgcolor: isLight ? '#F1F3F4' : 'rgba(255, 255, 255, 0.05)',
+              borderRadius: 100,
+              px: 2.5,
+              py: 0.75,
               width: { xs: 150, sm: 280, md: 350 },
               cursor: 'pointer',
-              border: '1px solid',
-              borderColor: 'divider',
-              transition: 'all 0.2s',
+              border: 'none',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               font: 'inherit',
               color: 'inherit',
               textAlign: 'left',
               appearance: 'none',
               '&:hover': {
-                borderColor: 'primary.light',
-                bgcolor: 'action.hover'
+                bgcolor: isLight ? '#E8EAED' : 'rgba(255, 255, 255, 0.08)',
+                transform: 'translateY(-0.5px)'
               },
               '&:focus-visible': {
                 outline: '2px solid',
@@ -149,10 +150,10 @@ const Header = () => {
             </Typography>
             <Typography component="span" variant="caption" sx={{
               display: { xs: 'none', sm: 'inline-block' },
-              bgcolor: 'divider',
+              bgcolor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
               px: 0.8,
               py: 0.2,
-              borderRadius: 1,
+              borderRadius: 1.5,
               fontWeight: 700,
               fontSize: '0.65rem'
             }}>

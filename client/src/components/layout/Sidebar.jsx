@@ -118,10 +118,11 @@ const Sidebar = () => {
 
       {/* User profile */}
       <Box sx={{
-        mx: 2, mb: 1, px: 1.5, py: 1.25, display: 'flex', alignItems: 'center', gap: 1.25,
-        borderRadius: '14px',
-        bgcolor: isLight ? '#F8FAFC' : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${theme.palette.divider}`,
+        mx: 2, mb: 1, px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.25,
+        borderRadius: '16px',
+        bgcolor: isLight ? '#FFFFFF' : 'rgba(255,255,255,0.02)',
+        border: `1px solid ${isLight ? '#F0EBE8' : 'rgba(216,202,186,0.08)'}`,
+        boxShadow: isLight ? '0px 2px 8px rgba(0,0,0,0.02)' : 'none',
       }}>
         <Avatar sx={{
           width: 38, height: 38, fontSize: '0.9rem', fontWeight: 700, color: '#fff',
@@ -130,38 +131,39 @@ const Sidebar = () => {
           {user?.full_name?.charAt(0) || 'U'}
         </Avatar>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: '0.83rem', color: 'text.primary' }} noWrap>
+          <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: 'text.primary' }} noWrap>
             {user?.full_name || 'User'}
           </Typography>
-          <Typography sx={{ fontSize: '0.68rem', color: mutedText, textTransform: 'capitalize' }} noWrap>
-            {user?.role || 'staff'} account
+          <Typography sx={{ fontSize: '0.68rem', color: mutedText, textTransform: 'capitalize', fontWeight: 600 }} noWrap>
+            {user?.role || 'staff'}
           </Typography>
         </Box>
         <Chip
           label={user?.role?.toUpperCase() || 'STAFF'}
           size="small"
           sx={{
-            height: 18, fontSize: '0.58rem', fontWeight: 700,
-            bgcolor: isAdmin ? 'primary.main' : (isLight ? '#E2E8F0' : 'rgba(255,255,255,0.08)'),
+            height: 18, fontSize: '0.58rem', fontWeight: 800,
+            bgcolor: isAdmin ? 'primary.main' : (isLight ? '#F1F3F4' : 'rgba(255,255,255,0.08)'),
             color: isAdmin ? '#fff' : 'text.secondary',
+            borderRadius: 50
           }}
         />
       </Box>
 
       {/* Navigation */}
-      <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5, py: 0.5 }}>
+      <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 0.5 }}>
         {navSections.map((section) => {
           const items = section.items;
           if (items.length === 0) return null;
           return (
-            <Box key={section.heading} sx={{ mb: 1.5 }}>
+            <Box key={section.heading} sx={{ mb: 2 }}>
               <Typography sx={{
-                px: 1.5, mb: 0.5, fontSize: '0.62rem', fontWeight: 700,
-                letterSpacing: '0.09em', textTransform: 'uppercase', color: mutedText,
+                px: 1.5, mb: 1, fontSize: '0.62rem', fontWeight: 800,
+                letterSpacing: '0.1em', textTransform: 'uppercase', color: mutedText,
               }}>
                 {section.heading}
               </Typography>
-              <List sx={{ p: 0 }}>
+              <List sx={{ p: 0, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                 {items.map((item) => {
                   const active = isItemActive(item.path);
                   return (
@@ -173,33 +175,29 @@ const Sidebar = () => {
                       }}
                       sx={{
                         position: 'relative',
-                        borderRadius: '11px',
-                        py: 0.9, px: 1.5, mb: 0.25, minHeight: 42,
+                        borderRadius: 100, // Perfect Pill layout (Google MD3 / Pinterest)
+                        py: 1, px: 2, minHeight: 40,
                         bgcolor: active ? 'sidebar.active' : 'transparent',
                         color: active ? 'primary.main' : idleText,
-                        '&::before': active ? {
-                          content: '""', position: 'absolute', left: 0, top: '22%', bottom: '22%',
-                          width: 3, borderRadius: 3, bgcolor: 'primary.main',
-                        } : {},
                         '&:hover': {
-                          bgcolor: active ? 'sidebar.active' : (isLight ? '#F1F5F9' : 'rgba(255,255,255,0.04)'),
+                          bgcolor: active ? 'sidebar.active' : (isLight ? '#F1F3F4' : 'rgba(255,255,255,0.04)'),
                         },
-                        transition: 'all 0.18s ease',
+                        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                       }}
                     >
                       <ListItemIcon sx={{
-                        minWidth: 34, color: active ? 'primary.main' : mutedText,
-                        '& .MuiSvgIcon-root': { fontSize: '1.2rem' },
+                        minWidth: 32, color: active ? 'primary.main' : mutedText,
+                        '& .MuiSvgIcon-root': { fontSize: '1.25rem' },
                       }}>
                         {item.icon}
                       </ListItemIcon>
                       <ListItemText
                         primary={item.label}
-                        slotProps={{ primary: { fontSize: '0.83rem', fontWeight: active ? 700 : 500 } }}
+                        slotProps={{ primary: { fontSize: '0.85rem', fontWeight: active ? 800 : 600 } }}
                       />
                       {item.badge && (
                         <Chip label="!" size="small" color="error"
-                          sx={{ height: 18, fontSize: '0.6rem', minWidth: 18, px: 0, fontWeight: 800 }} />
+                          sx={{ height: 18, fontSize: '0.6rem', minWidth: 18, px: 0, fontWeight: 800, borderRadius: 50 }} />
                       )}
                     </ListItemButton>
                   );
@@ -211,22 +209,22 @@ const Sidebar = () => {
       </Box>
 
       {/* Footer actions */}
-      <Box sx={{ p: 1.5, borderTop: `1px solid ${theme.palette.divider}` }}>
-        <ListItemButton onClick={toggleTheme} sx={{ borderRadius: '11px', py: 0.8, mb: 0.5, color: idleText }}>
-          <ListItemIcon sx={{ minWidth: 34, color: mutedText }}>
+      <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+        <ListItemButton onClick={toggleTheme} sx={{ borderRadius: 100, py: 1, px: 2, mb: 0.5, color: idleText }}>
+          <ListItemIcon sx={{ minWidth: 32, color: mutedText }}>
             {isLight ? <DarkModeIcon fontSize="small" /> : <LightModeIcon fontSize="small" />}
           </ListItemIcon>
           <ListItemText primary={isLight ? 'Dark Mode' : 'Light Mode'}
-            slotProps={{ primary: { fontSize: '0.83rem', fontWeight: 500 } }} />
+            slotProps={{ primary: { fontSize: '0.85rem', fontWeight: 600 } }} />
         </ListItemButton>
         <ListItemButton onClick={handleLogout} sx={{
-          borderRadius: '11px', py: 0.8, color: 'error.main',
+          borderRadius: 100, py: 1, px: 2, color: 'error.main',
           '&:hover': { bgcolor: 'error.main', color: '#fff', '& .MuiListItemIcon-root': { color: '#fff' } },
         }}>
-          <ListItemIcon sx={{ minWidth: 34, color: 'error.main' }}>
+          <ListItemIcon sx={{ minWidth: 32, color: 'error.main' }}>
             <LogoutIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Logout" slotProps={{ primary: { fontSize: '0.83rem', fontWeight: 600 } }} />
+          <ListItemText primary="Logout" slotProps={{ primary: { fontSize: '0.85rem', fontWeight: 700 } }} />
         </ListItemButton>
       </Box>
     </Box>

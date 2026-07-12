@@ -570,7 +570,7 @@ const Dashboard = () => {
                               size="small"
                               variant="outlined"
                               onClick={() => navigate(`/sarees/${item.sareeId}`)}
-                              sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 1.5 }}
+                              sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 100 }}
                             >
                               View Saree
                             </Button>
@@ -580,7 +580,7 @@ const Dashboard = () => {
                               color="success"
                               startIcon={<WhatsAppIcon fontSize="small" />}
                               onClick={() => handleActionableRequestStock(item)}
-                              sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 1.5 }}
+                              sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 100 }}
                             >
                               Request Stock
                             </Button>
@@ -650,7 +650,7 @@ const Dashboard = () => {
                             size="small"
                             variant="outlined"
                             onClick={() => navigate(`/sarees/${item.sareeId}`)}
-                            sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 1.5 }}
+                            sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 100 }}
                           >
                             View Saree
                           </Button>
@@ -660,7 +660,7 @@ const Dashboard = () => {
                             color="success"
                             startIcon={<WhatsAppIcon fontSize="small" />}
                             onClick={() => handleActionableRequestStock(item)}
-                            sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 1.5 }}
+                            sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 100 }}
                           >
                             Request/Deliver
                           </Button>

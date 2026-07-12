@@ -167,7 +167,7 @@ const Login = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #EFE9E1 0%, #D1C7BD 100%)',
+      background: 'linear-gradient(135deg, #FAFAFA 0%, #F5F1EE 100%)',
       px: { xs: 2, sm: 4 },
       py: 2
     }}>
@@ -175,8 +175,8 @@ const Login = () => {
       <style>{`
         .custom-input .MuiOutlinedInput-root {
           background-color: #FFFFFF !important;
-          border-radius: 10px !important;
-          border: 1px solid #D1C7BD !important;
+          border-radius: 12px !important;
+          border: 1px solid #ECE7E4 !important;
           transition: all 0.25s ease-in-out !important;
         }
         .custom-input .MuiOutlinedInput-root:hover {
@@ -184,18 +184,18 @@ const Login = () => {
         }
         .custom-input .MuiOutlinedInput-root.Mui-focused {
           border-color: #72383D !important;
-          box-shadow: 0 0 0 3px rgba(114, 56, 61, 0.18) !important;
+          box-shadow: 0 0 0 3px rgba(114, 56, 61, 0.12) !important;
         }
         .custom-input .MuiOutlinedInput-notchedOutline {
           border: none !important;
         }
         .custom-input input {
-          color: #322D29 !important;
+          color: #2D2825 !important;
           font-size: 0.92rem !important;
           padding: 12.5px 14px !important;
         }
         .custom-input input::placeholder {
-          color: #AC9C8D !important;
+          color: #9A8A7A !important;
           opacity: 1 !important;
         }
         @keyframes slideFadeIn {
@@ -211,13 +211,13 @@ const Login = () => {
         height: { xs: 'auto', md: 560 },
         display: 'flex',
         flexDirection: { xs: 'column', md: 'row' },
-        bgcolor: 'rgba(255, 255, 255, 0.74)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderRadius: 5,
+        bgcolor: 'rgba(255, 255, 255, 0.85)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderRadius: 6,
         overflow: 'hidden',
-        boxShadow: '0 24px 64px rgba(50, 45, 41, 0.08)',
-        border: '1px solid rgba(209, 199, 189, 0.5)'
+        boxShadow: '0 24px 64px -12px rgba(45, 40, 37, 0.06), 0 1px 2px rgba(0,0,0,0.01)',
+        border: '1px solid rgba(226, 232, 240, 0.8)'
       }}>
 
         {/* LEFT PANEL: Cover image & Slider */}
@@ -507,21 +507,26 @@ const Login = () => {
               sx={{
                 bgcolor: '#72383D',
                 color: '#FFF',
-                borderRadius: '8px',
+                borderRadius: '30px',
                 py: 1.5,
                 fontSize: '0.92rem',
-                fontWeight: 600,
+                fontWeight: 700,
                 textTransform: 'none',
-                boxShadow: 'none',
+                boxShadow: '0 4px 12px rgba(114, 56, 61, 0.15)',
                 mt: 1,
                 '&:hover': {
                   bgcolor: '#592B2F',
-                  boxShadow: 'none'
+                  boxShadow: '0 6px 20px rgba(114, 56, 61, 0.25)',
+                  transform: 'translateY(-1px)'
+                },
+                '&:active': {
+                  transform: 'translateY(1px)'
                 },
                 '&.Mui-disabled': {
                   bgcolor: 'rgba(114, 56, 61, 0.4)',
                   color: 'rgba(255, 255, 255, 0.5)'
-                }
+                },
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
             >
               {loading ? <CircularProgress size={20} color="inherit" /> : (isForgotPassword ? 'Send Reset Email' : isSignUp ? 'Create account' : 'Log in')}
