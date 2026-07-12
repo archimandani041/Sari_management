@@ -100,10 +100,15 @@ export const AuthProvider = ({ children }) => {
   const signUp = useCallback(async (email, password, fullName) => {
     if (!supabase) throw new Error('Supabase client not initialized');
 
+    // emailRedirectTo MUST match a URL whitelisted in Supabase Dashboard
+    // → Authentication → URL Configuration → Redirect URLs
+    const redirectTo = `${window.location.origin}/auth/callback`;
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: redirectTo,
         data: {
           full_name: fullName,
           username: email.split('@')[0],

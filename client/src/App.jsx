@@ -13,6 +13,7 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 
 // Pages
 import Login from './pages/Login';
+import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import AllSarees from './pages/AllSarees';
 import SareeForm from './pages/SareeForm';
@@ -32,8 +33,10 @@ const AppContent = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Routes>
-        {/* Public Login Route */}
+        {/* Public Routes */}
         <Route path="/login" element={<Login />} />
+        {/* Email verification callback — must be public and match the Supabase redirect URL */}
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
         {/* Guarded App Routes */}
         <Route
