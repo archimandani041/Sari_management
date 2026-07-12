@@ -44,18 +44,13 @@ const authenticate = async (req, res, next) => {
       const metadata = authUser.user_metadata || {};
       const full_name = metadata.full_name || '';
       const username = metadata.username || email.split('@')[0];
+      // Default to admin for new self-registrations, so each new user gets their own tenant workspace.
+      // Set to staff only if explicitly registering a seed staff account.
+      const isSeedStaff = email === 'staff@saristockmanager.com';
+      const role = isSeedStaff ? 'staff' : 'admin';
 
-      // Check number of users to determine if they are the first user (make them admin)
-      const { count } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true });
-
-      const role = (count === 0) ? 'admin' : 'staff';
-
-      // Find the effective owner_id for this new staff user.
-      // In a single-tenant setup, all staff share the same owner's data.
-      // We find the first user who has an owner_id set (i.e. the data owner).
-      let resolvedOwnerId = authUser.id; // Default: user is self-owned (first admin)
+      // Find the effective owner_id for this new user.
+      let resolvedOwnerId = authUser.id; // Default: user is self-owned (admin)
       if (role === 'staff') {
         const { data: ownerRecord } = await supabase
           .from('users')
@@ -123,15 +118,14 @@ const authenticate = async (req, res, next) => {
     if (!user.is_active) {
       return res.status(403).json({ error: 'Your account has been deactivated.' });
     }
-
     // Resolve effective owner_id for data scoping:
     // - If user.owner_id is set → they're a staff member scoped to that owner's data
-    // - If user.owner_id is null/missing → resolve from sarees table (legacy support)
+    // - If user.owner_id is null/missing → resolve from sarees table (legacy support, ONLY for staff users)
     // - Fallback → use user's own id
     let effectiveOwnerId = user.owner_id || user.id;
 
-    // Legacy fallback: if owner_id column doesn't exist in users table, check sarees
-    if (!user.owner_id) {
+    // Legacy fallback: ONLY for staff users, if owner_id column doesn't exist in users table, check sarees
+    if (user.role === 'staff' && !user.owner_id) {
       const { data: sareeOwner } = await supabase
         .from('sarees')
         .select('owner_id')
@@ -140,11 +134,9 @@ const authenticate = async (req, res, next) => {
         .maybeSingle();
 
       if (sareeOwner?.owner_id) {
-        // In single-tenant mode: staff sees the one and only owner's data
         effectiveOwnerId = sareeOwner.owner_id;
       }
     }
-
     // Attach to request
     req.user = {
       id: user.id,
