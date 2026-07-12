@@ -52,7 +52,36 @@ const authenticate = async (req, res, next) => {
 
       const role = (count === 0) ? 'admin' : 'staff';
 
-      const { data: newUser, error: insertError } = await supabase
+      // Find the effective owner_id for this new staff user.
+      // In a single-tenant setup, all staff share the same owner's data.
+      // We find the first user who has an owner_id set (i.e. the data owner).
+      let resolvedOwnerId = authUser.id; // Default: user is self-owned (first admin)
+      if (role === 'staff') {
+        const { data: ownerRecord } = await supabase
+          .from('users')
+          .select('id, owner_id')
+          .not('owner_id', 'is', null)
+          .limit(1)
+          .maybeSingle();
+
+        if (ownerRecord?.owner_id) {
+          resolvedOwnerId = ownerRecord.owner_id;
+        } else if (ownerRecord?.id) {
+          // owner_id column doesn't exist yet — fall back to sarees table
+          const { data: sareeOwner } = await supabase
+            .from('sarees')
+            .select('owner_id')
+            .not('owner_id', 'is', null)
+            .limit(1)
+            .maybeSingle();
+          if (sareeOwner?.owner_id) {
+            resolvedOwnerId = sareeOwner.owner_id;
+          }
+        }
+      }
+
+      // Try inserting with owner_id (requires migration to have been run)
+      let insertResult = await supabase
         .from('users')
         .insert({
           id: authUser.id,
@@ -61,25 +90,65 @@ const authenticate = async (req, res, next) => {
           password_hash: 'supabase_managed',
           role,
           full_name,
-          is_active: true
+          is_active: true,
+          owner_id: resolvedOwnerId
         })
         .select('*')
         .single();
 
-      if (insertError) {
-        console.error('Error creating public user profile:', insertError);
+      // If owner_id column doesn't exist yet, retry without it
+      if (insertResult.error && (insertResult.error.code === '42703' || insertResult.error.message?.includes('owner_id'))) {
+        insertResult = await supabase
+          .from('users')
+          .insert({
+            id: authUser.id,
+            username: username.toLowerCase().trim(),
+            email,
+            password_hash: 'supabase_managed',
+            role,
+            full_name,
+            is_active: true
+          })
+          .select('*')
+          .single();
+      }
+
+      if (insertResult.error) {
+        console.error('Error creating public user profile:', insertResult.error);
         return res.status(500).json({ error: 'Error creating user profile.' });
       }
-      user = newUser;
+      user = insertResult.data;
     }
 
     if (!user.is_active) {
       return res.status(403).json({ error: 'Your account has been deactivated.' });
     }
 
+    // Resolve effective owner_id for data scoping:
+    // - If user.owner_id is set → they're a staff member scoped to that owner's data
+    // - If user.owner_id is null/missing → resolve from sarees table (legacy support)
+    // - Fallback → use user's own id
+    let effectiveOwnerId = user.owner_id || user.id;
+
+    // Legacy fallback: if owner_id column doesn't exist in users table, check sarees
+    if (!user.owner_id) {
+      const { data: sareeOwner } = await supabase
+        .from('sarees')
+        .select('owner_id')
+        .not('owner_id', 'is', null)
+        .limit(1)
+        .maybeSingle();
+
+      if (sareeOwner?.owner_id) {
+        // In single-tenant mode: staff sees the one and only owner's data
+        effectiveOwnerId = sareeOwner.owner_id;
+      }
+    }
+
     // Attach to request
     req.user = {
       id: user.id,
+      owner_id: effectiveOwnerId, // ← All controllers should use this for data scoping
       username: user.username,
       role: user.role,
       full_name: user.full_name,

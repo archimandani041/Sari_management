@@ -228,7 +228,7 @@ const getDashboard = async (req, res) => {
     const { range = '30days', customStart, customEnd, grouping = 'daily' } = req.query;
     const periods = getDatePeriods(range, customStart, customEnd);
     
-    const ownerId = req.user.id;
+    const ownerId = req.user.owner_id;
 
     // 1. Core Counts & Dynamic details — all scoped to this owner
     const { count: totalSarees } = await supabase
@@ -727,7 +727,7 @@ const getPrediction = async (req, res) => {
       .from('sarees')
       .select('*, beams(*, combinations(*, combination_colors(*)))')
       .eq('id', sareeId)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.owner_id)
       .single();
 
     if (sareeError || !saree) {
@@ -754,7 +754,7 @@ const getPrediction = async (req, res) => {
         .from('stock_history')
         .select('*')
         .in('combination_id', comboIds)
-        .eq('owner_id', req.user.id)
+        .eq('owner_id', req.user.owner_id)
         .order('created_at', { ascending: true });
       history = rawHist || [];
     }

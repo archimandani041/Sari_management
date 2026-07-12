@@ -48,7 +48,7 @@ const getSarees = async (req, res) => {
     const offset = (parseInt(page) - 1) * parseInt(limit);
     const pageSize = parseInt(limit);
 
-    const ownerId = req.user.id;
+    const ownerId = req.user.owner_id;
 
     // Fetch all sarees with beams → combinations → colors (owner-scoped)
     let query = supabase
@@ -203,7 +203,7 @@ const getSareeById = async (req, res) => {
         )
       `)
       .eq('id', id)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.owner_id)
       .single();
 
     if (error || !saree) return res.status(404).json({ error: 'Saree not found' });
@@ -219,7 +219,7 @@ const getSareeById = async (req, res) => {
       .from('stock_history')
       .select('*')
       .eq('saree_id', id)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.owner_id)
       .order('created_at', { ascending: false })
       .limit(30);
 
@@ -250,7 +250,7 @@ const createSaree = async (req, res) => {
       .from('sarees')
       .select('id')
       .eq('series_code', seriesCode)
-      .eq('owner_id', req.user.id)
+      .eq('owner_id', req.user.owner_id)
       .limit(1);
     if (dupSaree && dupSaree.length > 0) {
       return res.status(400).json({ error: `Series Code ${seriesCode} already exists.` });
@@ -290,7 +290,7 @@ const createSaree = async (req, res) => {
         description,
         price: price != null ? parseFloat(price) : null,
         image_url,
-        owner_id: req.user.id,
+        owner_id: req.user.owner_id,
         created_by: req.user.id,
         updated_by: req.user.id
       })
@@ -353,7 +353,7 @@ const createSaree = async (req, res) => {
             new_stock: parseInt(c.current_stock),
             action: 'Manual Edit',
             reason: 'Initial stock on creation',
-            owner_id: req.user.id,
+            owner_id: req.user.owner_id,
             changed_by: req.user.id,
             changed_by_name: req.user.full_name
           });
@@ -393,7 +393,7 @@ const updateSaree = async (req, res) => {
     const { id } = req.params;
     const { series_base, series_letter, sari_name, description, price, image_url } = req.body;
 
-    const { data: existing } = await supabase.from('sarees').select('*').eq('id', id).eq('owner_id', req.user.id).single();
+    const { data: existing } = await supabase.from('sarees').select('*').eq('id', id).eq('owner_id', req.user.owner_id).single();
     if (!existing) return res.status(404).json({ error: 'Saree not found' });
 
     const newBase = series_base !== undefined ? series_base.trim().toUpperCase() : existing.series_base;
@@ -405,7 +405,7 @@ const updateSaree = async (req, res) => {
         .from('sarees')
         .select('id')
         .eq('series_code', newSeriesCode)
-        .eq('owner_id', req.user.id)
+        .eq('owner_id', req.user.owner_id)
         .neq('id', id)
         .limit(1);
       if (dupSaree && dupSaree.length > 0) {
@@ -451,7 +451,7 @@ const updateSaree = async (req, res) => {
 const deleteSaree = async (req, res) => {
   try {
     const { id } = req.params;
-    const { data: existing } = await supabase.from('sarees').select('*').eq('id', id).eq('owner_id', req.user.id).single();
+    const { data: existing } = await supabase.from('sarees').select('*').eq('id', id).eq('owner_id', req.user.owner_id).single();
     if (!existing) return res.status(404).json({ error: 'Saree not found' });
 
     // 1. Fetch beams and combinations to delete related records
@@ -538,7 +538,7 @@ const deleteSaree = async (req, res) => {
 const nextSeries = async (req, res) => {
   try {
     const { id } = req.params;
-    const { data: saree } = await supabase.from('sarees').select('*').eq('id', id).eq('owner_id', req.user.id).single();
+    const { data: saree } = await supabase.from('sarees').select('*').eq('id', id).eq('owner_id', req.user.owner_id).single();
     if (!saree) return res.status(404).json({ error: 'Saree not found' });
 
     const nextLetter = String.fromCharCode(saree.series_letter.charCodeAt(0) + 1);
