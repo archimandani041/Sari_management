@@ -2,12 +2,9 @@
  * Sidebar Navigation Component — "RestroBit" style
  * Grouped sections, orange active pill, brand logo, user profile, light/dark aware.
  */
-import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useApp } from '../../contexts/AppContext';
-import { sareeAPI } from '../../services/api';
-import { supabase } from '../../services/supabase';
 import {
   Drawer, List, ListItemButton, ListItemIcon, ListItemText,
   Box, Typography, Avatar, Chip, IconButton, useMediaQuery, useTheme
@@ -67,33 +64,9 @@ const Sidebar = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isLight = themeMode === 'light';
+
   const mutedText = isLight ? '#9E8E7A' : '#8A7C6A';
   const idleText = isLight ? '#2E2A24' : '#D8CABA';
-
-  const [hasLowStock, setHasLowStock] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-    const checkLowStock = async () => {
-      try {
-        const { data } = await sareeAPI.getAll({ status: 'low', limit: 1 });
-        setHasLowStock((data?.sarees || []).length > 0);
-      } catch (err) {
-        console.error('Failed to check low stock for sidebar:', err);
-      }
-    };
-    checkLowStock();
-
-    if (!supabase) return;
-    const channel = supabase
-      .channel('sidebar-low-stock')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, () => checkLowStock())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sarees' }, () => checkLowStock())
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
 
   const handleLogout = async () => {
     await logout();
@@ -224,7 +197,7 @@ const Sidebar = () => {
                         primary={item.label}
                         slotProps={{ primary: { fontSize: '0.83rem', fontWeight: active ? 700 : 500 } }}
                       />
-                      {item.badge && hasLowStock && (
+                      {item.badge && (
                         <Chip label="!" size="small" color="error"
                           sx={{ height: 18, fontSize: '0.6rem', minWidth: 18, px: 0, fontWeight: 800 }} />
                       )}
