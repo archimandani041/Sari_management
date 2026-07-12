@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { Box, CircularProgress, Typography, Alert } from '@mui/material';
-import { CheckCircleOutline, ErrorOutline } from '@mui/icons-material';
+import { CheckCircle, Error as ErrorIcon } from '@mui/icons-material';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -115,7 +115,7 @@ const AuthCallback = () => {
 
         {status === 'success' && (
           <>
-            <CheckCircleOutline sx={{ fontSize: 56, color: '#22C55E' }} />
+            <CheckCircle sx={{ fontSize: 56, color: '#22C55E' }} />
             <Alert
               severity="success"
               sx={{ bgcolor: 'rgba(34,197,94,0.08)', color: '#16A34A', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 2, width: '100%' }}
@@ -127,7 +127,7 @@ const AuthCallback = () => {
 
         {status === 'error' && (
           <>
-            <ErrorOutline sx={{ fontSize: 56, color: '#72383D' }} />
+            <ErrorIcon sx={{ fontSize: 56, color: '#72383D' }} />
             <Alert
               severity="error"
               sx={{ bgcolor: 'rgba(114,56,61,0.08)', color: '#72383D', border: '1px solid rgba(114,56,61,0.2)', borderRadius: 2, width: '100%' }}
