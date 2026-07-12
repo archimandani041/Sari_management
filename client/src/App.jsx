@@ -14,6 +14,7 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 // Pages
 import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
+import SetNewPassword from './pages/SetNewPassword';
 import Dashboard from './pages/Dashboard';
 import AllSarees from './pages/AllSarees';
 import SareeForm from './pages/SareeForm';
@@ -37,6 +38,8 @@ const AppContent = () => {
         <Route path="/login" element={<Login />} />
         {/* Email verification callback — must be public and match the Supabase redirect URL */}
         <Route path="/auth/callback" element={<AuthCallback />} />
+        {/* Password recovery — shown after clicking reset link, user sets new password here */}
+        <Route path="/set-password" element={<SetNewPassword />} />
 
         {/* Guarded App Routes */}
         <Route
