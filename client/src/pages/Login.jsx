@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabase';
 import {
   Box,
   TextField,
@@ -59,6 +60,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
 
   // Cover Slider State
   const [activeSlide, setActiveSlide] = useState(0);
@@ -86,7 +88,37 @@ const Login = () => {
       navigate('/');
     } catch (err) {
       console.error(err);
-      setError(err.message || 'Invalid credentials or connection issue');
+      // Give a more helpful error message
+      if (err.message?.toLowerCase().includes('invalid') || err.message?.toLowerCase().includes('credentials')) {
+        setError('Invalid email or password. If you forgot your password, click "Forgot password?" below.');
+      } else if (err.message?.toLowerCase().includes('email not confirmed')) {
+        setError('Please confirm your email first. Check your inbox for a verification link.');
+      } else {
+        setError(err.message || 'Login failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Please enter your email address first.');
+      return;
+    }
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      });
+      if (resetError) throw resetError;
+      setSuccess(`Password reset email sent to ${email}. Check your inbox and click the link to set a new password.`);
+      setIsForgotPassword(false);
+    } catch (err) {
+      setError(err.message || 'Failed to send reset email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -342,7 +374,7 @@ const Login = () => {
           {/* Form */}
           <Box
             component="form"
-            onSubmit={isSignUp ? handleSignUpSubmit : handleLoginSubmit}
+            onSubmit={isForgotPassword ? handleForgotPassword : (isSignUp ? handleSignUpSubmit : handleLoginSubmit)}
             sx={{ display: 'flex', flexDirection: 'column', gap: 2.2 }}
           >
             {/* First Name & Last Name (SignUp only) */}
@@ -421,6 +453,27 @@ const Login = () => {
               }}
             />
 
+            {/* Forgot Password link — only show on login view */}
+            {!isSignUp && (
+              <Typography
+                onClick={() => {
+                  setIsForgotPassword(true);
+                  setError('');
+                  setSuccess('');
+                }}
+                sx={{
+                  color: '#AC9C8D',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  textAlign: 'right',
+                  mt: -0.5,
+                  '&:hover': { color: '#72383D', textDecoration: 'underline' }
+                }}
+              >
+                Forgot password?
+              </Typography>
+            )}
+
             {/* Terms & Conditions Checkbox (SignUp only) */}
             {isSignUp && (
               <FormControlLabel
@@ -471,8 +524,18 @@ const Login = () => {
                 }
               }}
             >
-              {loading ? <CircularProgress size={20} color="inherit" /> : (isSignUp ? 'Create account' : 'Log in')}
+              {loading ? <CircularProgress size={20} color="inherit" /> : (isForgotPassword ? 'Send Reset Email' : isSignUp ? 'Create account' : 'Log in')}
             </Button>
+
+            {/* Back to login in forgot-password mode */}
+            {isForgotPassword && (
+              <Typography
+                onClick={() => { setIsForgotPassword(false); setError(''); setSuccess(''); }}
+                sx={{ color: '#AC9C8D', fontSize: '0.82rem', textAlign: 'center', cursor: 'pointer', '&:hover': { color: '#72383D' } }}
+              >
+                ← Back to login
+              </Typography>
+            )}
           </Box>
         </Box>
       </Box>
