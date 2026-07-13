@@ -36,6 +36,9 @@ import { getStockHealth } from '../constants/terms';
 // Filter tabs mapped to the existing `status` filter values
 const STATUS_TABS = [
   { label: 'All Sarees', value: '' },
+  { label: 'Seasonal Palettes', value: 'Seasonal Palettes' },
+  { label: 'Wedding Collection', value: 'Wedding Collection' },
+  { label: 'Artisan Exclusives', value: 'Artisan Exclusives' },
 ];
 
 const getStockStatus = (total, min) => {
@@ -430,13 +433,13 @@ const AllSarees = () => {
                   type="button"
                   onClick={() => handleTabChange(tab.value)}
                   sx={{
-                    border: 'none', cursor: 'pointer', font: 'inherit',
-                    px: 2, py: 0.9, borderRadius: 99, fontWeight: 700, fontSize: '0.82rem',
-                    transition: 'all 0.18s ease',
-                    bgcolor: active ? 'primary.main' : 'action.hover',
-                    color: active ? 'primary.contrastText' : 'text.secondary',
-                    boxShadow: active ? '0 4px 12px rgba(161,109,71,0.35)' : 'none',
-                    '&:hover': { bgcolor: active ? 'primary.dark' : 'action.selected', color: active ? 'primary.contrastText' : 'text.primary' },
+                    border: active ? 'none' : '1px solid #EAE6E1', cursor: 'pointer', font: 'inherit',
+                    px: 2.25, py: 1, borderRadius: 99, fontWeight: 700, fontSize: '0.8rem',
+                    transition: 'all 0.15s ease',
+                    bgcolor: active ? 'primary.main' : '#FAF8F5',
+                    color: active ? '#FFFFFF' : '#7C726A',
+                    boxShadow: 'none',
+                    '&:hover': { bgcolor: active ? '#2A0B12' : '#F2EFEA', color: active ? '#FFFFFF' : '#241C1A' },
                   }}
                 >
                   {tab.label}
@@ -635,7 +638,7 @@ const AllSarees = () => {
 
                       {/* Status pill */}
                       <TableCell>
-                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.5, borderRadius: 99, bgcolor: st.chipBg }}>
+                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.5, borderRadius: 4, bgcolor: st.chipBg }}>
                           <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: st.bar }} />
                           <Typography component="span" sx={{ fontSize: '0.72rem', fontWeight: 700, color: st.chipColor, whiteSpace: 'nowrap' }}>
                             {st.label}
@@ -673,67 +676,136 @@ const AllSarees = () => {
                     <TableRow>
                       <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
                         <Collapse in={expandedSarees[saree.id]} timeout="auto" unmountOnExit>
-                          <Box sx={{ py: 2, px: 3, my: 1.5, ml: 6, mr: 2, borderLeft: '3px solid', borderColor: 'primary.main', bgcolor: 'rgba(161,109,71,0.02)', borderRadius: 2 }}>
-                            {filteredBeams.length === 0 ? (
+                          {filteredBeams.length === 0 ? (
+                            <Box sx={{ py: 3, px: 3, my: 2, ml: 6, mr: 2, bgcolor: '#FAF8F5', border: '1px solid #EAE6E1', borderRadius: '8px' }}>
                               <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                                 No matching beams or combinations for the current filters.
                               </Typography>
-                            ) : (
-                              filteredBeams.map((beam) => (
-                                <Box key={beam.id} sx={{ mb: 2.5, '&:last-child': { mb: 0 } }}>
-                                  {/* Beam Name */}
-                                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
-                                    <span>📦</span> {renderHighlighted(beam.beam_name)}
-                                  </Typography>
+                            </Box>
+                          ) : (
+                            filteredBeams.map((beam) => (
+                              <Box key={beam.id} sx={{ py: 3, px: 3, my: 2, ml: 6, mr: 2, bgcolor: '#FAF8F5', border: '1px solid #EAE6E1', borderRadius: '8px' }}>
+                                {/* Beam Name */}
+                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#241C1A', textTransform: 'uppercase', letterSpacing: '0.08em', mb: 2 }}>
+                                  Detailed Stock View: {renderHighlighted(beam.beam_name)}
+                                </Typography>
 
-                                  {/* Combinations under this Beam */}
-                                  <Box sx={{ pl: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                    {beam.combinations?.map((combo) => {
-                                      const health = getStockHealth(combo.current_stock ?? 0, combo.minimum_stock ?? 20);
-                                      return (
-                                        <Box key={combo.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', borderLeft: `3px solid ${health.color}`, bgcolor: 'background.paper', transition: 'box-shadow 0.15s', '&:hover': { boxShadow: '0 2px 8px rgba(0,0,0,0.06)' } }}>
-                                          {/* Top row: name + metadata chips */}
-                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                                {/* Combinations under this Beam */}
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                  {beam.combinations?.map((combo) => {
+                                    const health = getStockHealth(combo.current_stock ?? 0, combo.minimum_stock ?? 20);
+                                    return (
+                                      <Box
+                                        key={combo.id}
+                                        sx={{
+                                          p: 2.5,
+                                          borderRadius: '6px',
+                                          border: '1px solid #EAE6E1',
+                                          bgcolor: '#FFFFFF',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'space-between',
+                                          flexWrap: 'wrap',
+                                          gap: 2,
+                                          transition: 'border-color 0.15s ease',
+                                          '&:hover': { borderColor: '#AC9C94' }
+                                        }}
+                                      >
+                                        {/* Left part: name + metadata chips + F-Colors */}
+                                        <Box sx={{ flex: 1, minWidth: 250 }}>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 800, color: '#241C1A' }}>
                                               {combo.combination_name ? renderHighlighted(combo.combination_name) : 'Unnamed Combination'}
                                             </Typography>
-                                            <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-                                              {combo.brand && <Chip label={combo.brand} size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800, bgcolor: combo.brand === 'KP' ? 'rgba(114,56,61,0.12)' : 'rgba(245,158,11,0.14)', color: combo.brand === 'KP' ? 'primary.main' : 'warning.dark' }} />}
-                                              <Chip label={`${combo.current_stock ?? 0} pcs`} size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800, bgcolor: `${health.color}18`, color: health.color }} />
-                                              {combo.status && <Chip label={combo.status} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.62rem', fontWeight: 700, borderColor: combo.status === 'In Stock' ? 'success.main' : 'info.main', color: combo.status === 'In Stock' ? 'success.main' : 'info.main' }} />}
-                                            </Box>
+                                            {combo.brand && (
+                                              <Chip
+                                                label={combo.brand}
+                                                size="small"
+                                                sx={{
+                                                  height: 18, fontSize: '0.62rem', fontWeight: 800,
+                                                  bgcolor: combo.brand === 'KP' ? 'rgba(59, 17, 26, 0.08)' : 'rgba(217, 119, 6, 0.08)',
+                                                  color: combo.brand === 'KP' ? 'primary.main' : '#D97706',
+                                                  borderRadius: '3px'
+                                                }}
+                                              />
+                                            )}
                                           </Box>
 
                                           {/* F-Colors inline */}
-                                          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.25 }}>
-                                            {combo.combination_colors?.map((col) => (
-                                              <Typography key={col.id} component="span" sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>
+                                          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                            {combo.combination_colors?.map((col, idx) => (
+                                              <Typography key={col.id} component="span" sx={{ fontSize: '0.75rem', color: '#7C726A' }}>
                                                 <strong>{col.f_number}</strong> {renderHighlighted(col.color_name, 'color')}{col.company_name ? ` (${renderHighlighted(col.company_name, 'company')})` : ''}
-                                                {combo.combination_colors.indexOf(col) < combo.combination_colors.length - 1 ? ' · ' : ''}
+                                                {idx < combo.combination_colors.length - 1 ? ' · ' : ''}
                                               </Typography>
                                             ))}
                                           </Box>
+                                        </Box>
 
-                                          {/* Action buttons */}
-                                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                            <Button size="small" variant="outlined" color="success" startIcon={<WhatsAppIcon sx={{ fontSize: 14 }} />} onClick={() => openStockDialog(combo, beam, saree, 'STOCK_IN')} sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 2, textTransform: 'none' }}>
+                                        {/* Right part: Stock Qty and Status + Actions */}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 800, color: '#241C1A' }}>
+                                              {combo.current_stock ?? 0} pcs
+                                            </Typography>
+                                            <Chip
+                                              label={combo.status?.toUpperCase() || 'IN STOCK'}
+                                              size="small"
+                                              sx={{
+                                                height: 18, fontSize: '0.6rem', fontWeight: 800,
+                                                bgcolor: combo.status === 'Out of Stock' ? '#FEEBEE' : '#E2F6EA',
+                                                color: combo.status === 'Out of Stock' ? '#DC2626' : '#16A34A',
+                                                borderRadius: '3px'
+                                              }}
+                                            />
+                                          </Box>
+
+                                          <Box sx={{ display: 'flex', gap: 1 }}>
+                                            <Button
+                                              size="small"
+                                              variant="outlined"
+                                              onClick={() => openStockDialog(combo, beam, saree, 'STOCK_IN')}
+                                              sx={{
+                                                fontSize: '0.72rem', fontWeight: 750, borderRadius: '4px',
+                                                borderColor: '#EAE6E1', color: '#241C1A', textTransform: 'none',
+                                                '&:hover': { borderColor: '#9E8E7A', bgcolor: '#FCFCFA' }
+                                              }}
+                                            >
                                               Stock In
                                             </Button>
-                                            <Button size="small" variant="outlined" color="warning" onClick={() => openStockDialog(combo, beam, saree, 'DELIVERY_OUT')} sx={{ fontSize: '0.72rem', fontWeight: 700, borderRadius: 2, textTransform: 'none' }}>
+                                            <Button
+                                              size="small"
+                                              variant="outlined"
+                                              onClick={() => openStockDialog(combo, beam, saree, 'DELIVERY_OUT')}
+                                              sx={{
+                                                fontSize: '0.72rem', fontWeight: 750, borderRadius: '4px',
+                                                borderColor: '#EAE6E1', color: '#241C1A', textTransform: 'none',
+                                                '&:hover': { borderColor: '#9E8E7A', bgcolor: '#FCFCFA' }
+                                              }}
+                                            >
                                               Delivery Out
                                             </Button>
-                                            <Button size="small" variant="text" startIcon={<HistoryIcon sx={{ fontSize: 14 }} />} onClick={() => navigate('/history')} sx={{ fontSize: '0.72rem', fontWeight: 600, borderRadius: 2, textTransform: 'none', color: 'text.secondary' }}>
-                                              History
-                                            </Button>
+                                            <IconButton
+                                              size="small"
+                                              onClick={() => navigate('/history')}
+                                              sx={{
+                                                color: '#7C726A',
+                                                border: '1px solid #EAE6E1',
+                                                borderRadius: '4px',
+                                                '&:hover': { bgcolor: '#FAF8F5' }
+                                              }}
+                                            >
+                                              <HistoryIcon sx={{ fontSize: 16 }} />
+                                            </IconButton>
                                           </Box>
                                         </Box>
-                                      );
-                                    })}
-                                  </Box>
+                                      </Box>
+                                    );
+                                  })}
                                 </Box>
-                              ))
-                            )}
-                          </Box>
+                              </Box>
+                            ))
+                          )}
                         </Collapse>
                       </TableCell>
                     </TableRow>

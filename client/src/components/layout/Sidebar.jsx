@@ -7,7 +7,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useApp } from '../../contexts/AppContext';
 import {
   Drawer, List, ListItemButton, ListItemIcon, ListItemText,
-  Box, Typography, Avatar, Chip, IconButton, useMediaQuery, useTheme
+  Box, Typography, Avatar, Chip, IconButton, useMediaQuery, useTheme,
+  Button
 } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import SareeIcon from '@mui/icons-material/Checkroom';
@@ -119,14 +120,15 @@ const Sidebar = () => {
       {/* User profile */}
       <Box sx={{
         mx: 2, mb: 1, px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.25,
-        borderRadius: '16px',
+        borderRadius: '8px',
         bgcolor: isLight ? '#FFFFFF' : 'rgba(255,255,255,0.02)',
-        border: `1px solid ${isLight ? '#F0EBE8' : 'rgba(216,202,186,0.08)'}`,
-        boxShadow: isLight ? '0px 2px 8px rgba(0,0,0,0.02)' : 'none',
+        border: `1px solid ${isLight ? '#EAE6E1' : 'rgba(216,202,186,0.08)'}`,
+        boxShadow: 'none',
       }}>
         <Avatar sx={{
           width: 38, height: 38, fontSize: '0.9rem', fontWeight: 700, color: '#fff',
-          background: 'linear-gradient(135deg, #AC9C8D 0%, #72383D 100%)',
+          background: 'linear-gradient(135deg, #AC9C8D 0%, #3B111A 100%)',
+          borderRadius: '50%'
         }}>
           {user?.full_name?.charAt(0) || 'U'}
         </Avatar>
@@ -145,7 +147,7 @@ const Sidebar = () => {
             height: 18, fontSize: '0.58rem', fontWeight: 800,
             bgcolor: isAdmin ? 'primary.main' : (isLight ? '#F1F3F4' : 'rgba(255,255,255,0.08)'),
             color: isAdmin ? '#fff' : 'text.secondary',
-            borderRadius: 50
+            borderRadius: 1
           }}
         />
       </Box>
@@ -175,14 +177,15 @@ const Sidebar = () => {
                       }}
                       sx={{
                         position: 'relative',
-                        borderRadius: 100, // Perfect Pill layout (Google MD3 / Pinterest)
+                        borderRadius: '8px',
                         py: 1, px: 2, minHeight: 40,
-                        bgcolor: active ? 'sidebar.active' : 'transparent',
+                        bgcolor: active ? 'rgba(59, 17, 26, 0.05)' : 'transparent',
                         color: active ? 'primary.main' : idleText,
+                        borderLeft: active ? '4px solid #3B111A' : '4px solid transparent',
                         '&:hover': {
-                          bgcolor: active ? 'sidebar.active' : (isLight ? '#F1F3F4' : 'rgba(255,255,255,0.04)'),
+                          bgcolor: active ? 'rgba(59, 17, 26, 0.08)' : (isLight ? '#F1F3F4' : 'rgba(255,255,255,0.04)'),
                         },
-                        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                        transition: 'all 0.15s ease',
                       }}
                     >
                       <ListItemIcon sx={{
@@ -197,7 +200,7 @@ const Sidebar = () => {
                       />
                       {item.badge && (
                         <Chip label="!" size="small" color="error"
-                          sx={{ height: 18, fontSize: '0.6rem', minWidth: 18, px: 0, fontWeight: 800, borderRadius: 50 }} />
+                          sx={{ height: 18, fontSize: '0.6rem', minWidth: 18, px: 0, fontWeight: 800, borderRadius: 1 }} />
                       )}
                     </ListItemButton>
                   );
@@ -208,9 +211,39 @@ const Sidebar = () => {
         })}
       </Box>
 
+      {/* Contextual Action Button */}
+      <Box sx={{ px: 2, pb: 2 }}>
+        <Button
+          variant="contained"
+          fullWidth
+          onClick={() => {
+            if (location.pathname === '/stock-requests') {
+              // Click action or trigger dialog
+              const btn = document.getElementById('new-stock-request-btn');
+              if (btn) btn.click();
+            } else {
+              navigate('/sarees/add');
+            }
+          }}
+          sx={{
+            bgcolor: 'primary.main',
+            color: '#FFFFFF',
+            borderRadius: '6px',
+            py: 1.25,
+            fontSize: '0.8rem',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            '&:hover': { bgcolor: '#2A0B12' }
+          }}
+        >
+          {location.pathname === '/stock-requests' ? 'New Stock Request' : 'New Collection'}
+        </Button>
+      </Box>
+
       {/* Footer actions */}
       <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-        <ListItemButton onClick={toggleTheme} sx={{ borderRadius: 100, py: 1, px: 2, mb: 0.5, color: idleText }}>
+        <ListItemButton onClick={toggleTheme} sx={{ borderRadius: '8px', py: 1, px: 2, mb: 0.5, color: idleText }}>
           <ListItemIcon sx={{ minWidth: 32, color: mutedText }}>
             {isLight ? <DarkModeIcon fontSize="small" /> : <LightModeIcon fontSize="small" />}
           </ListItemIcon>
@@ -218,7 +251,7 @@ const Sidebar = () => {
             slotProps={{ primary: { fontSize: '0.85rem', fontWeight: 600 } }} />
         </ListItemButton>
         <ListItemButton onClick={handleLogout} sx={{
-          borderRadius: 100, py: 1, px: 2, color: 'error.main',
+          borderRadius: '8px', py: 1, px: 2, color: 'error.main',
           '&:hover': { bgcolor: 'error.main', color: '#fff', '& .MuiListItemIcon-root': { color: '#fff' } },
         }}>
           <ListItemIcon sx={{ minWidth: 32, color: 'error.main' }}>

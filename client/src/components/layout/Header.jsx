@@ -113,7 +113,7 @@ const Header = () => {
               display: 'flex',
               alignItems: 'center',
               bgcolor: isLight ? '#F1F3F4' : 'rgba(255, 255, 255, 0.05)',
-              borderRadius: 100,
+              borderRadius: 6,
               px: 2.5,
               py: 0.75,
               width: { xs: 150, sm: 280, md: 350 },

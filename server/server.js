@@ -79,7 +79,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/auth', authLimiter, require('./routes/auth'));
+app.use('/api/auth', (req, res, next) => {
+  if (req.path.startsWith('/login') || req.path.startsWith('/register')) {
+    return authLimiter(req, res, next);
+  }
+  next();
+}, require('./routes/auth'));
 app.use('/api/sarees', require('./routes/sarees'));
 app.use('/api/stock', require('./routes/stock'));
 app.use('/api/suppliers', require('./routes/suppliers'));

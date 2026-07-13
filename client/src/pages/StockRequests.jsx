@@ -1,6 +1,7 @@
 /**
  * Stock Requests — Visual Pipeline (spec §13)
  * Shows a progress stepper (Requested → Confirmed → Received) per request card.
+ * Elevated to match the luxury catalog design system (deep burgundy highlights, 8px borders, clean flat surfaces).
  */
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -23,34 +24,42 @@ const STATUS_COLORS = { Requested: '#F59E0B', Confirmed: '#38BDF8', Received: '#
 const PipelineStepper = ({ currentStatus }) => {
   if (currentStatus === 'Cancelled') {
     return (
-      <Chip label="Cancelled" size="small" sx={{ bgcolor: 'rgba(239,68,68,0.12)', color: 'error.main', fontWeight: 700, fontSize: '0.72rem' }} />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#EF4444' }} />
+        <Typography variant="caption" sx={{ fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cancelled</Typography>
+      </Box>
     );
   }
   const currentIdx = PIPELINE_STEPS.indexOf(currentStatus);
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
       {PIPELINE_STEPS.map((step, idx) => {
         const done = idx <= currentIdx;
         const active = idx === currentIdx;
+        let dotColor = '#EAE6E1';
+        if (active) dotColor = STATUS_COLORS[step];
+        else if (done) dotColor = '#241C1A';
+
         return (
-          <Box key={step} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Box sx={{
-              width: active ? 10 : 8,
-              height: active ? 10 : 8,
-              borderRadius: '50%',
-              bgcolor: done ? STATUS_COLORS[step] : 'action.disabled',
-              transition: 'all 0.2s',
-              boxShadow: active ? `0 0 0 3px ${STATUS_COLORS[step]}30` : 'none'
-            }} />
-            <Typography variant="caption" sx={{
-              fontWeight: done ? 700 : 500,
-              color: done ? 'text.primary' : 'text.disabled',
-              fontSize: '0.68rem'
-            }}>
-              {step}
-            </Typography>
+          <Box key={step} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1.5 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                bgcolor: dotColor,
+                transition: 'bgcolor 0.2s ease',
+              }} />
+              <Typography variant="caption" sx={{
+                fontWeight: active ? 750 : (done ? 600 : 500),
+                color: active ? 'text.primary' : 'text.secondary',
+                fontSize: '0.75rem',
+              }}>
+                {step}
+              </Typography>
+            </Box>
             {idx < PIPELINE_STEPS.length - 1 && (
-              <Box sx={{ width: 20, height: 2, bgcolor: idx < currentIdx ? STATUS_COLORS[PIPELINE_STEPS[idx + 1]] : 'action.disabled', borderRadius: 1, mx: 0.25 }} />
+              <Box sx={{ width: { xs: 20, sm: 40 }, height: 1, bgcolor: '#EAE6E1' }} />
             )}
           </Box>
         );
@@ -83,7 +92,6 @@ const StockRequests = () => {
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
   const handleStatusChange = async (id, newStatus) => {
-    // If marking as Received, show confirmation first
     if (newStatus === 'Received') {
       const req = requests.find(r => r.id === id);
       setReceiveConfirm(req);
@@ -138,17 +146,35 @@ const StockRequests = () => {
   requests.forEach(r => { if (stats[r.status] !== undefined) stats[r.status]++; });
 
   return (
-    <Box>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 1, md: 3 }, py: 1 }}>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, flexWrap: 'wrap', gap: 2 }}>
         <Box>
-          <Typography variant="h4">Stock Requests</Typography>
-          <Typography variant="body1" color="text.secondary">Track supplier orders from request to receipt</Typography>
+          <Typography variant="h1" sx={{ fontSize: '2.5rem', fontWeight: 800, mb: 1, letterSpacing: '-0.02em', color: '#241C1A' }}>
+            Stock Requests
+          </Typography>
+          <Typography variant="body1" sx={{ color: '#7C726A', fontSize: '0.95rem' }}>
+            Track supplier orders from request to receipt
+          </Typography>
         </Box>
-        <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel>Filter</InputLabel>
-          <Select value={statusFilter} label="Filter" onChange={e => setStatusFilter(e.target.value)}>
-            <MenuItem value="">All</MenuItem>
+        <FormControl size="small" sx={{ minWidth: 180 }}>
+          <InputLabel id="filter-status-label" sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Filter Status</InputLabel>
+          <Select
+            labelId="filter-status-label"
+            value={statusFilter}
+            label="Filter Status"
+            onChange={e => setStatusFilter(e.target.value)}
+            sx={{
+              borderRadius: '6px',
+              bgcolor: '#FFFFFF',
+              borderColor: '#EAE6E1',
+              fontSize: '0.85rem',
+              fontWeight: 650,
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#EAE6E1' },
+              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#AC9E7A' },
+            }}
+          >
+            <MenuItem value="">All Statuses</MenuItem>
             <MenuItem value="Requested">Requested</MenuItem>
             <MenuItem value="Confirmed">Confirmed</MenuItem>
             <MenuItem value="Received">Received</MenuItem>
@@ -157,116 +183,264 @@ const StockRequests = () => {
         </FormControl>
       </Box>
 
-      {/* Stats pills */}
-      <Grid container spacing={1.5} sx={{ mb: 3 }}>
-        {Object.entries(stats).map(([status, count]) => (
-          <Grid size={{ xs: 6, sm: 3 }} key={status}>
-            <Paper
-              sx={{
-                p: 2, borderRadius: 3, textAlign: 'center', cursor: 'pointer',
-                border: '1.5px solid', borderColor: statusFilter === status ? STATUS_COLORS[status] : 'divider',
-                transition: 'all 0.15s', '&:hover': { transform: 'translateY(-2px)' }
-              }}
-              onClick={() => setStatusFilter(statusFilter === status ? '' : status)}
-            >
-              <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5, color: STATUS_COLORS[status] }}>{count}</Typography>
-              <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{status}</Typography>
-            </Paper>
-          </Grid>
-        ))}
+      {/* Stats pills — redesigned as clean catalog stats */}
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        {Object.entries(stats).map(([status, count]) => {
+          const isFilterActive = statusFilter === status;
+          return (
+            <Grid item xs={6} sm={3} key={status}>
+              <Paper
+                onClick={() => setStatusFilter(isFilterActive ? '' : status)}
+                sx={{
+                  p: 2.5,
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  border: isFilterActive ? '1px solid #3B111A' : '1px solid #EAE6E1',
+                  bgcolor: '#FAF8F5',
+                  boxShadow: 'none',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: '#3B111A',
+                    bgcolor: '#FFFFFF'
+                  }
+                }}
+              >
+                <Typography
+                  variant="h2"
+                  sx={{
+                    fontFamily: '"Playfair Display", Georgia, serif',
+                    fontWeight: 450,
+                    fontSize: '2.2rem',
+                    mb: 0.5,
+                    color: '#241C1A'
+                  }}
+                >
+                  {count}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 750,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    fontSize: '0.68rem',
+                    color: '#7C726A'
+                  }}
+                >
+                  {status}
+                </Typography>
+              </Paper>
+            </Grid>
+          );
+        })}
       </Grid>
 
-      {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 3, borderRadius: '8px' }}>{error}</Alert>}
 
       {loading && requests.length > 0 && (
-        <LinearProgress sx={{ height: 3, mb: 2.5, borderRadius: 1.5 }} />
+        <LinearProgress sx={{ height: 2, mb: 3, bgcolor: '#FAF8F5', '& .MuiLinearProgress-bar': { bgcolor: 'primary.main' } }} />
       )}
+
       {/* Request cards */}
       {loading && requests.length === 0 ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {[1,2,3].map(i => <Skeleton key={i} variant="rounded" height={120} sx={{ borderRadius: 3 }} />)}
+          {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={130} sx={{ borderRadius: '8px', bgcolor: '#FAF8F5' }} />)}
         </Box>
       ) : requests.length === 0 ? (
-        <Paper sx={{ p: 6, borderRadius: 3, textAlign: 'center' }}>
-          <HistoryIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-          <Typography color="text.secondary">No stock requests yet.</Typography>
+        <Paper sx={{ p: 6, borderRadius: '8px', textAlign: 'center', border: '1px solid #EAE6E1', bgcolor: '#FFFFFF', boxShadow: 'none' }}>
+          <HistoryIcon sx={{ fontSize: 40, color: '#AC9E7A', mb: 1.5 }} />
+          <Typography sx={{ color: '#7C726A', fontWeight: 600 }}>No stock requests yet.</Typography>
         </Paper>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
           {requests.map(req => {
             const movementLabel = getMovementLabel(req);
             const isDelivery = movementLabel === 'Delivery Out';
 
             return (
-              <Paper key={req.id} sx={{ p: 2.5, borderRadius: 3, border: '1px solid', borderColor: 'divider', transition: 'box-shadow 0.15s', '&:hover': { boxShadow: '0 4px 16px rgba(0,0,0,0.06)' } }}>
-                {/* Top row: pipeline + date */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+              <Paper
+                key={req.id}
+                sx={{
+                  p: 3,
+                  borderRadius: '8px',
+                  border: '1px solid #EAE6E1',
+                  bgcolor: '#FFFFFF',
+                  boxShadow: 'none',
+                  transition: 'border-color 0.2s ease',
+                  '&:hover': { borderColor: '#AC9C94' }
+                }}
+              >
+                {/* Top row: Stepper + Date */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, flexWrap: 'wrap', gap: 1.5 }}>
                   <PipelineStepper currentStatus={req.status} />
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#7C726A', fontSize: '0.8rem' }}>
                     {new Date(req.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                     {' · '}
-                    {new Date(req.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(req.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
                   </Typography>
                 </Box>
 
-                {/* Details */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 2 }}>
-                  <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{req.series_code}</Typography>
+                {/* Details grid layout matching design */}
+                <Grid container spacing={2} sx={{ mb: 2.5 }}>
+                  <Grid item xs={12} md={7}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                      <Typography
+                        variant="h3"
+                        sx={{
+                          fontSize: '1.25rem',
+                          fontWeight: 800,
+                          color: '#241C1A',
+                          fontFamily: '"Plus Jakarta Sans", sans-serif'
+                        }}
+                      >
+                        {req.series_code}
+                      </Typography>
                       <Chip
-                        label={movementLabel}
+                        label={movementLabel.toUpperCase()}
                         size="small"
                         sx={{
-                          height: 20, fontSize: '0.65rem', fontWeight: 700,
-                          bgcolor: isDelivery ? 'rgba(245,158,11,0.12)' : 'rgba(34,197,94,0.12)',
-                          color: isDelivery ? 'warning.dark' : 'success.dark'
+                          height: 18,
+                          fontSize: '0.6rem',
+                          fontWeight: 800,
+                          borderRadius: '3px',
+                          bgcolor: isDelivery ? '#FFF3E0' : '#E2F6EA',
+                          color: isDelivery ? '#D97706' : '#16A34A',
                         }}
                       />
                     </Box>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{ color: '#7C726A', fontWeight: 550 }}>
                       {req.beam_name} · {req.combination_name || 'Combination'}
                     </Typography>
-                  </Box>
+                  </Grid>
 
-                  <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>Qty</Typography>
-                      <Typography variant="h6" sx={{ fontWeight: 800, color: isDelivery ? 'warning.main' : 'success.main' }}>
+                  {/* Quantity and Supplier columns */}
+                  <Grid item xs={6} md={2.5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
+                    <Box>
+                      <Typography variant="caption" sx={{ fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9E8E7A', display: 'block', mb: 0.5 }}>
+                        QTY
+                      </Typography>
+                      <Typography
+                        variant="h4"
+                        sx={{
+                          fontFamily: '"Playfair Display", Georgia, serif',
+                          fontWeight: 700,
+                          fontSize: '1.4rem',
+                          color: isDelivery ? '#D97706' : '#16A34A'
+                        }}
+                      >
                         {isDelivery ? '−' : '+'}{req.requested_qty}
                       </Typography>
                     </Box>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>Supplier</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>{req.suppliers?.name || '—'}</Typography>
+                  </Grid>
+                  <Grid item xs={6} md={2.5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
+                    <Box>
+                      <Typography variant="caption" sx={{ fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9E8E7A', display: 'block', mb: 0.5 }}>
+                        SUPPLIER
+                      </Typography>
+                      <Typography
+                        variant="h4"
+                        sx={{
+                          fontFamily: '"Playfair Display", Georgia, serif',
+                          fontWeight: 700,
+                          fontSize: '1.35rem',
+                          color: '#241C1A'
+                        }}
+                      >
+                        {req.suppliers?.name || '—'}
+                      </Typography>
                     </Box>
-                  </Box>
-                </Box>
+                  </Grid>
+                </Grid>
 
-                {/* Actions */}
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                {/* Actions row */}
+                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center', pt: 1.5, borderTop: '1px solid #FAF8F5' }}>
                   {req.status !== 'Received' && req.status !== 'Cancelled' && (
                     <>
                       {req.suppliers?.mobile && (
-                        <Button size="small" variant="outlined" color="success" startIcon={<WhatsAppIcon />} onClick={() => openWhatsApp(req)} sx={{ fontWeight: 700, borderRadius: 2, textTransform: 'none', fontSize: '0.75rem' }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="success"
+                          startIcon={<WhatsAppIcon sx={{ fontSize: 16 }} />}
+                          onClick={() => openWhatsApp(req)}
+                          sx={{
+                            fontWeight: 800,
+                            borderRadius: '4px',
+                            borderColor: '#16A34A',
+                            color: '#16A34A',
+                            px: 2,
+                            py: 0.8,
+                            fontSize: '0.78rem',
+                            '&:hover': {
+                              borderColor: '#15803d',
+                              bgcolor: 'rgba(22,163,74,0.04)'
+                            }
+                          }}
+                        >
                           WhatsApp
                         </Button>
                       )}
                       {req.status === 'Requested' && (
-                        <Button size="small" variant="outlined" onClick={() => handleStatusChange(req.id, 'Confirmed')} sx={{ fontWeight: 700, borderRadius: 2, textTransform: 'none', fontSize: '0.75rem' }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => handleStatusChange(req.id, 'Confirmed')}
+                          sx={{
+                            fontWeight: 800,
+                            borderRadius: '4px',
+                            borderColor: '#EAE6E1',
+                            color: '#241C1A',
+                            px: 2,
+                            py: 0.8,
+                            fontSize: '0.78rem',
+                            '&:hover': {
+                              borderColor: '#9E8E7A',
+                              bgcolor: '#FCFCFA'
+                            }
+                          }}
+                        >
                           Confirm
                         </Button>
                       )}
                       {(req.status === 'Requested' || req.status === 'Confirmed') && (
-                        <Button size="small" variant="contained" startIcon={<CheckCircleIcon sx={{ fontSize: 14 }} />} onClick={() => handleStatusChange(req.id, 'Received')} sx={{ fontWeight: 700, borderRadius: 2, textTransform: 'none', fontSize: '0.75rem' }}>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<CheckCircleIcon sx={{ fontSize: 14 }} />}
+                          onClick={() => handleStatusChange(req.id, 'Received')}
+                          sx={{
+                            fontWeight: 800,
+                            borderRadius: '4px',
+                            bgcolor: '#3B111A',
+                            color: '#FFFFFF',
+                            px: 2.5,
+                            py: 0.8,
+                            fontSize: '0.78rem',
+                            '&:hover': {
+                              bgcolor: '#2A0B12'
+                            }
+                          }}
+                        >
                           Mark Received
                         </Button>
                       )}
                     </>
                   )}
                   <Tooltip title="Delete">
-                    <IconButton size="small" color="error" onClick={() => setDeleteId(req.id)} sx={{ ml: 'auto' }}>
-                      <DeleteIcon fontSize="small" />
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => setDeleteId(req.id)}
+                      sx={{
+                        ml: 'auto',
+                        color: '#DC2626',
+                        border: '1px solid #FEEBEE',
+                        borderRadius: '4px',
+                        '&:hover': { bgcolor: '#FEEBEE' }
+                      }}
+                    >
+                      <DeleteIcon sx={{ fontSize: 18 }} />
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -277,44 +451,50 @@ const StockRequests = () => {
       )}
 
       {/* Receive confirmation dialog (spec §13) */}
-      <Dialog open={!!receiveConfirm} onClose={() => setReceiveConfirm(null)} PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
-        <DialogTitle sx={{ fontWeight: 800 }}>Confirm Stock Receipt</DialogTitle>
+      <Dialog open={!!receiveConfirm} onClose={() => setReceiveConfirm(null)} PaperProps={{ sx: { borderRadius: '8px', p: 1 } }}>
+        <DialogTitle sx={{ fontWeight: 800, fontFamily: '"Plus Jakarta Sans", sans-serif', color: '#241C1A' }}>
+          Confirm Stock Receipt
+        </DialogTitle>
         <DialogContent>
           {receiveConfirm && (
             <Box>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, fontWeight: 600 }}>
                 {receiveConfirm.series_code} — {receiveConfirm.beam_name} · {receiveConfirm.combination_name}
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: 2, bgcolor: '#FAF8F5', borderRadius: '4px', border: '1px solid #EAE6E1' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Current Stock</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{receiveConfirm.current_stock ?? '—'} pcs</Typography>
+                  <Typography variant="body2" sx={{ color: '#7C726A', fontWeight: 550 }}>Current Stock</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#241C1A' }}>{receiveConfirm.current_stock ?? '—'} pcs</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Receiving</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: 'success.main' }}>+{receiveConfirm.requested_qty} pcs</Typography>
+                  <Typography variant="body2" sx={{ color: '#7C726A', fontWeight: 550 }}>Receiving</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#16A34A' }}>+{receiveConfirm.requested_qty} pcs</Typography>
                 </Box>
-                <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 1, display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>New Stock</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 800 }}>{(receiveConfirm.current_stock ?? 0) + receiveConfirm.requested_qty} pcs</Typography>
+                <Box sx={{ borderTop: '1px solid #EAE6E1', pt: 1.5, display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#241C1A' }}>New Stock</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 800, color: '#241C1A' }}>{(receiveConfirm.current_stock ?? 0) + receiveConfirm.requested_qty} pcs</Typography>
                 </Box>
               </Box>
             </Box>
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          <Button onClick={() => setReceiveConfirm(null)} variant="outlined">Cancel</Button>
-          <Button onClick={confirmReceive} variant="contained">Confirm & Update Stock</Button>
+          <Button onClick={() => setReceiveConfirm(null)} variant="outlined" sx={{ borderRadius: '4px', textTransform: 'none', fontWeight: 700 }}>
+            Cancel
+          </Button>
+          <Button onClick={confirmReceive} variant="contained" sx={{ borderRadius: '4px', bgcolor: '#3B111A', textTransform: 'none', fontWeight: 700, '&:hover': { bgcolor: '#2A0B12' } }}>
+            Confirm & Update Stock
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete confirm */}
-      <Dialog open={!!deleteId} onClose={() => setDeleteId(null)}>
-        <DialogTitle sx={{ fontWeight: 700 }}>Delete Request?</DialogTitle>
-        <DialogContent>This will permanently delete the stock request record.</DialogContent>
+      <Dialog open={!!deleteId} onClose={() => setDeleteId(null)} PaperProps={{ sx: { borderRadius: '8px' } }}>
+        <DialogTitle sx={{ fontWeight: 800, color: '#241C1A' }}>Delete Request?</DialogTitle>
+        <DialogContent sx={{ color: '#7C726A' }}>This will permanently delete the stock request record.</DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setDeleteId(null)}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={handleDelete}>Delete</Button>
+          <Button onClick={() => setDeleteId(null)} variant="outlined" sx={{ borderRadius: '4px', textTransform: 'none', fontWeight: 700 }}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={handleDelete} sx={{ borderRadius: '4px', textTransform: 'none', fontWeight: 700, bgcolor: '#DC2626' }}>Delete</Button>
         </DialogActions>
       </Dialog>
 
