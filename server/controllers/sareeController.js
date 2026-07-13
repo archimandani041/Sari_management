@@ -65,66 +65,81 @@ const getSarees = async (req, res) => {
       `, { count: 'exact' })
       .eq('owner_id', ownerId);
 
-    // Brand filter
+    // Execute all filtering helper queries concurrently using Promise.all
+    const filterPromises = {};
+
     if (brand) {
-      const { data: brandCombos } = await supabase
+      filterPromises.brand = supabase
         .from('combinations')
         .select('beam_id, beams(saree_id, sarees(owner_id))')
         .eq('brand', brand);
-      const brandSareeIds = (brandCombos || []).map(c => c.beams?.saree_id).filter(Boolean);
+    }
+    if (saree_status) {
+      filterPromises.saree_status = supabase
+        .from('combinations')
+        .select('beam_id, beams(saree_id)')
+        .eq('status', saree_status);
+    }
+    if (company) {
+      filterPromises.company = supabase
+        .from('combination_colors')
+        .select('combination_id, combinations(beam_id, beams(saree_id))')
+        .ilike('company_name', `%${company}%`);
+    }
+    if (color) {
+      filterPromises.color = supabase
+        .from('combination_colors')
+        .select('combination_id, combinations(beam_id, beams(saree_id))')
+        .ilike('color_name', `%${color}%`);
+    }
+    if (search) {
+      filterPromises.searchColors = supabase
+        .from('combination_colors')
+        .select('combination_id, combinations(beam_id, beams(saree_id, sarees(owner_id)))')
+        .or(`color_name.ilike.%${search}%,company_name.ilike.%${search}%`);
+      filterPromises.searchBeams = supabase
+        .from('beams')
+        .select('saree_id, sarees(owner_id)')
+        .ilike('beam_name', `%${search}%`);
+    }
+
+    const filterKeys = Object.keys(filterPromises);
+    console.time(`getSarees-FilterQueries-${ownerId}`);
+    const filterResults = await Promise.all(Object.values(filterPromises));
+    console.timeEnd(`getSarees-FilterQueries-${ownerId}`);
+    const filterData = {};
+    filterKeys.forEach((key, idx) => {
+      filterData[key] = filterResults[idx].data || [];
+    });
+
+    // Brand filter
+    if (brand) {
+      const brandSareeIds = filterData.brand.map(c => c.beams?.saree_id).filter(Boolean);
       query = query.in('id', brandSareeIds.length > 0 ? brandSareeIds : ['00000000-0000-0000-0000-000000000000']);
     }
 
     // Status (In Stock / In Delivery) filter
     if (saree_status) {
-      const { data: statusCombos } = await supabase
-        .from('combinations')
-        .select('beam_id, beams(saree_id)')
-        .eq('status', saree_status);
-      const statusSareeIds = (statusCombos || []).map(c => c.beams?.saree_id).filter(Boolean);
+      const statusSareeIds = filterData.saree_status.map(c => c.beams?.saree_id).filter(Boolean);
       query = query.in('id', statusSareeIds.length > 0 ? statusSareeIds : ['00000000-0000-0000-0000-000000000000']);
     }
 
     // Company filter
     if (company) {
-      const { data: companyColors } = await supabase
-        .from('combination_colors')
-        .select('combination_id, combinations(beam_id, beams(saree_id))')
-        .ilike('company_name', `%${company}%`);
-      const companySareeIds = (companyColors || [])
-        .map(c => c.combinations?.beams?.saree_id)
-        .filter(Boolean);
+      const companySareeIds = filterData.company.map(c => c.combinations?.beams?.saree_id).filter(Boolean);
       query = query.in('id', companySareeIds.length > 0 ? companySareeIds : ['00000000-0000-0000-0000-000000000000']);
     }
 
     // Color filter
     if (color) {
-      const { data: colorMatches } = await supabase
-        .from('combination_colors')
-        .select('combination_id, combinations(beam_id, beams(saree_id))')
-        .ilike('color_name', `%${color}%`);
-      const colorSareeIds = (colorMatches || [])
-        .map(c => c.combinations?.beams?.saree_id)
-        .filter(Boolean);
+      const colorSareeIds = filterData.color.map(c => c.combinations?.beams?.saree_id).filter(Boolean);
       query = query.in('id', colorSareeIds.length > 0 ? colorSareeIds : ['00000000-0000-0000-0000-000000000000']);
     }
 
     // Search — only within this owner's sarees
     if (search) {
-      // Fetch matching child IDs that belong to this owner's sarees
-      const { data: colorMatches } = await supabase
-        .from('combination_colors')
-        .select('combination_id, combinations(beam_id, beams(saree_id, sarees(owner_id)))')
-        .or(`color_name.ilike.%${search}%,company_name.ilike.%${search}%`);
-
-      const { data: beamMatches } = await supabase
-        .from('beams')
-        .select('saree_id, sarees(owner_id)')
-        .ilike('beam_name', `%${search}%`);
-
-      const sareeIdsFromColors = (colorMatches || [])
-        .map(c => c.combinations?.beams?.saree_id).filter(Boolean);
-      const sareeIdsFromBeams = (beamMatches || []).map(b => b.saree_id);
+      const sareeIdsFromColors = filterData.searchColors.map(c => c.combinations?.beams?.saree_id).filter(Boolean);
+      const sareeIdsFromBeams = filterData.searchBeams.map(b => b.saree_id).filter(Boolean);
       const extraIds = [...new Set([...sareeIdsFromColors, ...sareeIdsFromBeams])];
 
       if (extraIds.length > 0) {
@@ -145,7 +160,9 @@ const getSarees = async (req, res) => {
       default: query = query.order('created_at', { ascending: false });
     }
 
+    console.time(`getSarees-MainQuery-${ownerId}`);
     const { data, error, count } = await query.range(offset, offset + pageSize - 1);
+    console.timeEnd(`getSarees-MainQuery-${ownerId}`);
     if (error) throw error;
 
     // Compute total stock per saree + apply status filter in JS

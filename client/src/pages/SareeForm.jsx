@@ -223,8 +223,8 @@ const SareeForm = () => {
           }));
         }
 
-        // Check if there is a pending import in localStorage
-        const pendingImportStr = localStorage.getItem('pending_whatsapp_import');
+        // Check if there is a pending import in sessionStorage
+        const pendingImportStr = sessionStorage.getItem('pending_whatsapp_import');
         if (pendingImportStr) {
           try {
             const pendingEntries = JSON.parse(pendingImportStr);
@@ -279,7 +279,7 @@ const SareeForm = () => {
           } catch (e) {
             console.error('Failed to parse pending import', e);
           } finally {
-            localStorage.removeItem('pending_whatsapp_import');
+            sessionStorage.removeItem('pending_whatsapp_import');
           }
         }
 
@@ -739,7 +739,7 @@ const SareeForm = () => {
       const entriesToMerge = parsedEntries.filter(entry =>
         (entry.series_code || '').toUpperCase() === currentConflict.seriesCode
       );
-      localStorage.setItem('pending_whatsapp_import', JSON.stringify(entriesToMerge));
+      sessionStorage.setItem('pending_whatsapp_import', JSON.stringify(entriesToMerge));
       setActiveSareeExist(null);
       setSareeExistQueue([]);
       navigate(`/sarees/edit/${currentConflict.sareeId}`);

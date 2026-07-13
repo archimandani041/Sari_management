@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Paper, Typography, Chip, Select, MenuItem, FormControl, InputLabel,
   IconButton, Tooltip, Alert, Skeleton, Button, Dialog, DialogTitle,
-  DialogContent, DialogActions, Snackbar, Grid
+  DialogContent, DialogActions, Snackbar, Grid, LinearProgress
 } from '@mui/material';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -178,8 +178,11 @@ const StockRequests = () => {
 
       {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
 
+      {loading && requests.length > 0 && (
+        <LinearProgress sx={{ height: 3, mb: 2.5, borderRadius: 1.5 }} />
+      )}
       {/* Request cards */}
-      {loading ? (
+      {loading && requests.length === 0 ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {[1,2,3].map(i => <Skeleton key={i} variant="rounded" height={120} sx={{ borderRadius: 3 }} />)}
         </Box>

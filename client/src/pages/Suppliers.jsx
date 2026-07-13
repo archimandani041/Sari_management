@@ -7,7 +7,7 @@ import {
   Box, Paper, Typography, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, IconButton, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Grid, Chip, Alert, Snackbar,
-  Avatar, Tooltip, Skeleton, InputAdornment
+  Avatar, Tooltip, Skeleton, InputAdornment, LinearProgress
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -120,6 +120,9 @@ const Suppliers = () => {
         />
       </Paper>
 
+      {loading && suppliers.length > 0 && (
+        <LinearProgress sx={{ height: 3, mb: 2, borderRadius: 1.5 }} />
+      )}
       {/* Table */}
       <Paper sx={{ borderRadius: 3, overflow: 'hidden' }}>
         <TableContainer>
@@ -135,7 +138,7 @@ const Suppliers = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {loading ? (
+              {loading && suppliers.length === 0 ? (
                 [...Array(4)].map((_, i) => (
                   <TableRow key={i}>
                     {[1, 2, 3, 4, 5, 6].map(j => <TableCell key={j}><Skeleton /></TableCell>)}

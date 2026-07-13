@@ -19,11 +19,22 @@ const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
     
-    // Call Supabase API to get user info from the token
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !authUser) {
-      return res.status(401).json({ error: 'Invalid or expired session. Please log in again.' });
+    // Verify Supabase JWT token locally to avoid slow network requests
+    let authUser;
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      authUser = {
+        id: decoded.sub,
+        email: decoded.email,
+        user_metadata: decoded.user_metadata || {}
+      };
+    } catch (jwtError) {
+      console.warn('Local JWT verification failed, falling back to Supabase API:', jwtError.message);
+      const { data: { user: apiUser }, error: authError } = await supabase.auth.getUser(token);
+      if (authError || !apiUser) {
+        return res.status(401).json({ error: 'Invalid or expired session. Please log in again.' });
+      }
+      authUser = apiUser;
     }
 
     // Find the user's role and details in public.users table

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dashboardAPI, sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
+import { useDebouncedCallback } from '../hooks/useDebounce';
 import {
   Grid, Paper, Box, Typography, Card, CardContent,
   Table, TableBody, TableCell, TableContainer, TableRow, TableHead,
@@ -99,6 +100,7 @@ const Dashboard = () => {
 
   // Fetch Dashboard Stats
   const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
     try {
       const params = {
         range: dateRange,
@@ -157,6 +159,14 @@ const Dashboard = () => {
     }
   }, [selectedSaree, forecastHorizon, fetchPrediction]);
 
+  // Debounced realtime callback to avoid rapid multiple fetches
+  const handleRealtimeUpdate = useDebouncedCallback(() => {
+    fetchDashboardData();
+    if (selectedSaree?.id) {
+      fetchPrediction(selectedSaree.id, forecastHorizon);
+    }
+  }, 300);
+
   // Real-time Supabase subscriptions
   useEffect(() => {
     if (!supabase) {
@@ -169,16 +179,10 @@ const Dashboard = () => {
     const channel = supabase
       .channel('realtime-dashboard-updates-v3')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_history' }, () => {
-        fetchDashboardData();
-        if (selectedSaree?.id) {
-          fetchPrediction(selectedSaree.id, forecastHorizon);
-        }
+        handleRealtimeUpdate();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, () => {
-        fetchDashboardData();
-        if (selectedSaree?.id) {
-          fetchPrediction(selectedSaree.id, forecastHorizon);
-        }
+        handleRealtimeUpdate();
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
@@ -191,7 +195,7 @@ const Dashboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchDashboardData, fetchPrediction, selectedSaree, forecastHorizon]);
+  }, [handleRealtimeUpdate]);
 
   // Frosted surface style (single source of truth — no glass-on-glass nesting inside)
   const glassCard = {
@@ -246,7 +250,7 @@ const Dashboard = () => {
             {icon}
           </Box>
         </Box>
-        {loading ? <Skeleton width="55%" height={44} /> : (
+        {loading && !data ? <Skeleton width="55%" height={44} /> : (
           <Typography variant="h3" sx={{ fontWeight: 850, color: 'text.primary', letterSpacing: '-0.5px' }}>
             {value}{unit && <Box component="span" sx={{ fontSize: '1.1rem', fontWeight: 600, ml: 0.5 }}>{unit}</Box>}
           </Typography>
@@ -276,7 +280,10 @@ const Dashboard = () => {
   }[realtimeStatus] || { label: 'Offline', color: theme.palette.text.disabled };
 
   return (
-    <Box sx={{ flexGrow: 1, p: { xs: 1.5, md: 3 }, maxWidth: 1500, mx: 'auto' }}>
+    <Box sx={{ flexGrow: 1, p: { xs: 1.5, md: 3 }, maxWidth: 1500, mx: 'auto', position: 'relative' }}>
+      {loading && data && (
+        <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, height: 3, borderRadius: 1.5 }} />
+      )}
 
       {/* HEADER */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, flexWrap: 'wrap', gap: 2, mb: 3 }}>
@@ -403,7 +410,7 @@ const Dashboard = () => {
                     <Button variant={grouping === 'monthly' ? 'contained' : 'outlined'} onClick={() => setGrouping('monthly')}>Monthly</Button>
                   </ButtonGroup>
                 </Box>
-                {loading ? (
+                {loading && !data ? (
                   <Skeleton variant="rectangular" height="75%" sx={{ borderRadius: 2 }} />
                 ) : stockMovement.length === 0 ? (
                   <Box sx={{ height: '75%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -764,7 +771,10 @@ const Dashboard = () => {
 
       {/* ══════════════════════ TAB 1: PREDICTION ══════════════════════ */}
       {activeTab === 1 && (
-        <Box>
+        <Box sx={{ position: 'relative' }}>
+          {loadingPrediction && predictionData && (
+            <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, height: 3, borderRadius: 1.5 }} />
+          )}
           <Paper sx={{ ...glassCard, p: 3, mb: 2.5 }} elevation={0}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
               <Box>
@@ -791,7 +801,7 @@ const Dashboard = () => {
               </Box>
             </Box>
 
-            {loadingPrediction ? (
+            {loadingPrediction && !predictionData ? (
               <Grid container spacing={2.5}>
                 <Grid size={{ xs: 12, md: 4 }}><Skeleton variant="rectangular" height={340} sx={{ borderRadius: 3 }} /></Grid>
                 <Grid size={{ xs: 12, md: 8 }}><Skeleton variant="rectangular" height={340} sx={{ borderRadius: 3 }} /></Grid>

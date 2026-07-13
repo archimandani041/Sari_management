@@ -231,16 +231,52 @@ const getDashboard = async (req, res) => {
     const ownerId = req.user.owner_id;
 
     // 1. Core Counts & Dynamic details — all scoped to this owner
-    const { count: totalSarees } = await supabase
-      .from('sarees').select('*', { count: 'exact', head: true }).eq('owner_id', ownerId);
+    // Execute all queries concurrently to optimize backend performance
+    console.time(`getDashboard-Queries-${ownerId}`);
+    const [
+      totalSareesRes,
+      ownerSareesRes,
+      pendingRequestsRes,
+      completedRequestsRes,
+      rawHistoryRes
+    ] = await Promise.all([
+      supabase
+        .from('sarees')
+        .select('*', { count: 'exact', head: true })
+        .eq('owner_id', ownerId),
+      supabase
+        .from('sarees')
+        .select('id, series_code, price, beams(id, saree_id, beam_name, combinations(id, combination_name, current_stock, minimum_stock, brand, status))')
+        .eq('owner_id', ownerId),
+      supabase
+        .from('stock_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'Requested')
+        .eq('owner_id', ownerId),
+      supabase
+        .from('stock_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'Received')
+        .eq('owner_id', ownerId),
+      supabase
+        .from('stock_history')
+        .select('*, sarees(series_code, sari_name, price)')
+        .eq('owner_id', ownerId)
+        .gte('created_at', periods.prevStartDate.toISOString())
+    ]);
+    console.timeEnd(`getDashboard-Queries-${ownerId}`);
 
-    // Query via sarees (owner-scoped) → beams → combinations so we ONLY get this owner's data.
-    // DO NOT query combinations directly and use .filter() on a join — that returns all rows
-    // in combinations table and only nullifies the nested join, leaking other users' data.
-    const { data: ownerSarees } = await supabase
-      .from('sarees')
-      .select('id, series_code, price, beams(id, saree_id, beam_name, combinations(id, combination_name, current_stock, minimum_stock, brand, status))')
-      .eq('owner_id', ownerId);
+    if (totalSareesRes.error) throw totalSareesRes.error;
+    if (ownerSareesRes.error) throw ownerSareesRes.error;
+    if (pendingRequestsRes.error) throw pendingRequestsRes.error;
+    if (completedRequestsRes.error) throw completedRequestsRes.error;
+    if (rawHistoryRes.error) throw rawHistoryRes.error;
+
+    const totalSarees = totalSareesRes.count;
+    const ownerSarees = ownerSareesRes.data;
+    const pendingRequests = pendingRequestsRes.count;
+    const completedRequests = completedRequestsRes.count;
+    const rawHistory = rawHistoryRes.data;
 
     // Flatten into a combos array that mirrors the old shape, strictly scoped to this owner
     const combos = [];
@@ -264,19 +300,6 @@ const getDashboard = async (req, res) => {
     const totalStock = combos.reduce((sum, c) => sum + (c.current_stock || 0), 0);
     const lowStockCount = combos.filter(c => (c.current_stock ?? 0) <= (c.minimum_stock ?? 20)).length;
     const outOfStock = combos.filter(c => (c.current_stock ?? 0) === 0).length;
-
-    const { count: pendingRequests } = await supabase
-      .from('stock_requests').select('*', { count: 'exact', head: true }).eq('status', 'Requested').eq('owner_id', ownerId);
-    
-    const { count: completedRequests } = await supabase
-      .from('stock_requests').select('*', { count: 'exact', head: true }).eq('status', 'Received').eq('owner_id', ownerId);
-
-    // Fetch history for comparison (current period + previous period) — scoped to owner
-    const { data: rawHistory } = await supabase
-      .from('stock_history')
-      .select('*, sarees(series_code, sari_name, price)')
-      .eq('owner_id', ownerId)
-      .gte('created_at', periods.prevStartDate.toISOString());
 
     const parsedHistory = (rawHistory || []).map(h => {
       const details = getTransactionDetails(h);

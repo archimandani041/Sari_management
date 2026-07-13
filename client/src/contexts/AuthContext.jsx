@@ -17,17 +17,17 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('sari_token'));
+  const [token, setToken] = useState(sessionStorage.getItem('sari_token'));
 
   // Fetch the public user profile from the backend
   const fetchProfile = useCallback(async (accessToken) => {
     try {
-      // Temporarily store token in localStorage so API interceptor uses it
-      localStorage.setItem('sari_token', accessToken);
+      // Temporarily store token in sessionStorage so API interceptor uses it
+      sessionStorage.setItem('sari_token', accessToken);
       const { data } = await authAPI.getMe();
       if (data && data.user) {
         setUser(data.user);
-        localStorage.setItem('sari_user', JSON.stringify(data.user));
+        sessionStorage.setItem('sari_user', JSON.stringify(data.user));
         setToken(accessToken);
       } else {
         throw new Error('No user data returned');
@@ -35,8 +35,8 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error('Failed to fetch user profile:', err);
       // Clean up on failure
-      localStorage.removeItem('sari_token');
-      localStorage.removeItem('sari_user');
+      sessionStorage.removeItem('sari_token');
+      sessionStorage.removeItem('sari_user');
       setUser(null);
       setToken(null);
     }
@@ -55,8 +55,8 @@ export const AuthProvider = ({ children }) => {
       if (session) {
         await fetchProfile(session.access_token);
       } else {
-        localStorage.removeItem('sari_token');
-        localStorage.removeItem('sari_user');
+        sessionStorage.removeItem('sari_token');
+        sessionStorage.removeItem('sari_user');
         setUser(null);
         setToken(null);
       }
@@ -68,8 +68,8 @@ export const AuthProvider = ({ children }) => {
       if (session) {
         await fetchProfile(session.access_token);
       } else {
-        localStorage.removeItem('sari_token');
-        localStorage.removeItem('sari_user');
+        sessionStorage.removeItem('sari_token');
+        sessionStorage.removeItem('sari_user');
         setUser(null);
         setToken(null);
       }
@@ -133,11 +133,11 @@ export const AuthProvider = ({ children }) => {
         console.error('Error signing out from Supabase:', err);
       }
     }
-    localStorage.removeItem('sari_token');
-    localStorage.removeItem('sari_user');
-    localStorage.removeItem('pending_whatsapp_import');
-    localStorage.removeItem('sari_recent');
-    localStorage.removeItem('sari_favorites');
+    sessionStorage.removeItem('sari_token');
+    sessionStorage.removeItem('sari_user');
+    sessionStorage.removeItem('pending_whatsapp_import');
+    sessionStorage.removeItem('sari_recent');
+    sessionStorage.removeItem('sari_favorites');
     setToken(null);
     setUser(null);
     window.location.href = '/login';

@@ -12,7 +12,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('sari_token');
+  const token = sessionStorage.getItem('sari_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -23,8 +23,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const code = error.response?.data?.code;
       // Force clear stale session (expired token OR user deleted from DB after migration)
-      localStorage.removeItem('sari_token');
-      localStorage.removeItem('sari_user');
+      sessionStorage.removeItem('sari_token');
+      sessionStorage.removeItem('sari_user');
       if (window.location.pathname !== '/login') {
         // Add a hint in the URL so the login page can show a message
         const reason = code === 'STALE_SESSION' ? '?reason=session_reset' : '';

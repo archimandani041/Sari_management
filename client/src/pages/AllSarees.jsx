@@ -7,7 +7,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { useDebounce } from '../hooks/useDebounce';
+import { useDebounce, useDebouncedCallback } from '../hooks/useDebounce';
 import {
   Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, TablePagination, Typography, TextField, Button, MenuItem,
@@ -304,6 +304,11 @@ const AllSarees = () => {
     fetchSarees();
   }, [fetchSarees]);
 
+  // Debounced realtime callback to avoid rapid multiple fetches
+  const handleRealtimeUpdate = useDebouncedCallback(() => {
+    fetchSarees();
+  }, 300);
+
   // Real-time Supabase subscriptions
   useEffect(() => {
     if (!supabase) return;
@@ -311,20 +316,20 @@ const AllSarees = () => {
     const channel = supabase
       .channel('realtime-sarees-list-updates')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, () => {
-        fetchSarees();
+        handleRealtimeUpdate();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'beams' }, () => {
-        fetchSarees();
+        handleRealtimeUpdate();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sarees' }, () => {
-        fetchSarees();
+        handleRealtimeUpdate();
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchSarees]);
+  }, [handleRealtimeUpdate]);
 
   // Sync URL search parameters
   useEffect(() => {
@@ -518,7 +523,10 @@ const AllSarees = () => {
       </Paper>
 
       {/* Table */}
-      {loading ? (
+      {loading && sarees.length > 0 && (
+        <LinearProgress sx={{ height: 3, mb: 2, borderRadius: 1.5 }} />
+      )}
+      {loading && sarees.length === 0 ? (
         <Paper sx={{ p: 2, borderRadius: 4 }}>
           {[...Array(6)].map((_, index) => (
             <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>

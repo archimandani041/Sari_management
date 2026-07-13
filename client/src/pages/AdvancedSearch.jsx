@@ -12,7 +12,7 @@ import {
   Select, MenuItem, Checkbox, ListItemText, OutlinedInput, Button, Chip,
   Card, CardContent, CardMedia, IconButton, Badge, Dialog, DialogTitle,
   DialogContent, DialogActions, Alert, CircularProgress, Breadcrumbs, Link,
-  Tooltip, Accordion, AccordionSummary, AccordionDetails, Divider, Slider
+  Tooltip, Accordion, AccordionSummary, AccordionDetails, Divider, Slider, LinearProgress
 } from '@mui/material';
 import {
   Search as SearchIcon, FilterList as FilterIcon, Edit as EditIcon,
@@ -402,7 +402,10 @@ const AdvancedSearch = () => {
           </Paper>
 
           {/* Results Grid */}
-          {loading ? (
+          {loading && results.length > 0 && (
+            <LinearProgress sx={{ height: 3, mb: 3, borderRadius: 1.5 }} />
+          )}
+          {loading && results.length === 0 ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>
           ) : results.length === 0 ? (
             <Alert severity="info" sx={{ borderRadius: 3 }}>No combinations found matching your search criteria.</Alert>

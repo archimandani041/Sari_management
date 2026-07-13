@@ -9,11 +9,12 @@ import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
 import RequestStockDialog from '../components/common/RequestStockDialog';
+import { useDebouncedCallback } from '../hooks/useDebounce';
 import {
   Box, Grid, Paper, Typography, Button, Chip, Divider, Card, CardContent,
   CardMedia, TextField, FormControl, InputLabel, Select, MenuItem, Alert,
   Table, TableBody, TableCell, TableContainer, TableRow, TableHead, IconButton,
-  CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText
+  CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText, LinearProgress
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -73,6 +74,11 @@ const SareeDetail = () => {
     fetchSareeDetails();
   }, [id]);
 
+  // Debounced realtime callback to avoid rapid multiple fetches
+  const handleRealtimeUpdate = useDebouncedCallback(() => {
+    fetchSareeDetails();
+  }, 300);
+
   // Real-time Supabase subscriptions
   useEffect(() => {
     if (!supabase || !id) return;
@@ -80,20 +86,20 @@ const SareeDetail = () => {
     const channel = supabase
       .channel(`realtime-saree-detail-${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'combinations' }, () => {
-        fetchSareeDetails();
+        handleRealtimeUpdate();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'beams' }, () => {
-        fetchSareeDetails();
+        handleRealtimeUpdate();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sarees', filter: `id=eq.${id}` }, () => {
-        fetchSareeDetails();
+        handleRealtimeUpdate();
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [id]);
+  }, [id, handleRealtimeUpdate]);
 
 
 
@@ -124,7 +130,7 @@ const SareeDetail = () => {
 
 
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>;
+  if (loading && !saree) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>;
   if (!saree) return <Box sx={{ p: 3 }}><Alert severity="error">Saree details not found.</Alert></Box>;
 
   // Calculations
@@ -145,7 +151,10 @@ const SareeDetail = () => {
 
 
   return (
-    <Box className="printable-area">
+    <Box className="printable-area" sx={{ position: 'relative' }}>
+      {loading && saree && (
+        <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, height: 3, borderRadius: 1.5 }} />
+      )}
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, displayPrint: 'none' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>

@@ -16,10 +16,10 @@ export const AppProvider = ({ children }) => {
   const [themeMode, setThemeMode] = useState(localStorage.getItem('sari_theme') || 'dark');
   const [searchOpen, setSearchOpen] = useState(false);
   const [recentlyViewed, setRecentlyViewed] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('sari_recent') || '[]'); } catch { return []; }
+    try { return JSON.parse(sessionStorage.getItem('sari_recent') || '[]'); } catch { return []; }
   });
   const [favorites, setFavorites] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('sari_favorites') || '[]'); } catch { return []; }
+    try { return JSON.parse(sessionStorage.getItem('sari_favorites') || '[]'); } catch { return []; }
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -35,7 +35,7 @@ export const AppProvider = ({ children }) => {
     setRecentlyViewed(prev => {
       const filtered = prev.filter(s => s.id !== saree.id);
       const updated = [{ id: saree.id, sari_name: saree.sari_name, series_code: saree.series_code, image_url: saree.image_url }, ...filtered].slice(0, 10);
-      localStorage.setItem('sari_recent', JSON.stringify(updated));
+      sessionStorage.setItem('sari_recent', JSON.stringify(updated));
       return updated;
     });
   }, []);
@@ -43,7 +43,7 @@ export const AppProvider = ({ children }) => {
   const toggleFavorite = useCallback((sareeId) => {
     setFavorites(prev => {
       const updated = prev.includes(sareeId) ? prev.filter(id => id !== sareeId) : [...prev, sareeId];
-      localStorage.setItem('sari_favorites', JSON.stringify(updated));
+      sessionStorage.setItem('sari_favorites', JSON.stringify(updated));
       return updated;
     });
   }, []);

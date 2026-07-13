@@ -1,7 +1,7 @@
 /**
  * useDebounce hook - debounces a value
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export const useDebounce = (value, delay = 300) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -30,4 +30,26 @@ export const useKeyboardShortcut = (key, ctrlKey, callback) => {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [key, ctrlKey, callback]);
+};
+
+export const useDebouncedCallback = (callback, delay = 300) => {
+  const callbackRef = useRef(callback);
+  const timeoutRef = useRef(null);
+
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  return useCallback((...args) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      callbackRef.current(...args);
+    }, delay);
+  }, [delay]);
 };
