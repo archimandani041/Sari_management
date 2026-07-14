@@ -30,8 +30,8 @@ import {
   ArrowForward as ArrowForwardIcon
 } from '@mui/icons-material';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-  Legend, ReferenceLine
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
+  Legend, AreaChart, Area, ReferenceLine
 } from 'recharts';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import RequestStockDialog from '../components/common/RequestStockDialog';
@@ -71,7 +71,7 @@ const Dashboard = () => {
     try {
       if (!item.sareeId || !item.id) return;
       const res = await sareeAPI.getById(item.sareeId);
-      const saree = res.data;
+      const saree = res.data.saree;
 
       let matchedBeam = null;
       let matchedCombo = null;
@@ -238,33 +238,33 @@ const Dashboard = () => {
   const stockTurnover = stats.currentStock > 0 ? Math.round((stats.delivered / stats.currentStock) * 1000) / 10 : 0;
   const stockDemandRatio = avgDailyDelivery > 0 ? Math.round((stats.currentStock / avgDailyDelivery) * 10) / 10 : 999;
 
-  // Reusable compact KPI card (no sparkline clutter)
+  // Reusable compact KPI card — flat editorial style matching image
   const KpiCard = ({ label, sublabel, value, unit, icon, tint, trendPercent }) => (
-    <Card>
-      <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 1.5, minHeight: 138 }}>
+    <Card sx={{ border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', borderRadius: '8px' }}>
+      <CardContent sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 1, minHeight: 120 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.68rem' }}>
             {label}
           </Typography>
-          <Box sx={{ color: tint, bgcolor: `${tint}1F`, p: 1, borderRadius: 2.5, display: 'flex' }}>
+          <Box sx={{ color: tint, bgcolor: `${tint}18`, p: 0.75, borderRadius: '6px', display: 'flex' }}>
             {icon}
           </Box>
         </Box>
-        {loading && !data ? <Skeleton width="55%" height={44} /> : (
-          <Typography variant="h3" sx={{ fontWeight: 850, color: 'text.primary', letterSpacing: '-0.5px' }}>
-            {value}{unit && <Box component="span" sx={{ fontSize: '1.1rem', fontWeight: 600, ml: 0.5 }}>{unit}</Box>}
+        {loading && !data ? <Skeleton width="55%" height={40} /> : (
+          <Typography sx={{ fontWeight: 800, fontSize: '2rem', color: 'text.primary', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+            {value}{unit && <Box component="span" sx={{ fontSize: '0.95rem', fontWeight: 500, ml: 0.5, color: 'text.secondary' }}>{unit}</Box>}
           </Typography>
         )}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 22 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minHeight: 20 }}>
           {typeof trendPercent === 'number' && (
             <Chip
               label={`${trendPercent >= 0 ? '↑' : '↓'} ${Math.abs(trendPercent)}%`}
               color={trendPercent >= 0 ? 'success' : 'error'}
               size="small"
-              sx={{ height: 20, fontSize: '0.68rem', fontWeight: 800, borderRadius: 1.5 }}
+              sx={{ height: 18, fontSize: '0.62rem', fontWeight: 800, borderRadius: '4px' }}
             />
           )}
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, fontSize: '0.72rem' }}>
             {sublabel}
           </Typography>
         </Box>
@@ -369,33 +369,34 @@ const Dashboard = () => {
           </Grid>
 
           {/* ALERT STRIP */}
-          <Paper sx={{ py: 1.75, px: 3, mb: 2.5 }} elevation={0}>
-            <Grid container spacing={2} justifyContent="space-around" alignItems="center">
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/low-stock')}>
-                  <Box sx={{ bgcolor: 'rgba(245, 158, 11, 0.12)', p: 0.8, borderRadius: 1.5, display: 'flex' }}><WarningIcon color="warning" fontSize="small" /></Box>
-                  <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.86rem' }}>Low Stock: <Box component="span" sx={{ color: 'warning.main', fontWeight: 900 }}>{stats.lowStock}</Box></Typography>
+          <Paper sx={{ py: 1.5, px: 2.5, mb: 2.5, border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', borderRadius: '8px' }} elevation={0}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/low-stock')}>
+                  <Box sx={{ bgcolor: 'rgba(245,158,11,0.12)', p: 0.6, borderRadius: '5px', display: 'flex' }}><WarningIcon color="warning" sx={{ fontSize: 16 }} /></Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Low Stock <Box component="span" sx={{ color: 'warning.main', fontWeight: 800 }}>{stats.lowStock}</Box></Typography>
                 </Box>
-              </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/sarees?status=out')}>
-                  <Box sx={{ bgcolor: 'rgba(239, 68, 68, 0.1)', p: 0.8, borderRadius: 1.5, display: 'flex' }}><ErrorIcon color="error" fontSize="small" /></Box>
-                  <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.86rem' }}>Out of Stock: <Box component="span" sx={{ color: 'error.main', fontWeight: 900 }}>{stats.outOfStock}</Box></Typography>
+                <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/sarees?status=out')}>
+                  <Box sx={{ bgcolor: 'rgba(239,68,68,0.1)', p: 0.6, borderRadius: '5px', display: 'flex' }}><ErrorIcon color="error" sx={{ fontSize: 16 }} /></Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Out of Stock <Box component="span" sx={{ color: 'error.main', fontWeight: 800 }}>{stats.outOfStock}</Box></Typography>
                 </Box>
-              </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/stock-requests')}>
-                  <Box sx={{ bgcolor: 'rgba(56, 189, 248, 0.12)', p: 0.8, borderRadius: 1.5, display: 'flex' }}><PendingIcon color="info" fontSize="small" /></Box>
-                  <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.86rem' }}>Pending: <Box component="span" sx={{ color: 'info.main', fontWeight: 900 }}>{stats.pendingRequests}</Box></Typography>
+                <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/stock-requests')}>
+                  <Box sx={{ bgcolor: 'rgba(56,189,248,0.12)', p: 0.6, borderRadius: '5px', display: 'flex' }}><PendingIcon color="info" sx={{ fontSize: 16 }} /></Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Pending <Box component="span" sx={{ color: 'info.main', fontWeight: 800 }}>{stats.pendingRequests}</Box></Typography>
                 </Box>
-              </Grid>
-              <Grid size={{ xs: 6, sm: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box sx={{ bgcolor: 'rgba(192, 173, 141, 0.15)', p: 0.8, borderRadius: 1.5, display: 'flex' }}><DeliveryIcon color="secondary" fontSize="small" /></Box>
-                  <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.86rem' }}>In Delivery: <Box component="span" sx={{ color: 'secondary.main', fontWeight: 900 }}>{stats.inDelivery}</Box></Typography>
+                <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ bgcolor: 'rgba(192,173,141,0.15)', p: 0.6, borderRadius: '5px', display: 'flex' }}><DeliveryIcon color="secondary" sx={{ fontSize: 16 }} /></Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>In Delivery <Box component="span" sx={{ color: 'secondary.main', fontWeight: 800 }}>{stats.inDelivery}</Box></Typography>
                 </Box>
-              </Grid>
-            </Grid>
+              </Box>
+              <Button variant="contained" size="small" onClick={() => navigate('/stock-requests')}
+                sx={{ borderRadius: '6px', fontWeight: 700, fontSize: '0.75rem', whiteSpace: 'nowrap', bgcolor: '#3B111A', '&:hover': { bgcolor: '#2A0B12' } }}>
+                Create Purchase Order
+              </Button>
+            </Box>
           </Paper>
 
           {/* STOCK MOVEMENT + HEALTH ANALYTICS */}
@@ -418,25 +419,15 @@ const Dashboard = () => {
                   </Box>
                 ) : (
                   <ResponsiveContainer width="100%" height="82%">
-                    <AreaChart data={stockMovement}>
-                      <defs>
-                        <linearGradient id="colorAddedGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#22C55E" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#22C55E" stopOpacity={0.01} />
-                        </linearGradient>
-                        <linearGradient id="colorDeliveredGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#EF4444" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="#EF4444" stopOpacity={0.01} />
-                        </linearGradient>
-                      </defs>
+                    <BarChart data={stockMovement} barGap={2} barCategoryGap="30%">
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
-                      <XAxis dataKey="label" stroke={theme.palette.text.secondary} fontSize={11} tickLine={false} />
-                      <YAxis stroke={theme.palette.text.secondary} fontSize={11} tickLine={false} />
-                      <RechartsTooltip contentStyle={tooltipStyle} />
+                      <XAxis dataKey="label" stroke={theme.palette.text.secondary} fontSize={11} tickLine={false} axisLine={false} />
+                      <YAxis stroke={theme.palette.text.secondary} fontSize={11} tickLine={false} axisLine={false} />
+                      <RechartsTooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
                       <Legend verticalAlign="top" height={36} iconType="circle" />
-                      <Area type="monotone" dataKey="stockAdded" name="Stock Added" stroke="#22C55E" strokeWidth={2.5} fillOpacity={1} fill="url(#colorAddedGrad)" />
-                      <Area type="monotone" dataKey="stockDelivered" name="Stock Delivered" stroke="#EF4444" strokeWidth={2.5} fillOpacity={1} fill="url(#colorDeliveredGrad)" />
-                    </AreaChart>
+                      <Bar dataKey="stockAdded" name="Stock Added" fill="#22C55E" radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="stockDelivered" name="Stock Delivered" fill="#EF4444" radius={[3, 3, 0, 0]} />
+                    </BarChart>
                   </ResponsiveContainer>
                 )}
               </Paper>
@@ -482,31 +473,46 @@ const Dashboard = () => {
             </Grid>
           </Grid>
 
+          {/* AI DEMAND PREDICTION BANNER — dark maroon matching image */}
+          {selectedSaree && (
+            <Box sx={{
+              bgcolor: '#3B111A', borderRadius: '8px', px: 3, py: 2, mb: 2.5,
+              display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer',
+              '&:hover': { bgcolor: '#2A0B12' }, transition: 'background 0.2s'
+            }} onClick={() => setActiveTab(1)}>
+              <SparklesIcon sx={{ color: '#F0C98A', fontSize: 20 }} />
+              <Typography sx={{ color: '#F0C98A', fontWeight: 700, fontSize: '0.9rem' }}>
+                AI Demand Prediction{selectedSaree?.series_code ? `: ${selectedSaree.series_code} — ${selectedSaree.sari_name || ''}` : ''}
+              </Typography>
+              <Box sx={{ ml: 'auto' }}>
+                <ArrowForwardIcon sx={{ color: 'rgba(240,201,138,0.7)', fontSize: 18 }} />
+              </Box>
+            </Box>
+          )}
           {/* AI INVENTORY BRIEF */}
           {aiBrief.length > 0 && (
-            <Paper sx={{ p: 3, mb: 2.5 }} elevation={0}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                <SparklesIcon color="primary" />
-                <Typography variant="h6" sx={{ fontWeight: 800 }}>AI Inventory Brief</Typography>
+            <Paper sx={{ p: 2.5, mb: 2.5, border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', borderRadius: '8px' }} elevation={0}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                <SparklesIcon color="primary" sx={{ fontSize: 18 }} />
+                <Typography sx={{ fontWeight: 700, fontSize: '0.88rem' }}>AI Inventory Brief</Typography>
               </Box>
-              <Grid container spacing={2}>
+              <Grid container spacing={1.5}>
                 {aiBrief.map((brief) => (
                   <Grid size={{ xs: 12, md: 6 }} key={brief.id}>
                     <Box sx={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, p: 2.25, borderRadius: 3,
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, p: 2, borderRadius: '6px',
                       border: `1px solid ${theme.palette.divider}`,
-                      borderLeft: `4px solid ${brief.severity === 'warning' ? theme.palette.warning.main : brief.severity === 'success' ? theme.palette.success.main : theme.palette.primary.main}`,
-                      height: '100%'
+                      borderLeft: `3px solid ${brief.severity === 'warning' ? theme.palette.warning.main : brief.severity === 'success' ? theme.palette.success.main : theme.palette.primary.main}`,
                     }}>
-                      <Box sx={{ display: 'flex', gap: 1.75, alignItems: 'center' }}>
-                        {brief.severity === 'warning' ? <WarningIcon color="warning" /> : brief.severity === 'success' ? <TrendingUpIcon color="success" /> : <InsightsIcon color="info" />}
+                      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                        {brief.severity === 'warning' ? <WarningIcon color="warning" fontSize="small" /> : brief.severity === 'success' ? <TrendingUpIcon color="success" fontSize="small" /> : <InsightsIcon color="info" fontSize="small" />}
                         <Box>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 800, fontSize: '0.9rem' }}>{brief.title}</Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', fontWeight: 500 }}>{brief.explanation}</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 700 }}>{brief.title}</Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>{brief.explanation}</Typography>
                         </Box>
                       </Box>
                       {brief.action && brief.route && (
-                        <Button variant="text" color={brief.severity === 'warning' ? 'warning' : 'primary'} size="small" onClick={() => navigate(brief.route)} sx={{ flexShrink: 0, fontWeight: 700 }}>
+                        <Button variant="text" color={brief.severity === 'warning' ? 'warning' : 'primary'} size="small" onClick={() => navigate(brief.route)} sx={{ flexShrink: 0, fontWeight: 700, fontSize: '0.72rem' }}>
                           {brief.action}
                         </Button>
                       )}
@@ -521,80 +527,54 @@ const Dashboard = () => {
           <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
             {/* Needs Attention */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 340 }} elevation={0}>
-                <Typography variant="h6" sx={{ fontWeight: 800, mb: 2.5, color: 'error.main' }}>
-                  Needs Attention
-                </Typography>
-
+              <Paper sx={{ p: 2.5, border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', borderRadius: '8px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 300 }} elevation={0}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: 'error.main' }}>Needs Attention</Typography>
+                  <Button size="small" variant="text" onClick={() => navigate('/low-stock')} sx={{ fontSize: '0.72rem', fontWeight: 700, color: 'text.secondary' }}>View All</Button>
+                </Box>
                 {needsAttention.length === 0 ? (
-                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 6, color: 'text.secondary' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Nothing needs attention right now.</Typography>
+                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">Nothing needs attention right now.</Typography>
                   </Box>
                 ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75, flexGrow: 1 }}>
-                    {needsAttention.map((item) => {
-                      const borderColor = item.severity === 'error' ? theme.palette.error.main : item.severity === 'warning' ? theme.palette.warning.main : theme.palette.info.main;
-                      return (
-                        <Box
-                          key={item.id}
-                          sx={{
-                            p: 2,
-                            borderRadius: 3,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            borderLeft: `4px solid ${borderColor}`,
-                            bgcolor: 'background.paper',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 1.5,
-                            transition: 'transform 0.15s, box-shadow 0.15s',
-                            '&:hover': {
-                              transform: 'translateY(-2px)',
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                              borderColor: 'primary.light'
-                            }
-                          }}
-                        >
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
-                            <Box sx={{ minWidth: 0 }}>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 800 }} noWrap>
-                                {item.name}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 500, mt: 0.5 }}>
-                                {item.detail}
-                              </Typography>
-                            </Box>
-                            <Chip
-                              label={item.type}
-                              color={item.severity === 'error' ? 'error' : item.severity === 'warning' ? 'warning' : 'info'}
-                              size="small"
-                              sx={{ height: 20, fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase' }}
-                            />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, flexGrow: 1 }}>
+                    {needsAttention.map((item) => (
+                      <Box key={item.id} sx={{
+                        display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5,
+                        border: `1px solid ${theme.palette.divider}`, borderRadius: '6px',
+                        bgcolor: 'background.paper',
+                        '&:hover': { borderColor: theme.palette.primary.light }
+                      }}>
+                        {/* Thumbnail */}
+                        <Box sx={{
+                          width: 44, height: 44, borderRadius: '6px', flexShrink: 0,
+                          bgcolor: 'rgba(59,17,26,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '1.2rem'
+                        }}>🧵</Box>
+                        {/* Info */}
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.82rem' }} noWrap>{item.name}</Typography>
+                            <Chip label={item.type} color={item.severity === 'error' ? 'error' : 'warning'} size="small"
+                              sx={{ height: 16, fontSize: '0.58rem', fontWeight: 800, borderRadius: '3px' }} />
                           </Box>
-
-                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() => navigate(`/sarees/${item.sareeId}`)}
-                              sx={{ fontSize: '0.72rem', fontWeight: 700 }}
-                            >
-                              View Saree
-                            </Button>
-                            <Button
-                              size="small"
-                              variant="contained"
-                              color="success"
-                              startIcon={<WhatsAppIcon fontSize="small" />}
-                              onClick={() => handleActionableRequestStock(item)}
-                              sx={{ fontSize: '0.72rem', fontWeight: 700 }}
-                            >
-                              Request Stock
-                            </Button>
-                          </Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>{item.detail}</Typography>
                         </Box>
-                      );
-                    })}
+                        {/* Actions */}
+                        <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                          <Button size="small" variant="outlined"
+                            onClick={() => {
+                              const code = item.name?.split(' - ')[0];
+                              navigate(`/sarees?search=${encodeURIComponent(code || '')}&expandSareeId=${item.sareeId}&highlightComboId=${item.id}`);
+                            }}
+                            sx={{ fontSize: '0.68rem', fontWeight: 700, borderRadius: '4px', px: 1, py: 0.4, minWidth: 0 }}>View</Button>
+                          <Button size="small" variant="contained" color="success"
+                            startIcon={<WhatsAppIcon sx={{ fontSize: '13px !important' }} />}
+                            onClick={() => handleActionableRequestStock(item)}
+                            sx={{ fontSize: '0.68rem', fontWeight: 700, borderRadius: '4px', px: 1, py: 0.4, minWidth: 0 }}>Stock</Button>
+                        </Box>
+                      </Box>
+                    ))}
                   </Box>
                 )}
               </Paper>
@@ -602,75 +582,51 @@ const Dashboard = () => {
 
             {/* Opportunities */}
             <Grid size={{ xs: 12, md: 6 }}>
-              <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 340 }} elevation={0}>
-                <Typography variant="h6" sx={{ fontWeight: 800, mb: 2.5, color: 'success.main' }}>
-                  Opportunities
-                </Typography>
-
+              <Paper sx={{ p: 2.5, border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', borderRadius: '8px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 300 }} elevation={0}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: 'success.main' }}>Opportunities</Typography>
+                  <Button size="small" variant="text" onClick={() => navigate('/sarees')} sx={{ fontSize: '0.72rem', fontWeight: 700, color: 'text.secondary' }}>View All</Button>
+                </Box>
                 {opportunities.length === 0 ? (
-                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 6, color: 'text.secondary' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>No opportunities in this range.</Typography>
+                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">No opportunities in this range.</Typography>
                   </Box>
                 ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.75, flexGrow: 1 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, flexGrow: 1 }}>
                     {opportunities.map((item) => (
-                      <Box
-                        key={item.id}
-                        sx={{
-                          p: 2,
-                          borderRadius: 3,
-                          border: '1px solid',
-                          borderColor: 'divider',
-                          borderLeft: `4px solid ${theme.palette.success.main}`,
-                          bgcolor: 'background.paper',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 1.5,
-                          transition: 'transform 0.15s, box-shadow 0.15s',
-                          '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                            borderColor: 'primary.light'
-                          }
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
-                          <Box sx={{ minWidth: 0 }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 800 }} noWrap>
-                              {item.name}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 500, mt: 0.5 }}>
-                              {item.detail}
-                            </Typography>
+                      <Box key={item.id} sx={{
+                        display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5,
+                        border: `1px solid ${theme.palette.divider}`, borderRadius: '6px',
+                        bgcolor: 'background.paper',
+                        '&:hover': { borderColor: theme.palette.success.light }
+                      }}>
+                        {/* Thumbnail */}
+                        <Box sx={{
+                          width: 44, height: 44, borderRadius: '6px', flexShrink: 0,
+                          bgcolor: 'rgba(34,197,94,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '1.2rem'
+                        }}>🧵</Box>
+                        {/* Info */}
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.82rem' }} noWrap>{item.name}</Typography>
+                            <Chip label={item.type} color="success" variant="outlined" size="small"
+                              sx={{ height: 16, fontSize: '0.58rem', fontWeight: 800, borderRadius: '3px' }} />
                           </Box>
-                          <Chip
-                            label={item.type}
-                            color="success"
-                            variant="outlined"
-                            size="small"
-                            sx={{ height: 20, fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase' }}
-                          />
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>{item.detail}</Typography>
                         </Box>
-
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => navigate(`/sarees/${item.sareeId}`)}
-                            sx={{ fontSize: '0.72rem', fontWeight: 700 }}
-                          >
-                            View Saree
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="success"
-                            startIcon={<WhatsAppIcon fontSize="small" />}
+                        {/* Actions */}
+                        <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                          <Button size="small" variant="outlined" color="success"
+                            onClick={() => {
+                              const code = item.name?.split(' - ')[0];
+                              navigate(`/sarees?search=${encodeURIComponent(code || '')}&expandSareeId=${item.sareeId}&highlightComboId=${item.id}`);
+                            }}
+                            sx={{ fontSize: '0.68rem', fontWeight: 700, borderRadius: '4px', px: 1, py: 0.4, minWidth: 0 }}>Forecast</Button>
+                          <Button size="small" variant="contained" color="success"
+                            startIcon={<WhatsAppIcon sx={{ fontSize: '13px !important' }} />}
                             onClick={() => handleActionableRequestStock(item)}
-                            sx={{ fontSize: '0.72rem', fontWeight: 700 }}
-                          >
-                            Request/Deliver
-                          </Button>
+                            sx={{ fontSize: '0.68rem', fontWeight: 700, borderRadius: '4px', px: 1, py: 0.4, minWidth: 0 }}>Deliver</Button>
                         </Box>
                       </Box>
                     ))}
@@ -679,6 +635,7 @@ const Dashboard = () => {
               </Paper>
             </Grid>
           </Grid>
+
 
           {/* TOP PERFORMING + RECENT ACTIVITY */}
           <Grid container spacing={2.5}>
@@ -710,12 +667,8 @@ const Dashboard = () => {
                             <Chip label={saree.daysRemaining === '∞' ? '∞' : `${saree.daysRemaining}d`} variant="outlined" color={saree.daysRemaining <= 15 ? 'warning' : 'primary'} size="small" sx={{ fontSize: '0.63rem', fontWeight: 800 }} />
                           </TableCell>
                           <TableCell align="center">
-                            <IconButton size="small" color="primary" onClick={async () => {
-                              try {
-                                const res = await sareeAPI.getAll({ search: saree.code });
-                                const sObj = res.data.sarees?.find(s => s.series_code === saree.code);
-                                if (sObj) navigate(`/sarees/${sObj.id}`);
-                              } catch (e) { console.error(e); }
+                            <IconButton size="small" color="primary" onClick={() => {
+                              navigate(`/sarees?search=${encodeURIComponent(saree.code)}`);
                             }}>
                               <ChevronRightIcon />
                             </IconButton>

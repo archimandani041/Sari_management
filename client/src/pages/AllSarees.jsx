@@ -36,9 +36,6 @@ import { getStockHealth } from '../constants/terms';
 // Filter tabs mapped to the existing `status` filter values
 const STATUS_TABS = [
   { label: 'All Sarees', value: '' },
-  { label: 'Seasonal Palettes', value: 'Seasonal Palettes' },
-  { label: 'Wedding Collection', value: 'Wedding Collection' },
-  { label: 'Artisan Exclusives', value: 'Artisan Exclusives' },
 ];
 
 const getStockStatus = (total, min) => {
@@ -76,6 +73,7 @@ const AllSarees = () => {
   const { isAdmin, isStaff } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const highlightComboId = searchParams.get('highlightComboId');
 
   // Search/Filter states
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -131,6 +129,19 @@ const AllSarees = () => {
     }));
   };
 
+  useEffect(() => {
+    const searchVal = searchParams.get('search') || '';
+    if (searchVal !== search) setSearch(searchVal);
+    const statusVal = searchParams.get('status') || '';
+    if (statusVal !== status) setStatus(statusVal);
+    const brandVal = searchParams.get('brand') || '';
+    if (brandVal !== brandFilter) setBrandFilter(brandVal);
+    const sareeStatusVal = searchParams.get('saree_status') || '';
+    if (sareeStatusVal !== sareeStatusFilter) setSareeStatusFilter(sareeStatusVal);
+    const sortVal = searchParams.get('sort') || 'newest';
+    if (sortVal !== sort) setSort(sortVal);
+  }, [searchParams]);
+
   const isDeepSearchActive = !!(
     debouncedSearch || debouncedCompany || debouncedColor ||
     brandFilter || sareeStatusFilter
@@ -147,6 +158,25 @@ const AllSarees = () => {
       setExpandedSarees({});
     }
   }, [isDeepSearchActive, sarees]);
+
+  useEffect(() => {
+    const expandId = searchParams.get('expandSareeId');
+    const highlightComboId = searchParams.get('highlightComboId');
+    if (expandId && sarees.length > 0) {
+      setExpandedSarees((prev) => ({
+        ...prev,
+        [expandId]: true,
+      }));
+      const timer = setTimeout(() => {
+        const targetId = highlightComboId ? `combo-row-${highlightComboId}` : `saree-row-${expandId}`;
+        const element = document.getElementById(targetId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, sarees]);
 
   const hasAnyFilter = !!(
     search || status || company || color || brandFilter || sareeStatusFilter || sort !== 'newest'
@@ -543,7 +573,7 @@ const AllSarees = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ width: 48 }} /> {/* Expand/Collapse arrow */}
+                <TableCell sx={{ width: 48 }} />
                 <TableCell>Product</TableCell>
                 <TableCell>Brand / Tags</TableCell>
                 <TableCell align="right">Price</TableCell>
@@ -563,11 +593,11 @@ const AllSarees = () => {
                 return (
                   <Fragment key={saree.id}>
                     <TableRow
+                      id={`saree-row-${saree.id}`}
                       hover
                       onClick={() => navigate(`/sarees/${saree.id}`)}
                       sx={{ cursor: 'pointer' }}
                     >
-                      {/* Expand Chevron */}
                       <TableCell onClick={(e) => e.stopPropagation()} sx={{ width: 48 }}>
                         {hasBeams && (
                           <IconButton
@@ -580,7 +610,6 @@ const AllSarees = () => {
                         )}
                       </TableCell>
 
-                      {/* Product */}
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                           <Avatar
@@ -601,7 +630,6 @@ const AllSarees = () => {
                         </Box>
                       </TableCell>
 
-                      {/* Brand / Tags */}
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', maxWidth: 200 }}>
                           {brands.map(b => (
@@ -626,17 +654,14 @@ const AllSarees = () => {
                         </Box>
                       </TableCell>
 
-                      {/* Price */}
                       <TableCell align="right" sx={{ fontWeight: 800, color: 'primary.main', whiteSpace: 'nowrap' }}>
                         {saree.price != null ? `₹${Number(saree.price).toLocaleString('en-IN')}` : '—'}
                       </TableCell>
 
-                      {/* Stock level */}
                       <TableCell>
                         <StockBar total={saree.total_stock} min={saree.min_stock ?? 20} max={saree.maximum_stock} barColor={st.bar} />
                       </TableCell>
 
-                      {/* Status pill */}
                       <TableCell>
                         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.5, borderRadius: 4, bgcolor: st.chipBg }}>
                           <Box sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: st.bar }} />
@@ -646,7 +671,6 @@ const AllSarees = () => {
                         </Box>
                       </TableCell>
 
-                      {/* Actions */}
                       <TableCell align="right" onClick={e => e.stopPropagation()}>
                         <Box sx={{ display: 'inline-flex', gap: 0.25 }}>
                           <Tooltip title="View">
@@ -694,21 +718,23 @@ const AllSarees = () => {
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                                   {beam.combinations?.map((combo) => {
                                     const health = getStockHealth(combo.current_stock ?? 0, combo.minimum_stock ?? 20);
+                                    const isHighlighted = combo.id === highlightComboId;
                                     return (
                                       <Box
+                                        id={`combo-row-${combo.id}`}
                                         key={combo.id}
                                         sx={{
                                           p: 2.5,
                                           borderRadius: '6px',
-                                          border: '1px solid #EAE6E1',
-                                          bgcolor: '#FFFFFF',
+                                          border: isHighlighted ? '2px solid #3B111A' : '1px solid #EAE6E1',
+                                          bgcolor: isHighlighted ? 'rgba(59, 17, 26, 0.04)' : '#FFFFFF',
                                           display: 'flex',
                                           alignItems: 'center',
                                           justifyContent: 'space-between',
                                           flexWrap: 'wrap',
                                           gap: 2,
-                                          transition: 'border-color 0.15s ease',
-                                          '&:hover': { borderColor: '#AC9C94' }
+                                          transition: 'all 0.15s ease',
+                                          '&:hover': { borderColor: isHighlighted ? '#3B111A' : '#AC9C94' }
                                         }}
                                       >
                                         {/* Left part: name + metadata chips + F-Colors */}

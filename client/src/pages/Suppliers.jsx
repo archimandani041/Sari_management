@@ -132,8 +132,6 @@ const Suppliers = () => {
                 <TableCell sx={{ fontWeight: 700 }}>Supplier</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Company</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>Mobile</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Email</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Notes</TableCell>
                 {(isAdmin || isStaff) && <TableCell align="right" sx={{ fontWeight: 700 }}>Actions</TableCell>}
               </TableRow>
             </TableHead>
@@ -141,12 +139,12 @@ const Suppliers = () => {
               {loading && suppliers.length === 0 ? (
                 [...Array(4)].map((_, i) => (
                   <TableRow key={i}>
-                    {[1, 2, 3, 4, 5, 6].map(j => <TableCell key={j}><Skeleton /></TableCell>)}
+                    {[1, 2, 3, 4].map(j => <TableCell key={j}><Skeleton /></TableCell>)}
                   </TableRow>
                 ))
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={4} align="center" sx={{ py: 6 }}>
                     <PersonIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1, display: 'block', mx: 'auto' }} />
                     <Typography color="text.secondary">
                       {search ? 'No suppliers match your search.' : 'No suppliers yet. Add your first supplier.'}
@@ -172,20 +170,20 @@ const Suppliers = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <Tooltip title="Open WhatsApp">
                         <IconButton size="small" color="success"
-                          onClick={() => window.open(`https://wa.me/${s.mobile.replace(/\D/g, '')}`, '_blank')}>
+                          onClick={() => {
+                            let num = s.mobile.replace(/[\s\-()]/g, '');
+                            if (!num.startsWith('+') && !num.startsWith('91') && num.replace(/\D/g, '').length === 10) {
+                              num = '91' + num;
+                            }
+                            num = num.replace(/\D/g, '');
+                            window.open(`https://wa.me/${num}`, '_blank');
+                          }}
+                        >
                           <WhatsAppIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>{s.mobile}</Typography>
                     </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">{s.email || '—'}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {s.notes || '—'}
-                    </Typography>
                   </TableCell>
                   {(isAdmin || isStaff) && (
                     <TableCell align="right">
@@ -214,21 +212,10 @@ const Suppliers = () => {
               <TextField fullWidth label="Company Name" value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))}
                 slotProps={{ input: { startAdornment: <InputAdornment position="start"><BusinessIcon color="action" fontSize="small" /></InputAdornment> } }} />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
+            <Grid size={12}>
               <TextField fullWidth label="Mobile Number *" value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))}
                 placeholder="+91XXXXXXXXXX"
                 slotProps={{ input: { startAdornment: <InputAdornment position="start"><PhoneIcon color="action" fontSize="small" /></InputAdornment> } }} />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Email (Optional)" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                slotProps={{ input: { startAdornment: <InputAdornment position="start"><EmailIcon color="action" fontSize="small" /></InputAdornment> } }} />
-            </Grid>
-            <Grid size={12}>
-              <TextField fullWidth label="Address (Optional)" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-                slotProps={{ input: { startAdornment: <InputAdornment position="start"><LocationOnIcon color="action" fontSize="small" /></InputAdornment> } }} />
-            </Grid>
-            <Grid size={12}>
-              <TextField fullWidth multiline rows={2} label="Notes (Optional)" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
             </Grid>
           </Grid>
         </DialogContent>

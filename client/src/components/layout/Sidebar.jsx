@@ -117,40 +117,7 @@ const Sidebar = () => {
         )}
       </Box>
 
-      {/* User profile */}
-      <Box sx={{
-        mx: 2, mb: 1, px: 2, py: 1.5, display: 'flex', alignItems: 'center', gap: 1.25,
-        borderRadius: '8px',
-        bgcolor: isLight ? '#FFFFFF' : 'rgba(255,255,255,0.02)',
-        border: `1px solid ${isLight ? '#EAE6E1' : 'rgba(216,202,186,0.08)'}`,
-        boxShadow: 'none',
-      }}>
-        <Avatar sx={{
-          width: 38, height: 38, fontSize: '0.9rem', fontWeight: 700, color: '#fff',
-          background: 'linear-gradient(135deg, #AC9C8D 0%, #3B111A 100%)',
-          borderRadius: '50%'
-        }}>
-          {user?.full_name?.charAt(0) || 'U'}
-        </Avatar>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: 'text.primary' }} noWrap>
-            {user?.full_name || 'User'}
-          </Typography>
-          <Typography sx={{ fontSize: '0.68rem', color: mutedText, textTransform: 'capitalize', fontWeight: 600 }} noWrap>
-            {user?.role || 'staff'}
-          </Typography>
-        </Box>
-        <Chip
-          label={user?.role?.toUpperCase() || 'STAFF'}
-          size="small"
-          sx={{
-            height: 18, fontSize: '0.58rem', fontWeight: 800,
-            bgcolor: isAdmin ? 'primary.main' : (isLight ? '#F1F3F4' : 'rgba(255,255,255,0.08)'),
-            color: isAdmin ? '#fff' : 'text.secondary',
-            borderRadius: 1
-          }}
-        />
-      </Box>
+
 
       {/* Navigation */}
       <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 0.5 }}>
@@ -241,25 +208,6 @@ const Sidebar = () => {
         </Button>
       </Box>
 
-      {/* Footer actions */}
-      <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-        <ListItemButton onClick={toggleTheme} sx={{ borderRadius: '8px', py: 1, px: 2, mb: 0.5, color: idleText }}>
-          <ListItemIcon sx={{ minWidth: 32, color: mutedText }}>
-            {isLight ? <DarkModeIcon fontSize="small" /> : <LightModeIcon fontSize="small" />}
-          </ListItemIcon>
-          <ListItemText primary={isLight ? 'Dark Mode' : 'Light Mode'}
-            slotProps={{ primary: { fontSize: '0.85rem', fontWeight: 600 } }} />
-        </ListItemButton>
-        <ListItemButton onClick={handleLogout} sx={{
-          borderRadius: '8px', py: 1, px: 2, color: 'error.main',
-          '&:hover': { bgcolor: 'error.main', color: '#fff', '& .MuiListItemIcon-root': { color: '#fff' } },
-        }}>
-          <ListItemIcon sx={{ minWidth: 32, color: 'error.main' }}>
-            <LogoutIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Logout" slotProps={{ primary: { fontSize: '0.85rem', fontWeight: 700 } }} />
-        </ListItemButton>
-      </Box>
     </Box>
   );
 

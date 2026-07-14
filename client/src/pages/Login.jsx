@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useApp } from '../contexts/AppContext';
 import { supabase } from '../services/supabase';
 import {
   Box,
@@ -41,6 +42,7 @@ const SLIDES = [
 
 const Login = () => {
   const { login, signUp } = useAuth();
+  const { setThemeMode } = useApp();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionReset = searchParams.get('reason') === 'session_reset';
@@ -85,6 +87,8 @@ const Login = () => {
 
     try {
       await login(email.trim(), password);
+      setThemeMode('light');
+      localStorage.setItem('sari_theme', 'light');
       navigate('/');
     } catch (err) {
       console.error(err);

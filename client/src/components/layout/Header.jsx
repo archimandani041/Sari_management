@@ -1,6 +1,11 @@
 /**
  * Header/Navbar Component
- * Includes menu toggle, search bar (Ctrl+K), notification dropdown, and user controls
+ * Redesigned to match the requested header layout:
+ * - Elongated search pill
+ * - Outlined notifications with dot badge
+ * - Moon (dark mode) toggle icon
+ * - Vertical divider line
+ * - User name + uppercase role text aligned next to the maroon-bordered avatar.
  */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -13,7 +18,8 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
-import NotificationsIcon from '@mui/icons-material/Notifications';
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
+import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import LogoutIcon from '@mui/icons-material/Logout';
 import WarningIcon from '@mui/icons-material/WarningAmber';
@@ -22,7 +28,7 @@ import { useKeyboardShortcut } from '../../hooks/useDebounce';
 
 const Header = () => {
   const { user, logout } = useAuth();
-  const { sidebarOpen, setSidebarOpen, setSearchOpen } = useApp();
+  const { sidebarOpen, setSidebarOpen, setSearchOpen, toggleTheme } = useApp();
   const navigate = useNavigate();
   const theme = useTheme();
 
@@ -88,22 +94,27 @@ const Header = () => {
 
   return (
     <AppBar position="sticky" sx={{
+      bgcolor: 'background.paper',
       color: 'text.primary',
+      boxShadow: 'none',
+      borderBottom: '1px solid',
+      borderColor: 'divider',
       zIndex: theme.zIndex.drawer + 1
     }}>
-      <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', px: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', px: 3, minHeight: 64 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {/* Menu Toggle for mobile */}
           <IconButton
             edge="start"
             color="inherit"
             aria-label="open drawer"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            sx={{ mr: 1 }}
+            sx={{ display: { md: 'none' } }}
           >
             <MenuIcon />
           </IconButton>
 
-          {/* Search Trigger Bar — real <button> so clicking anywhere reliably opens the dialog */}
+          {/* Search Trigger Bar — styled as pill input from the image */}
           <Box
             component="button"
             type="button"
@@ -112,72 +123,107 @@ const Header = () => {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              bgcolor: isLight ? '#F1F3F4' : 'rgba(255, 255, 255, 0.05)',
-              borderRadius: 6,
+              bgcolor: isLight ? '#FAF8F5' : 'rgba(255, 255, 255, 0.04)',
+              borderRadius: '99px',
               px: 2.5,
-              py: 0.75,
-              width: { xs: 150, sm: 280, md: 350 },
+              py: 0.9,
+              width: { xs: 180, sm: 380, md: 450 },
               cursor: 'pointer',
-              border: 'none',
-              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              border: '1px solid #EAE6E1',
+              transition: 'all 0.15s ease',
               font: 'inherit',
-              color: 'inherit',
+              color: 'text.primary',
               textAlign: 'left',
               appearance: 'none',
               '&:hover': {
-                bgcolor: isLight ? '#E8EAED' : 'rgba(255, 255, 255, 0.08)',
-                transform: 'translateY(-0.5px)'
-              },
-              '&:focus-visible': {
-                outline: '2px solid',
-                outlineColor: 'primary.main',
-                outlineOffset: 2
+                bgcolor: isLight ? '#F5F2EC' : 'rgba(255, 255, 255, 0.06)',
+                borderColor: '#DFD9D0'
               }
             }}
           >
-            <SearchIcon sx={{ color: 'text.secondary', mr: 1, fontSize: 20 }} />
+            <SearchIcon sx={{ color: 'text.secondary', mr: 1.5, fontSize: 18 }} />
             <Typography
               component="span"
               sx={{
                 fontSize: '0.82rem',
                 flex: 1,
-                color: 'text.secondary',
+                color: '#7C726A',
+                fontWeight: 500,
                 pointerEvents: 'none',
                 userSelect: 'none'
               }}
             >
-              Search anything (Ctrl+K)...
+              Search orders, SKU, or fabrics...
             </Typography>
             <Typography component="span" variant="caption" sx={{
               display: { xs: 'none', sm: 'inline-block' },
-              bgcolor: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.08)',
-              px: 0.8,
+              bgcolor: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.08)',
+              px: 1,
               py: 0.2,
               borderRadius: 1.5,
               fontWeight: 700,
-              fontSize: '0.65rem'
+              fontSize: '0.62rem',
+              color: 'text.secondary'
             }}>
               Ctrl + K
             </Typography>
           </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {/* Notifications Dropdown */}
-          <IconButton onClick={handleNotiMenuOpen} color="inherit">
-            <Badge badgeContent={notifications.length} color="error">
-              <NotificationsIcon />
+          <IconButton onClick={handleNotiMenuOpen} sx={{ color: 'text.primary' }}>
+            <Badge
+              badgeContent={notifications.length}
+              color="error"
+              variant="dot"
+              sx={{ '& .MuiBadge-badge': { width: 8, height: 8, minWidth: 8 } }}
+            >
+              <NotificationsNoneOutlinedIcon sx={{ fontSize: 22 }} />
             </Badge>
           </IconButton>
 
-          {/* User Account Menu */}
-          <Tooltip title={user?.full_name || 'Account'}>
-            <IconButton onClick={handleProfileMenuOpen} color="inherit">
-              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '0.8rem' }}>
-                {user?.full_name?.charAt(0) || 'U'}
-              </Avatar>
-            </IconButton>
-          </Tooltip>
+          {/* Dark Mode Icon */}
+          <IconButton onClick={toggleTheme} sx={{ color: 'text.primary' }}>
+            <DarkModeOutlinedIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+
+          {/* Vertical Divider */}
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 28, alignSelf: 'center', borderColor: '#EAE6E1' }} />
+
+          {/* User Info & Avatar Circle */}
+          <Box
+            onClick={handleProfileMenuOpen}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              cursor: 'pointer',
+              '&:hover': { opacity: 0.85 }
+            }}
+          >
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+              <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', color: 'text.primary', lineHeight: 1.2 }}>
+                {user?.full_name || 'Admin Portal'}
+              </Typography>
+              <Typography sx={{ fontSize: '0.65rem', fontWeight: 800, color: 'text.secondary', letterSpacing: '0.05em' }}>
+                {user?.role?.toUpperCase() || 'ADMINISTRATOR'}
+              </Typography>
+            </Box>
+
+            <Avatar
+              sx={{
+                width: 36,
+                height: 36,
+                bgcolor: 'primary.main',
+                fontSize: '0.85rem',
+                border: '1.5px solid',
+                borderColor: '#3B111A'
+              }}
+            >
+              {user?.full_name?.charAt(0) || 'A'}
+            </Avatar>
+          </Box>
         </Box>
       </Toolbar>
 

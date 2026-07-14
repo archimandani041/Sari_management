@@ -8,19 +8,19 @@ import { createTheme } from '@mui/material/styles';
 
 // ── Design Tokens ──────────────────────────────────────────────
 export const LUXE = {
-  charcoal:  '#1A1512', // near-black ink
-  burgundy:  '#3B111A', // deep burgundy primary CTA
-  wine:      '#72383D', // medium wine accent
-  taupe:     '#9E8E7A', // warm taupe label text
-  grey:      '#E5E1DC', // warm catalog border
-  beige:     '#F0EBE6', // section divider
-  cream:     '#FAF9F7', // page canvas
-  white:     '#FFFFFF', // card surface
+  charcoal: '#1A1512', // near-black ink
+  burgundy: '#3B111A', // deep burgundy primary CTA
+  wine: '#72383D', // medium wine accent
+  taupe: '#9E8E7A', // warm taupe label text
+  grey: '#E5E1DC', // warm catalog border
+  beige: '#F0EBE6', // section divider
+  cream: '#FAF9F7', // page canvas
+  white: '#FFFFFF', // card surface
 };
 
 export const STATUS = {
-  healthy:  '#ECFDF3',
-  low:      '#FFFBEB',
+  healthy: '#ECFDF3',
+  low: '#FFFBEB',
   critical: '#FFF1F2',
   delivery: '#EFF6FF',
 };
@@ -50,16 +50,16 @@ export const getTheme = (mode = 'light') => {
   const isLight = mode === 'light';
 
   const surface = {
-    bg:           isLight ? LUXE.white : '#211E1C',
-    border:       isLight ? LUXE.grey  : 'rgba(216,202,186,0.08)',
-    shadow:       isLight ? '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)' : '0 4px 16px rgba(0,0,0,0.3)',
-    shadowHover:  isLight ? '0 4px 12px rgba(0,0,0,0.06)' : '0 8px 24px rgba(0,0,0,0.4)',
+    bg: isLight ? LUXE.white : '#211E1C',
+    border: isLight ? LUXE.grey : 'rgba(216,202,186,0.08)',
+    shadow: isLight ? '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)' : '0 4px 16px rgba(0,0,0,0.3)',
+    shadowHover: isLight ? '0 4px 12px rgba(0,0,0,0.06)' : '0 8px 24px rgba(0,0,0,0.4)',
   };
 
   const glass = {
-    bg:     isLight ? 'rgba(255,255,255,0.92)' : 'rgba(28,26,25,0.90)',
-    border: isLight ? 'rgba(229,225,220,0.9)'  : 'rgba(216,202,186,0.08)',
-    blur:   'blur(20px) saturate(160%)',
+    bg: isLight ? 'rgba(255,255,255,0.92)' : 'rgba(28,26,25,0.90)',
+    border: isLight ? 'rgba(229,225,220,0.9)' : 'rgba(216,202,186,0.08)',
+    blur: 'blur(20px) saturate(160%)',
     shadow: isLight
       ? '0 12px 40px -10px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.04)'
       : '0 12px 40px -10px rgba(0,0,0,0.5)',
@@ -69,62 +69,62 @@ export const getTheme = (mode = 'light') => {
     palette: {
       mode,
       primary: {
-        main:         LUXE.burgundy,
-        light:        LUXE.wine,
-        dark:         LUXE.charcoal,
+        main: LUXE.burgundy,
+        light: LUXE.wine,
+        dark: LUXE.charcoal,
         contrastText: '#FFFFFF',
       },
       secondary: {
-        main:         isLight ? LUXE.charcoal : LUXE.beige,
-        light:        isLight ? LUXE.taupe    : LUXE.cream,
-        dark:         isLight ? '#3D3530'     : LUXE.taupe,
-        contrastText: isLight ? '#FFFFFF'     : LUXE.charcoal,
+        main: isLight ? LUXE.charcoal : LUXE.beige,
+        light: isLight ? LUXE.taupe : LUXE.cream,
+        dark: isLight ? '#3D3530' : LUXE.taupe,
+        contrastText: isLight ? '#FFFFFF' : LUXE.charcoal,
       },
       success: {
-        main:         '#16A34A',
-        light:        STATUS.healthy,
-        dark:         '#14532D',
+        main: '#16A34A',
+        light: STATUS.healthy,
+        dark: '#14532D',
         contrastText: '#14532D',
       },
       warning: {
-        main:         '#D97706',
-        light:        STATUS.low,
-        dark:         '#78350F',
+        main: '#D97706',
+        light: STATUS.low,
+        dark: '#78350F',
         contrastText: '#78350F',
       },
       error: {
-        main:         '#DC2626',
-        light:        STATUS.critical,
-        dark:         '#7F1D1D',
+        main: '#DC2626',
+        light: STATUS.critical,
+        dark: '#7F1D1D',
         contrastText: '#7F1D1D',
       },
       info: {
-        main:         '#2563EB',
-        light:        STATUS.delivery,
-        dark:         '#1E3A8A',
+        main: '#2563EB',
+        light: STATUS.delivery,
+        dark: '#1E3A8A',
         contrastText: '#1E3A8A',
       },
       background: {
-        default: isLight ? LUXE.cream  : '#181513',
-        paper:   surface.bg,
+        default: isLight ? LUXE.cream : '#181513',
+        paper: surface.bg,
       },
       text: {
-        primary:   isLight ? LUXE.charcoal : '#EDE9E4',
-        secondary: isLight ? LUXE.taupe    : '#A09080',
-        disabled:  isLight ? '#C4BAB2'     : '#5A524A',
+        primary: isLight ? LUXE.charcoal : '#EDE9E4',
+        secondary: isLight ? LUXE.taupe : '#A09080',
+        disabled: isLight ? '#C4BAB2' : '#5A524A',
       },
       divider: isLight ? LUXE.grey : 'rgba(216,202,186,0.08)',
       glass,
       surface,
       sidebar: {
-        bg:     isLight ? LUXE.white : '#1C1A19',
+        bg: isLight ? LUXE.white : '#1C1A19',
         active: isLight ? `${LUXE.burgundy}0D` : `${LUXE.burgundy}1A`,
       },
       brand: {
-        main:  LUXE.burgundy,
+        main: LUXE.burgundy,
         light: LUXE.wine,
-        dark:  LUXE.charcoal,
-        sand:  LUXE.beige,
+        dark: LUXE.charcoal,
+        sand: LUXE.beige,
         linen: LUXE.cream,
       },
     },
@@ -134,16 +134,16 @@ export const getTheme = (mode = 'light') => {
       fontFamily: '"Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif',
 
       // Display headings — Playfair Display (editorial, luxury feel)
-      h1: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '3rem',   letterSpacing: '-0.02em', lineHeight: 1.1 },
+      h1: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '3rem', letterSpacing: '-0.02em', lineHeight: 1.1 },
       h2: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '2.25rem', letterSpacing: '-0.015em', lineHeight: 1.15 },
       h3: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '1.75rem', letterSpacing: '-0.01em', lineHeight: 1.2 },
-      h4: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '1.5rem',  letterSpacing: '-0.01em', lineHeight: 1.25 },
-      h5: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 600, fontSize: '1.2rem',  letterSpacing: '-0.005em' },
+      h4: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.01em', lineHeight: 1.25 },
+      h5: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 600, fontSize: '1.2rem', letterSpacing: '-0.005em' },
       h6: { fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 600, fontSize: '1rem' },
 
       subtitle1: { fontWeight: 500, fontSize: '0.95rem', lineHeight: 1.5 },
       subtitle2: { fontWeight: 700, fontSize: '0.82rem', letterSpacing: '0.06em', textTransform: 'uppercase' },
-      body1: { fontSize: '0.9rem',  lineHeight: 1.6 },
+      body1: { fontSize: '0.9rem', lineHeight: 1.6 },
       body2: { fontSize: '0.83rem', lineHeight: 1.5 },
       caption: { fontSize: '0.73rem', lineHeight: 1.4, letterSpacing: '0.01em' },
       overline: { fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', lineHeight: 1.6 },

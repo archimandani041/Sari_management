@@ -463,7 +463,7 @@ const getDashboard = async (req, res) => {
           title: 'Safety stock breached',
           explanation: `${lowC.beams?.sarees?.series_code} (${lowC.beams?.beam_name}) dropped to ${lowC.current_stock} pcs.`,
           action: 'Create Stock Request',
-          route: `/sarees/${lowC.beams?.saree_id}`
+          route: `/sarees?search=${lowC.beams?.sarees?.series_code}`
         });
       }
     }
@@ -479,7 +479,7 @@ const getDashboard = async (req, res) => {
         title: 'Stagnant Stock Warning',
         explanation: `${stagnantC.beams?.sarees?.series_code} has not moved in 45 days. Consider promotions or discounts.`,
         action: 'View Saree',
-        route: `/sarees/${stagnantC.beams?.saree_id}`
+        route: `/sarees?search=${stagnantC.beams?.sarees?.series_code}`
       });
     }
 

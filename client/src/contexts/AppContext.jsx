@@ -13,7 +13,7 @@ export const useApp = () => {
 };
 
 export const AppProvider = ({ children }) => {
-  const [themeMode, setThemeMode] = useState(localStorage.getItem('sari_theme') || 'dark');
+  const [themeMode, setThemeMode] = useState(localStorage.getItem('sari_theme') || 'light');
   const [searchOpen, setSearchOpen] = useState(false);
   const [recentlyViewed, setRecentlyViewed] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('sari_recent') || '[]'); } catch { return []; }
@@ -52,7 +52,7 @@ export const AppProvider = ({ children }) => {
 
   return (
     <AppContext.Provider value={{
-      themeMode, toggleTheme, searchOpen, setSearchOpen,
+      themeMode, setThemeMode, toggleTheme, searchOpen, setSearchOpen,
       recentlyViewed, addRecentlyViewed, favorites, toggleFavorite, isFavorite,
       sidebarOpen, setSidebarOpen,
     }}>

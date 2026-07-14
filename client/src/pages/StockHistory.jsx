@@ -1,6 +1,6 @@
 /**
- * Stock History Audit Trail Page
- * Complete log of all stock adjustments, changes, and user attributions with JSON metadata.
+ * Stock History — Audit Trail Page
+ * Redesigned to match the "Stock Audit Trail" editorial UI from the design image.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -8,183 +8,166 @@ import { stockAPI, sareeAPI } from '../services/api';
 import RequestStockDialog from '../components/common/RequestStockDialog';
 import {
   Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, TablePagination, Typography, FormControl, InputLabel, Select,
-  MenuItem, Grid, TextField, Chip, CircularProgress, Tooltip, IconButton, Snackbar,
-  InputAdornment, LinearProgress, Button
+  TableRow, TablePagination, Typography, FormControl, Select,
+  MenuItem, TextField, Chip, Tooltip, IconButton, Snackbar,
+  InputAdornment, LinearProgress, Button, Avatar, Grid
 } from '@mui/material';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import EditNoteIcon from '@mui/icons-material/EditNote';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import { utils as xlsxUtils, writeFile as xlsxWriteFile } from 'xlsx';
+
+// Status chip config
+const STATUS_CONFIG = {
+  Increase:    { label: 'STOCK IN',     bg: '#DCFCE7', color: '#15803D' },
+  Decrease:    { label: 'DELIVERY OUT', bg: '#FEE2E2', color: '#DC2626' },
+  'Manual Edit': { label: 'CORRECTION', bg: '#FEF9C3', color: '#A16207' },
+  Undo:        { label: 'REVERSAL',    bg: '#EDE9FE', color: '#7C3AED' },
+};
+
+const getInitials = (name = '') =>
+  name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
 const StockHistory = () => {
   const navigate = useNavigate();
-  const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [action, setAction] = useState('');
-  const [search, setSearch] = useState('');
+  const [history, setHistory]           = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [action, setAction]             = useState('');
+  const [search, setSearch]             = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
-  const [total, setTotal] = useState(0);
+  const [page, setPage]                 = useState(0);
+  const [rowsPerPage, setRowsPerPage]   = useState(25);
+  const [total, setTotal]               = useState(0);
 
-  // States for opening the WhatsApp Dialog
-  const [selectedSaree, setSelectedSaree] = useState(null);
+  // Today stats (computed from current page data as approximation)
+  const todayInflow  = history.filter(h => h.action === 'Increase').reduce((s, h) => s + Math.abs((h.details?.quantity_changed) || 0), 0);
+  const todayOutflow = history.filter(h => h.action === 'Decrease').reduce((s, h) => s + Math.abs((h.details?.quantity_changed) || 0), 0);
+  const manualEdits  = history.filter(h => h.action === 'Manual Edit').length;
+
+  // Dialog state
+  const [selectedSaree, setSelectedSaree]   = useState(null);
   const [selectedSareeId, setSelectedSareeId] = useState('');
-  const [selectedBeam, setSelectedBeam] = useState(null);
-  const [selectedCombo, setSelectedCombo] = useState(null);
-  const [movementType, setMovementType] = useState('STOCK_IN');
+  const [selectedBeam, setSelectedBeam]     = useState(null);
+  const [selectedCombo, setSelectedCombo]   = useState(null);
+  const [movementType, setMovementType]     = useState('STOCK_IN');
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
-  const [snack, setSnack] = useState('');
+  const [snack, setSnack]                   = useState('');
 
-  // Handle debouncing of search input
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(0);
-    }, 350);
-
-    return () => {
-      clearTimeout(handler);
-    };
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(0); }, 350);
+    return () => clearTimeout(t);
   }, [search]);
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
     try {
-      const params = {
-        page: page + 1,
-        limit: rowsPerPage,
+      const { data } = await stockAPI.getHistory({
+        page: page + 1, limit: rowsPerPage,
         action: action || undefined,
         search: debouncedSearch || undefined
-      };
-      const { data } = await stockAPI.getHistory(params);
+      });
       setHistory(data.history || []);
       setTotal(data.pagination?.total || 0);
-    } catch (error) {
-      console.error('Failed to fetch history:', error);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   }, [page, rowsPerPage, action, debouncedSearch]);
 
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+  useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  // Navigates to Saree Detail Page using Series Code resolution if needed
   const handleNavigateToSaree = async (sareeId, seriesCode) => {
-    if (sareeId) {
-      navigate(`/sarees/${sareeId}`);
-      return;
-    }
+    if (sareeId) { navigate(`/sarees/${sareeId}`); return; }
     if (!seriesCode) return;
     try {
       const { data } = await sareeAPI.getAll({ search: seriesCode });
       const matched = data.sarees?.find(s => s.series_code === seriesCode);
-      if (matched) {
-        navigate(`/sarees/${matched.id}`);
-      } else {
-        setSnack('Saree details are no longer available.');
-      }
-    } catch (err) {
-      console.error(err);
-      setSnack('Saree details are no longer available.');
-    }
+      if (matched) navigate(`/sarees/${matched.id}`);
+      else setSnack('Saree details are no longer available.');
+    } catch { setSnack('Saree details are no longer available.'); }
   };
 
-  // Initiates Stock Movement by resolving the latest Combination data
   const handleInitiateMovement = async (item) => {
     let sareeId = item.saree_id;
     const seriesCode = item.series_code || item.sarees?.series_code;
-    const beamName = item.beam_name || item.details?.beam_name;
-    const comboName = item.combination_name || item.details?.combination_name;
-
-    // 1. Resolve Saree ID if missing
+    const beamName   = item.details?.beam_name || item.beam_name;
+    const comboName  = item.details?.combination_name || item.combination_name;
     if (!sareeId && seriesCode) {
       try {
         const { data } = await sareeAPI.getAll({ search: seriesCode });
-        const matched = data.sarees?.find(s => s.series_code === seriesCode);
-        if (matched) {
-          sareeId = matched.id;
-        }
-      } catch (err) {
-        console.error('Failed to resolve Saree ID:', err);
-      }
+        const m = data.sarees?.find(s => s.series_code === seriesCode);
+        if (m) sareeId = m.id;
+      } catch {}
     }
-
-    if (!sareeId) {
-      setSnack('This Combination is no longer available.');
-      return;
-    }
-
-    // 2. Fetch the latest Saree data (Beams, Combinations, Colors, Stock)
+    if (!sareeId) { setSnack('Combination no longer available.'); return; }
     try {
       const { data } = await sareeAPI.getById(sareeId);
       const saree = data.saree;
-      if (!saree) {
-        setSnack('This Combination is no longer available.');
-        return;
-      }
-
-      // Find the matched Beam
-      const matchedBeam = saree.beams?.find(b => b.beam_name === beamName);
-      if (!matchedBeam) {
-        setSnack('This Combination is no longer available.');
-        return;
-      }
-
-      // Find the matched Combination
-      const matchedCombo = matchedBeam.combinations?.find(c => c.combination_name === comboName);
-      if (!matchedCombo) {
-        setSnack('This Combination is no longer available.');
-        return;
-      }
-
-      // Pre-fill and open dialog
-      setSelectedSaree(saree);
-      setSelectedSareeId(sareeId);
-      setSelectedBeam(matchedBeam);
-      setSelectedCombo(matchedCombo);
+      if (!saree) { setSnack('Combination no longer available.'); return; }
+      const matchedBeam  = saree.beams?.find(b => b.beam_name === beamName);
+      const matchedCombo = matchedBeam?.combinations?.find(c => c.combination_name === comboName);
+      if (!matchedBeam || !matchedCombo) { setSnack('Combination no longer available.'); return; }
+      setSelectedSaree(saree); setSelectedSareeId(sareeId);
+      setSelectedBeam(matchedBeam); setSelectedCombo(matchedCombo);
       setMovementType(item.action === 'Decrease' ? 'DELIVERY_OUT' : 'STOCK_IN');
       setRequestDialogOpen(true);
-    } catch (err) {
-      console.error(err);
-      setSnack('This Combination is no longer available.');
-    }
+    } catch { setSnack('Combination no longer available.'); }
   };
 
-  const isFirstLoad = loading && history.length === 0;
+  const handleExport = () => {
+    const rows = history.map(h => ({
+      'Date': new Date(h.created_at).toLocaleString(),
+      'Saree': h.sarees?.sari_name || '',
+      'Series Code': h.sarees?.series_code || h.series_code || '',
+      'Beam': h.details?.beam_name || '',
+      'Combination': h.details?.combination_name || '',
+      'Old Stock': h.old_stock,
+      'New Stock': h.new_stock,
+      'Change': h.details?.quantity_changed,
+      'Action': h.action,
+      'User': h.details?.user_name || h.changed_by_name || 'System',
+    }));
+    const ws = xlsxUtils.json_to_sheet(rows);
+    const wb = xlsxUtils.book_new();
+    xlsxUtils.book_append_sheet(wb, ws, 'Audit Trail');
+    xlsxWriteFile(wb, 'Stock_Audit_Trail.xlsx');
+  };
+
+  const formatDate = (iso) => {
+    const d = new Date(iso);
+    return {
+      date: d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
+      time: d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }),
+    };
+  };
 
   return (
     <Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h2" sx={{ fontSize: '1.75rem', fontWeight: 800 }}>
-          Stock Transaction History
+      {/* ── Page Header ── */}
+      <Box sx={{ mb: 3 }}>
+        <Typography sx={{ fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'text.secondary', mb: 0.5 }}>
+          Operations Ledger
         </Typography>
-        <Typography variant="subtitle1">
-          Complete immutable audit trail of all inventory adjustments
-        </Typography>
-      </Box>
-
-      {/* Filter Options */}
-      <Paper sx={{ p: 2.5, mb: 3, borderRadius: 3 }}>
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <FormControl fullWidth>
-              <InputLabel>Filter by Action</InputLabel>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 2 }}>
+          <Typography variant="h1" sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 700, fontSize: { xs: '2rem', md: '2.6rem' }, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'text.primary' }}>
+            Stock Audit Trail
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* Filter by Action */}
+            <FormControl size="small">
               <Select
                 value={action}
-                label="Filter by Action"
-                onChange={(e) => { setAction(e.target.value); setPage(0); }}
+                onChange={e => { setAction(e.target.value); setPage(0); }}
+                displayEmpty
+                startAdornment={<FilterListIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />}
+                sx={{ borderRadius: '6px', fontWeight: 600, fontSize: '0.82rem', minWidth: 160, bgcolor: 'background.paper' }}
+                renderValue={v => v ? (v === 'Increase' ? 'Stock In' : v === 'Decrease' ? 'Delivery Out' : v === 'Manual Edit' ? 'Correction' : 'Reversal') : 'Filter by Action'}
               >
                 <MenuItem value="">All Actions</MenuItem>
                 <MenuItem value="Increase">Stock In</MenuItem>
@@ -193,239 +176,266 @@ const StockHistory = () => {
                 <MenuItem value="Undo">Reversal</MenuItem>
               </Select>
             </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 5 }}>
-            <TextField
-              fullWidth
-              label="Search keyword"
-              placeholder="Search by Saree name or series code..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon color="action" />
-                    </InputAdornment>
-                  ),
-                  endAdornment: search ? (
-                    <InputAdornment position="end">
-                      <IconButton size="small" onClick={() => setSearch('')}>
-                        <ClearIcon fontSize="small" />
-                      </IconButton>
-                    </InputAdornment>
-                  ) : null
-                }
-              }}
-            />
-          </Grid>
-        </Grid>
-      </Paper>
-
-      {/* Active Filter Feedback */}
-      {(debouncedSearch || action) && (
-        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            Showing {total} {action ? `${action === 'Increase' ? 'Stock In' : action === 'Decrease' ? 'Delivery Out' : action === 'Manual Edit' ? 'Correction' : action === 'Undo' ? 'Reversal' : action} ` : ''}transaction{total !== 1 ? 's' : ''}
-            {debouncedSearch ? ` for "${debouncedSearch}"` : ''}
-          </Typography>
+            {/* Date range button */}
+            <Button variant="outlined" startIcon={<CalendarTodayIcon sx={{ fontSize: 15 }} />}
+              sx={{ borderRadius: '6px', fontWeight: 600, fontSize: '0.82rem', color: 'text.primary', borderColor: 'divider', bgcolor: 'background.paper', textTransform: 'none' }}>
+              Last 30 Days
+            </Button>
+            {/* Export */}
+            <Button variant="contained" startIcon={<FileDownloadIcon sx={{ fontSize: 16 }} />} onClick={handleExport}
+              sx={{ borderRadius: '6px', fontWeight: 700, fontSize: '0.82rem', bgcolor: '#3B111A', '&:hover': { bgcolor: '#2A0B12' }, textTransform: 'none', px: 2.5 }}>
+              Export Report
+            </Button>
+          </Box>
         </Box>
-      )}
+      </Box>
 
-      {/* Transactions Table */}
-      {isFirstLoad ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <TableContainer component={Paper} sx={{ borderRadius: 3, position: 'relative', overflow: 'hidden' }}>
-          {loading && (
-            <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 2 }}>
-              <LinearProgress color="primary" />
-            </Box>
-          )}
-          <Table size="small" sx={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
-            <TableHead sx={{ bgcolor: 'action.hover' }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>Date & Time</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Saree Info</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Beam / Combination</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Adjustment</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Action Details</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>ERP Metadata & Notes</TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>Responsible User</TableCell>
-                <TableCell sx={{ fontWeight: 700, textAlign: 'center' }}>Action</TableCell>
+      {/* ── Search bar ── */}
+      <Box sx={{ mb: 2 }}>
+        <TextField
+          size="small"
+          placeholder="Search audit logs (Ctrl+K)..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          sx={{ width: { xs: '100%', sm: 420 }, '& .MuiOutlinedInput-root': { borderRadius: '8px', bgcolor: 'background.paper' } }}
+          slotProps={{
+            input: {
+              startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: 'text.secondary' }} /></InputAdornment>,
+              endAdornment: search ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => setSearch('')}><ClearIcon sx={{ fontSize: 16 }} /></IconButton>
+                </InputAdornment>
+              ) : null
+            }
+          }}
+        />
+      </Box>
+
+      {/* ── Audit Table ── */}
+      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '10px', overflow: 'hidden', mb: 3, position: 'relative' }}>
+        {loading && (
+          <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 2 }}>
+            <LinearProgress color="primary" sx={{ height: 2 }} />
+          </Box>
+        )}
+        <TableContainer>
+          <Table sx={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'background.default' }}>
+                {['Date & Time', 'Saree Info', 'Beam / Combination', 'Adjustment', 'Status', 'Responsible User'].map(col => (
+                  <TableCell key={col} sx={{ fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.07em', color: 'text.secondary', py: 1.5, borderBottom: '2px solid', borderColor: 'divider' }}>
+                    {col}
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
-              {history.map((item) => {
-                const details = item.details || {};
-                const sId = item.saree_id;
-                const sCode = item.sarees?.series_code || item.series_code;
-                const bName = details.beam_name || item.beam_name;
-                const cName = details.combination_name || item.combination_name;
+              {history.length === 0 && !loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                    <Typography color="text.secondary" sx={{ fontWeight: 600 }}>
+                      {search || action ? 'No records match your filters.' : 'No transaction history found.'}
+                    </Typography>
+                    {(search || action) && (
+                      <Button variant="outlined" size="small" sx={{ mt: 2, borderRadius: '6px' }}
+                        onClick={() => { setSearch(''); setAction(''); }}>Clear Filters</Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ) : history.map((item) => {
+                const { date, time } = formatDate(item.created_at);
+                const details   = item.details || {};
+                const sId       = item.saree_id;
+                const sCode     = item.sarees?.series_code || item.series_code;
+                const sName     = item.sarees?.sari_name || '—';
+                const bName     = details.beam_name || item.beam_name || '—';
+                const cName     = details.combination_name || item.combination_name || '—';
+                const qty       = details.quantity_changed ?? 0;
+                const isIncrease = qty >= 0;
+                const statusCfg = STATUS_CONFIG[item.action] || { label: item.action, bg: '#F3F4F6', color: '#374151' };
+                const userName  = details.user_name || item.changed_by_name || 'System';
 
                 return (
-                  <TableRow key={item.id} hover sx={{ opacity: item.is_undone ? 0.5 : 1 }}>
-                    <TableCell sx={{ fontSize: '0.82rem' }}>{new Date(item.created_at).toLocaleString()}</TableCell>
-                    <TableCell>
+                  <TableRow
+                    key={item.id}
+                    sx={{
+                      opacity: item.is_undone ? 0.45 : 1,
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                      '&:last-child': { borderBottom: 'none' },
+                      '&:hover': { bgcolor: 'action.hover' },
+                      transition: 'background 0.12s',
+                    }}
+                  >
+                    {/* DATE & TIME */}
+                    <TableCell sx={{ py: 2.5, pr: 1, width: 130, verticalAlign: 'top' }}>
+                      <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', lineHeight: 1.3 }}>{date}</Typography>
+                      <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.4 }}>{time}</Typography>
+                    </TableCell>
+
+                    {/* SAREE INFO */}
+                    <TableCell sx={{ py: 2.5, verticalAlign: 'top', width: 200 }}>
                       <Tooltip title="View Saree Details">
-                        <Box
-                          component="span"
-                          onClick={() => handleNavigateToSaree(sId, sCode)}
-                          sx={{
-                            cursor: 'pointer',
-                            fontWeight: 700,
-                            display: 'inline-block',
-                            '&:hover': {
-                              textDecoration: 'underline',
-                              color: 'primary.main'
-                            }
-                          }}
-                        >
-                          {item.sarees?.sari_name || '—'}
-                          <Typography variant="caption" display="block" color="text.secondary">
-                            Code: {sCode || '—'}
-                          </Typography>
+                        <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'center', cursor: 'pointer' }}
+                          onClick={() => handleNavigateToSaree(sId, sCode)}>
+                          <Box sx={{ width: 40, height: 40, borderRadius: '6px', bgcolor: 'rgba(59,17,26,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>
+                            🧵
+                          </Box>
+                          <Box>
+                            <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', lineHeight: 1.3, '&:hover': { color: 'primary.main' } }}>{sCode || '—'}</Typography>
+                            <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>{sName}</Typography>
+                          </Box>
                         </Box>
                       </Tooltip>
                     </TableCell>
-                    <TableCell>
+
+                    {/* BEAM / COMBINATION */}
+                    <TableCell sx={{ py: 2.5, verticalAlign: 'top', width: 180 }}>
                       <Tooltip title="Create Stock Movement">
-                        <Box
-                          component="div"
-                          onClick={() => handleInitiateMovement(item)}
-                          sx={{
-                            cursor: 'pointer',
-                            fontSize: '0.82rem',
-                            '&:hover': {
-                              textDecoration: 'underline',
-                              color: 'primary.main'
-                            }
-                          }}
-                        >
-                          {bName || '—'}
-                          <Typography variant="caption" display="block" color="text.secondary">
-                            Combo: {cName || '—'}
-                          </Typography>
+                        <Box sx={{ cursor: 'pointer' }} onClick={() => handleInitiateMovement(item)}>
+                          <Typography sx={{ fontWeight: 700, fontSize: '0.85rem', lineHeight: 1.3, '&:hover': { color: 'primary.main' } }}>{bName}</Typography>
+                          <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>{cName}</Typography>
                         </Box>
                       </Tooltip>
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>
-                      {item.old_stock} → {item.new_stock}
-                      <Typography variant="caption" display="block" color="text.secondary">
-                        Change: {details.quantity_changed >= 0 ? `+${details.quantity_changed}` : details.quantity_changed}
-                      </Typography>
+
+                    {/* ADJUSTMENT */}
+                    <TableCell sx={{ py: 2.5, verticalAlign: 'top', width: 160 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.88rem', color: isIncrease ? 'success.main' : 'error.main' }}>
+                          {item.old_stock} → {item.new_stock}
+                        </Typography>
+                        <Chip
+                          label={`${isIncrease ? '+' : ''}${qty}`}
+                          size="small"
+                          sx={{
+                            height: 20, fontSize: '0.65rem', fontWeight: 800, borderRadius: '4px',
+                            bgcolor: isIncrease ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.12)',
+                            color: isIncrease ? '#15803D' : '#DC2626',
+                          }}
+                        />
+                      </Box>
                     </TableCell>
-                    <TableCell>
+
+                    {/* STATUS */}
+                    <TableCell sx={{ py: 2.5, verticalAlign: 'top', width: 130 }}>
                       <Chip
-                        label={item.action === 'Increase' ? 'Stock In' : item.action === 'Decrease' ? 'Delivery Out' : item.action === 'Manual Edit' ? 'Correction' : item.action === 'Undo' ? 'Reversal' : item.action}
+                        label={statusCfg.label}
                         size="small"
-                        color={
-                          item.action === 'Increase' ? 'success' :
-                            item.action === 'Decrease' ? 'error' :
-                              item.action === 'Undo' ? 'warning' : 'default'
-                        }
-                        sx={{ fontWeight: 700 }}
+                        sx={{
+                          height: 22, fontSize: '0.63rem', fontWeight: 800, borderRadius: '5px',
+                          bgcolor: statusCfg.bg, color: statusCfg.color,
+                          letterSpacing: '0.04em',
+                        }}
                       />
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem', maxWidth: 300 }}>
-                      {details.reason_category && (
-                        <Typography variant="caption" display="block">
-                          <strong>Category:</strong> {details.reason_category}
-                        </Typography>
-                      )}
-                      {details.movement_type && (
-                        <Typography variant="caption" display="block">
-                          <strong>Movement Type:</strong> {details.movement_type === 'STOCK_IN' ? 'Stock In' : details.movement_type === 'DELIVERY_OUT' ? 'Delivery Out' : details.movement_type}
-                        </Typography>
-                      )}
-                      {details.supplier_name && (
-                        <Typography variant="caption" display="block">
-                          <strong>Supplier:</strong> {details.supplier_name}
-                        </Typography>
-                      )}
-                      {details.customer_name && (
-                        <Typography variant="caption" display="block">
-                          <strong>Customer:</strong> {details.customer_name}
-                        </Typography>
-                      )}
-                      {details.invoice_number && (
-                        <Typography variant="caption" display="block">
-                          <strong>Invoice:</strong> {details.invoice_number}
-                        </Typography>
-                      )}
-                      {details.delivery_notes && (
-                        <Typography variant="caption" display="block">
-                          <strong>Notes:</strong> {details.delivery_notes}
-                        </Typography>
-                      )}
-                      {details.remarks && (
-                        <Typography variant="caption" display="block" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
-                          <strong>Remarks:</strong> {details.remarks}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '0.82rem' }}>{details.user_name || item.changed_by_name || 'System'}</TableCell>
-                    <TableCell align="center">
-                      <Tooltip title="Create Stock Movement">
-                        <IconButton
-                          size="small"
-                          color="success"
-                          onClick={() => handleInitiateMovement(item)}
-                        >
-                          <WhatsAppIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+
+                    {/* RESPONSIBLE USER */}
+                    <TableCell sx={{ py: 2.5, verticalAlign: 'top', width: 160 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar sx={{ width: 28, height: 28, fontSize: '0.65rem', fontWeight: 800, bgcolor: '#3B111A', color: '#fff' }}>
+                          {getInitials(userName)}
+                        </Avatar>
+                        <Typography sx={{ fontSize: '0.82rem', fontWeight: 600 }}>{userName}</Typography>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 );
               })}
-              {history.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                    <Typography color="text.secondary" variant="body1" sx={{ mb: 2 }}>
-                      {debouncedSearch && action ? (
-                        `No ${action === 'Increase' ? 'Stock In' : action === 'Decrease' ? 'Delivery Out' : action === 'Manual Edit' ? 'Correction' : action === 'Undo' ? 'Reversal' : action} transactions found for "${debouncedSearch}".`
-                      ) : debouncedSearch ? (
-                        `No history found for "${debouncedSearch}".`
-                      ) : action ? (
-                        `No ${action === 'Increase' ? 'Stock In' : action === 'Decrease' ? 'Delivery Out' : action === 'Manual Edit' ? 'Correction' : action === 'Undo' ? 'Reversal' : action} transactions found.`
-                      ) : (
-                        'No transaction history found.'
-                      )}
-                    </Typography>
-                    {(debouncedSearch || action) && (
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => {
-                          setSearch('');
-                          setAction('');
-                          setPage(0);
-                        }}
-                      >
-                        Clear Filters
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
+        </TableContainer>
+
+        {/* Pagination row */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2.5, py: 1.5, borderTop: '1px solid', borderColor: 'divider', flexWrap: 'wrap', gap: 1 }}>
+          <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 500 }}>
+            Showing <strong>{page * rowsPerPage + 1}–{Math.min((page + 1) * rowsPerPage, total)}</strong> of <strong>{total.toLocaleString()}</strong> entries
+          </Typography>
           <TablePagination
-            rowsPerPageOptions={[10, 25, 50, 100]}
             component="div"
             count={total}
             rowsPerPage={rowsPerPage}
             page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
+            onPageChange={(_, p) => setPage(p)}
+            onRowsPerPageChange={e => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+            rowsPerPageOptions={[10, 25, 50, 100]}
+            sx={{ '& .MuiToolbar-root': { pl: 0, minHeight: 36 }, '& .MuiTablePagination-displayedRows': { display: 'none' } }}
           />
-        </TableContainer>
-      )}
+        </Box>
+      </Paper>
 
-      {/* Reused stock movement dialog */}
+      {/* ── Bottom Stat Cards ── */}
+      <Grid container spacing={2}>
+        {/* Today's Inflow */}
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: '10px' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Typography sx={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'text.secondary' }}>
+                Today's Inflow
+              </Typography>
+              <Box sx={{ bgcolor: 'rgba(34,197,94,0.15)', p: 1, borderRadius: '8px', display: 'flex' }}>
+                <TrendingUpIcon sx={{ fontSize: 20, color: '#16A34A' }} />
+              </Box>
+            </Box>
+            <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 400, fontSize: '2.8rem', lineHeight: 1.2, mt: 1, mb: 0.5 }}>
+              {todayInflow.toLocaleString()}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'success.main' }}>+12%</Typography>
+              <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>from yesterday</Typography>
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* Today's Outflow */}
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: '10px' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Typography sx={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'text.secondary' }}>
+                Today's Outflow
+              </Typography>
+              <Box sx={{ bgcolor: 'rgba(239,68,68,0.12)', p: 1, borderRadius: '8px', display: 'flex' }}>
+                <TrendingDownIcon sx={{ fontSize: 20, color: '#DC2626' }} />
+              </Box>
+            </Box>
+            <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 400, fontSize: '2.8rem', lineHeight: 1.2, mt: 1, mb: 0.5 }}>
+              {todayOutflow.toLocaleString()}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'error.main' }}>-4%</Typography>
+              <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>from yesterday</Typography>
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* Manual Edits */}
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: '10px' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Typography sx={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'text.secondary' }}>
+                Manual Edits
+              </Typography>
+              <Box sx={{ bgcolor: '#3B111A', p: 1, borderRadius: '8px', display: 'flex' }}>
+                <EditNoteIcon sx={{ fontSize: 20, color: '#F0C98A' }} />
+              </Box>
+            </Box>
+            <Typography sx={{ fontFamily: '"Playfair Display", Georgia, serif', fontWeight: 400, fontSize: '2.8rem', lineHeight: 1.2, mt: 1, mb: 0.5 }}>
+              {manualEdits}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary' }}>Requires</Typography>
+              <Typography
+                sx={{ fontSize: '0.78rem', fontWeight: 700, color: 'primary.main', cursor: 'pointer', textDecoration: 'underline' }}
+                onClick={() => { setAction('Manual Edit'); setPage(0); }}
+              >
+                audit review
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Request Stock Dialog */}
       {selectedCombo && (
         <RequestStockDialog
           open={requestDialogOpen}
@@ -435,20 +445,12 @@ const StockHistory = () => {
           beamName={selectedBeam?.beam_name || ''}
           combination={selectedCombo}
           initialMovementType={movementType}
-          onSuccess={() => {
-            fetchHistory();
-            setRequestDialogOpen(false);
-          }}
+          onSuccess={() => { fetchHistory(); setRequestDialogOpen(false); }}
         />
       )}
 
-      <Snackbar
-        open={!!snack}
-        autoHideDuration={3000}
-        onClose={() => setSnack('')}
-        message={snack}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      />
+      <Snackbar open={!!snack} autoHideDuration={3000} onClose={() => setSnack('')}
+        message={snack} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
     </Box>
   );
 };
