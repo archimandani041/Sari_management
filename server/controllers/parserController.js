@@ -388,7 +388,7 @@ const handleWhatsAppWebhook = async (req, res) => {
         // Create the beam
         const { data: newBeam, error: createBeamError } = await supabase
           .from('beams')
-          .insert({ saree_id: saree.id, beam_name: entry.beam_name.trim() })
+          .insert({ saree_id: saree.id, beam_name: entry.beam_name.trim(), owner_id: ownerId })
           .select().single();
         if (createBeamError) throw createBeamError;
         beam = newBeam;
@@ -465,7 +465,8 @@ const handleWhatsAppWebhook = async (req, res) => {
         const { error: updateError } = await supabase
           .from('combinations')
           .update({ current_stock: finalStock, updated_at: new Date().toISOString() })
-          .eq('id', matchedCombo.id);
+          .eq('id', matchedCombo.id)
+          .eq('owner_id', ownerId);
         if (updateError) throw updateError;
       } else {
         // Create new combination
@@ -483,7 +484,8 @@ const handleWhatsAppWebhook = async (req, res) => {
             combination_name: comboName,
             current_stock: finalStock,
             minimum_stock: 20,
-            sort_order: combos.length
+            sort_order: combos.length,
+            owner_id: ownerId
           })
           .select().single();
 
@@ -495,7 +497,8 @@ const handleWhatsAppWebhook = async (req, res) => {
             combination_id: newCombo.id,
             f_number: col.f_number,
             color_name: col.color_name,
-            company_name: col.company_name
+            company_name: col.company_name,
+            owner_id: ownerId
           }));
           const { error: insertColorsError } = await supabase
             .from('combination_colors')
@@ -549,6 +552,7 @@ const handleWhatsAppWebhook = async (req, res) => {
         entity_type: 'combination',
         entity_id: matchedCombo.id,
         user_name: userDisplayName,
+        owner_id: ownerId,
         details: {
           saree_code: saree.series_code,
           beam_name: beam.beam_name,

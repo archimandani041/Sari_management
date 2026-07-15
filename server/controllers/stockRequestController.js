@@ -50,6 +50,7 @@ const createStockRequest = async (req, res) => {
       .from('combinations')
       .select('current_stock, combination_name')
       .eq('id', combination_id)
+      .eq('owner_id', req.user.owner_id)
       .single();
     if (comboErr || !combo) return res.status(404).json({ error: 'Combination not found' });
 
@@ -58,6 +59,7 @@ const createStockRequest = async (req, res) => {
       .from('suppliers')
       .select('name')
       .eq('id', supplier_id)
+      .eq('owner_id', req.user.owner_id)
       .single();
     const supplierName = supplier?.name || 'Supplier';
 
@@ -78,7 +80,8 @@ const createStockRequest = async (req, res) => {
         status: newStatus, 
         updated_at: new Date().toISOString() 
       })
-      .eq('id', combination_id);
+      .eq('id', combination_id)
+      .eq('owner_id', req.user.owner_id);
     if (updateErr) throw updateErr;
 
     // 2. Log to stock_history (which populates the Audit History Log table)
@@ -126,6 +129,7 @@ const createStockRequest = async (req, res) => {
       entity_type: 'combination',
       entity_id: combination_id,
       user_name: userName,
+      owner_id: req.user.owner_id,
       details: {
         saree_code: series_code,
         beam_name,

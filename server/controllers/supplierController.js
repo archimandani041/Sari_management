@@ -129,7 +129,8 @@ const getSuppliersByCombo = async (req, res) => {
     const { data, error } = await supabase
       .from('combination_suppliers')
       .select('*, suppliers(*)')
-      .eq('combination_id', comboId);
+      .eq('combination_id', comboId)
+      .eq('owner_id', req.user.owner_id);
     if (error) throw error;
     const suppliers = (data || []).map(r => ({ ...r.suppliers, is_primary: r.is_primary, mapping_id: r.id }));
     res.json({ suppliers });
@@ -147,9 +148,27 @@ const linkSupplierToCombo = async (req, res) => {
     const { supplier_id, is_primary = false } = req.body;
     if (!supplier_id) return res.status(400).json({ error: 'supplier_id is required' });
 
+    // Verify supplier ownership
+    const { data: supplierCheck } = await supabase
+      .from('suppliers')
+      .select('id')
+      .eq('id', supplier_id)
+      .eq('owner_id', req.user.owner_id)
+      .single();
+    if (!supplierCheck) return res.status(404).json({ error: 'Supplier not found' });
+
+    // Verify combination ownership
+    const { data: comboCheck } = await supabase
+      .from('combinations')
+      .select('id')
+      .eq('id', comboId)
+      .eq('owner_id', req.user.owner_id)
+      .single();
+    if (!comboCheck) return res.status(404).json({ error: 'Combination not found' });
+
     const { data, error } = await supabase
       .from('combination_suppliers')
-      .upsert({ combination_id: comboId, supplier_id, is_primary }, { onConflict: 'combination_id,supplier_id' })
+      .upsert({ combination_id: comboId, supplier_id, is_primary, owner_id: req.user.owner_id }, { onConflict: 'combination_id,supplier_id' })
       .select('*, suppliers(*)')
       .single();
 
@@ -169,7 +188,8 @@ const unlinkSupplierFromCombo = async (req, res) => {
       .from('combination_suppliers')
       .delete()
       .eq('combination_id', comboId)
-      .eq('supplier_id', supplierId);
+      .eq('supplier_id', supplierId)
+      .eq('owner_id', req.user.owner_id);
     if (error) throw error;
     res.json({ message: 'Supplier unlinked' });
   } catch (error) {

@@ -5,8 +5,24 @@ const { supabase } = require('../config/supabase');
 
 const getSettings = async (req, res) => {
   try {
-    const { data, error } = await supabase.from('settings').select('*').limit(1).maybeSingle();
+    let { data, error } = await supabase.from('settings').select('*').eq('owner_id', req.user.owner_id).maybeSingle();
     if (error) throw error;
+
+    if (!data) {
+      const { data: created, error: createError } = await supabase
+        .from('settings')
+        .insert({
+          owner_id: req.user.owner_id,
+          company_name: 'Sari Stock Manager',
+          theme: 'light',
+          default_minimum_stock: 20
+        })
+        .select()
+        .single();
+      if (createError) throw createError;
+      data = created;
+    }
+
     res.json({ settings: data });
   } catch (error) {
     console.error('GetSettings error:', error);
@@ -17,9 +33,7 @@ const getSettings = async (req, res) => {
 const updateSettings = async (req, res) => {
   try {
     const { company_name, logo_url, theme, default_minimum_stock } = req.body;
-    const { data: existing } = await supabase.from('settings').select('id').limit(1).maybeSingle();
-
-    if (!existing) return res.status(404).json({ error: 'Settings not found' });
+    let { data: existing } = await supabase.from('settings').select('id').eq('owner_id', req.user.owner_id).maybeSingle();
 
     const updateData = { updated_at: new Date().toISOString() };
     if (company_name !== undefined) updateData.company_name = company_name;
@@ -27,10 +41,25 @@ const updateSettings = async (req, res) => {
     if (theme !== undefined) updateData.theme = theme;
     if (default_minimum_stock !== undefined) updateData.default_minimum_stock = parseInt(default_minimum_stock);
 
-    const { data, error } = await supabase.from('settings').update(updateData).eq('id', existing.id).select().single();
-    if (error) throw error;
+    let resultData;
+    if (!existing) {
+      const insertData = {
+        ...updateData,
+        owner_id: req.user.owner_id,
+        company_name: company_name || 'Sari Stock Manager',
+        theme: theme || 'light',
+        default_minimum_stock: default_minimum_stock !== undefined ? parseInt(default_minimum_stock) : 20
+      };
+      const { data: created, error: createError } = await supabase.from('settings').insert(insertData).select().single();
+      if (createError) throw createError;
+      resultData = created;
+    } else {
+      const { data, error: updateError } = await supabase.from('settings').update(updateData).eq('id', existing.id).eq('owner_id', req.user.owner_id).select().single();
+      if (updateError) throw updateError;
+      resultData = data;
+    }
 
-    res.json({ settings: data });
+    res.json({ settings: resultData });
   } catch (error) {
     console.error('UpdateSettings error:', error);
     res.status(500).json({ error: 'Failed to update settings' });
@@ -38,3 +67,4 @@ const updateSettings = async (req, res) => {
 };
 
 module.exports = { getSettings, updateSettings };
+

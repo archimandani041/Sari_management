@@ -17,14 +17,10 @@ const updateStock = async (req, res) => {
       .from('combinations')
       .select('*, beams(saree_id, beam_name, sarees(series_code, owner_id))')
       .eq('id', combination_id)
+      .eq('owner_id', req.user.owner_id)
       .single();
 
     if (fetchError || !combo) return res.status(404).json({ error: 'Combination not found' });
-
-    // Ownership check: ensure the combination belongs to the authenticated user
-    if (combo.beams?.sarees?.owner_id !== req.user.owner_id) {
-      return res.status(403).json({ error: 'Access denied: this stock does not belong to your account.' });
-    }
 
     let newStock;
     const oldStock = combo.current_stock;
@@ -45,7 +41,7 @@ const updateStock = async (req, res) => {
 
     await supabase.from('combinations').update({
       current_stock: newStock, updated_at: new Date().toISOString()
-    }).eq('id', combination_id);
+    }).eq('id', combination_id).eq('owner_id', req.user.owner_id);
 
     const quantityChanged = action === 'Manual Edit' ? newStock - oldStock : qtyInt;
     
@@ -86,6 +82,7 @@ const updateStock = async (req, res) => {
       action: 'STOCK_UPDATE',
       entity_type: 'saree',
       entity_id: combo.beams?.saree_id,
+      owner_id: req.user.owner_id,
       details: {
         beam_name: combo.beams?.beam_name,
         combination_name: combo.combination_name,
@@ -113,15 +110,15 @@ const undoStockChange = async (req, res) => {
     if (!entry.combination_id) return res.status(400).json({ error: 'Cannot undo: combination no longer exists' });
 
     const { data: combo } = await supabase
-      .from('combinations').select('current_stock').eq('id', entry.combination_id).single();
+      .from('combinations').select('current_stock').eq('id', entry.combination_id).eq('owner_id', req.user.owner_id).single();
 
     if (!combo) return res.status(404).json({ error: 'Combination not found' });
 
     await supabase.from('combinations').update({
       current_stock: entry.old_stock, updated_at: new Date().toISOString()
-    }).eq('id', entry.combination_id);
+    }).eq('id', entry.combination_id).eq('owner_id', req.user.owner_id);
 
-    await supabase.from('stock_history').update({ is_undone: true }).eq('id', historyId);
+    await supabase.from('stock_history').update({ is_undone: true }).eq('id', historyId).eq('owner_id', req.user.owner_id);
 
     await supabase.from('stock_history').insert({
       saree_id: entry.saree_id,
@@ -179,6 +176,7 @@ const getHistory = async (req, res) => {
       const { data: matchedSarees } = await supabase
         .from('sarees')
         .select('id')
+        .eq('owner_id', req.user.owner_id)
         .or(`series_code.ilike.%${cleanSearch}%,sari_name.ilike.%${cleanSearch}%`);
       
       const matchedSareeIds = (matchedSarees || []).map(s => s.id);

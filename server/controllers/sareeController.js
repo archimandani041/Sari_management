@@ -26,7 +26,8 @@ const logActivity = async (user, action, entityType, entityId, details) => {
       action,
       entity_type: entityType,
       entity_id: entityId,
-      details
+      details,
+      owner_id: user.owner_id
     });
   } catch (e) {
     // Non-fatal: don't let activity log failures break the main operation
@@ -71,36 +72,42 @@ const getSarees = async (req, res) => {
     if (brand) {
       filterPromises.brand = supabase
         .from('combinations')
-        .select('beam_id, beams(saree_id, sarees(owner_id))')
-        .eq('brand', brand);
+        .select('beam_id, beams(saree_id)')
+        .eq('brand', brand)
+        .eq('owner_id', ownerId);
     }
     if (saree_status) {
       filterPromises.saree_status = supabase
         .from('combinations')
         .select('beam_id, beams(saree_id)')
-        .eq('status', saree_status);
+        .eq('status', saree_status)
+        .eq('owner_id', ownerId);
     }
     if (company) {
       filterPromises.company = supabase
         .from('combination_colors')
         .select('combination_id, combinations(beam_id, beams(saree_id))')
-        .ilike('company_name', `%${company}%`);
+        .ilike('company_name', `%${company}%`)
+        .eq('owner_id', ownerId);
     }
     if (color) {
       filterPromises.color = supabase
         .from('combination_colors')
         .select('combination_id, combinations(beam_id, beams(saree_id))')
-        .ilike('color_name', `%${color}%`);
+        .ilike('color_name', `%${color}%`)
+        .eq('owner_id', ownerId);
     }
     if (search) {
       filterPromises.searchColors = supabase
         .from('combination_colors')
-        .select('combination_id, combinations(beam_id, beams(saree_id, sarees(owner_id)))')
-        .or(`color_name.ilike.%${search}%,company_name.ilike.%${search}%`);
+        .select('combination_id, combinations(beam_id, beams(saree_id))')
+        .or(`color_name.ilike.%${search}%,company_name.ilike.%${search}%`)
+        .eq('owner_id', ownerId);
       filterPromises.searchBeams = supabase
         .from('beams')
-        .select('saree_id, sarees(owner_id)')
-        .ilike('beam_name', `%${search}%`);
+        .select('saree_id')
+        .ilike('beam_name', `%${search}%`)
+        .eq('owner_id', ownerId);
     }
 
     const filterKeys = Object.keys(filterPromises);
@@ -324,7 +331,7 @@ const createSaree = async (req, res) => {
       const b = beams[bi];
       const { data: beam, error: beamErr } = await supabase
         .from('beams')
-        .insert({ saree_id: saree.id, beam_name: b.beam_name.trim(), sort_order: bi })
+        .insert({ saree_id: saree.id, beam_name: b.beam_name.trim(), sort_order: bi, owner_id: req.user.owner_id })
         .select().single();
       if (beamErr) throw beamErr;
 
@@ -341,7 +348,8 @@ const createSaree = async (req, res) => {
             notes: c.notes || null,
             status: c.status || 'In Stock',
             brand: c.brand || 'KP',
-            sort_order: ci
+            sort_order: ci,
+            owner_id: req.user.owner_id
           })
           .select().single();
         if (comboErr) throw comboErr;
@@ -354,7 +362,8 @@ const createSaree = async (req, res) => {
               f_number: col.f_number.trim().toUpperCase(),
               color_name: col.color_name.trim(),
               company_name: col.company_name?.trim() || null,
-              sort_order: fi
+              sort_order: fi,
+              owner_id: req.user.owner_id
             }))
           );
         }
@@ -582,8 +591,9 @@ const nextSeries = async (req, res) => {
 };
 
 // ═══════════════════════════════════════════════
+// =============================================
 // BEAM OPERATIONS
-// ═══════════════════════════════════════════════
+// =============================================
 
 // POST /api/sarees/:id/beams
 const addBeam = async (req, res) => {
@@ -592,22 +602,32 @@ const addBeam = async (req, res) => {
     const { beam_name } = req.body;
     if (!beam_name?.trim()) return res.status(400).json({ error: 'Beam name is required' });
 
+    // Verify saree ownership
+    const { data: sareeCheck } = await supabase
+      .from('sarees')
+      .select('id')
+      .eq('id', saree_id)
+      .eq('owner_id', req.user.owner_id)
+      .single();
+    if (!sareeCheck) return res.status(404).json({ error: 'Saree not found' });
+
     // Check duplicate beam names
     const { data: dupBeam } = await supabase
       .from('beams')
       .select('id')
       .eq('saree_id', saree_id)
       .eq('beam_name', beam_name.trim())
+      .eq('owner_id', req.user.owner_id)
       .limit(1);
     if (dupBeam && dupBeam.length > 0) {
       return res.status(400).json({ error: `${beam_name.trim()} already exists for this sari.` });
     }
 
-    const { data: existing } = await supabase.from('beams').select('id').eq('saree_id', saree_id);
+    const { data: existing } = await supabase.from('beams').select('id').eq('saree_id', saree_id).eq('owner_id', req.user.owner_id);
     const sort_order = (existing || []).length;
 
     const { data: beam, error } = await supabase
-      .from('beams').insert({ saree_id, beam_name: beam_name.trim(), sort_order }).select().single();
+      .from('beams').insert({ saree_id, beam_name: beam_name.trim(), sort_order, owner_id: req.user.owner_id }).select().single();
     if (error) {
       if (error.code === '23505') return res.status(400).json({ error: `${beam_name.trim()} already exists for this sari.` });
       throw error;
@@ -628,7 +648,7 @@ const updateBeam = async (req, res) => {
     const { beam_name } = req.body;
     if (!beam_name?.trim()) return res.status(400).json({ error: 'Beam name is required' });
 
-    const { data: old } = await supabase.from('beams').select('beam_name, saree_id').eq('id', beamId).single();
+    const { data: old } = await supabase.from('beams').select('beam_name, saree_id').eq('id', beamId).eq('owner_id', req.user.owner_id).single();
     if (!old) return res.status(404).json({ error: 'Beam not found' });
 
     // Check duplicate beam names
@@ -637,6 +657,7 @@ const updateBeam = async (req, res) => {
       .select('id')
       .eq('saree_id', old.saree_id)
       .eq('beam_name', beam_name.trim())
+      .eq('owner_id', req.user.owner_id)
       .neq('id', beamId)
       .limit(1);
     if (dupBeam && dupBeam.length > 0) {
@@ -645,7 +666,7 @@ const updateBeam = async (req, res) => {
 
     const { data: beam, error } = await supabase
       .from('beams').update({ beam_name: beam_name.trim(), updated_at: new Date().toISOString() })
-      .eq('id', beamId).select().single();
+      .eq('id', beamId).eq('owner_id', req.user.owner_id).select().single();
     if (error) {
       if (error.code === '23505') return res.status(400).json({ error: `${beam_name.trim()} already exists for this sari.` });
       throw error;
@@ -663,16 +684,17 @@ const updateBeam = async (req, res) => {
 const deleteBeam = async (req, res) => {
   try {
     const { beamId } = req.params;
-    const { data: beam } = await supabase.from('beams').select('beam_name, saree_id').eq('id', beamId).single();
+    const { data: beam } = await supabase.from('beams').select('beam_name, saree_id').eq('id', beamId).eq('owner_id', req.user.owner_id).single();
+    if (!beam) return res.status(404).json({ error: 'Beam not found' });
 
     // Delete stock history for this beam's combinations
-    const { data: combos } = await supabase.from('combinations').select('id').eq('beam_id', beamId);
+    const { data: combos } = await supabase.from('combinations').select('id').eq('beam_id', beamId).eq('owner_id', req.user.owner_id);
     if (combos?.length) {
       const ids = combos.map(c => c.id);
-      await supabase.from('stock_history').delete().in('combination_id', ids);
+      await supabase.from('stock_history').delete().in('combination_id', ids).eq('owner_id', req.user.owner_id);
     }
 
-    const { error } = await supabase.from('beams').delete().eq('id', beamId);
+    const { error } = await supabase.from('beams').delete().eq('id', beamId).eq('owner_id', req.user.owner_id);
     if (error) throw error;
 
     await logActivity(req.user, 'DELETE_BEAM', 'beam', beamId, { beam_name: beam?.beam_name });
@@ -683,9 +705,9 @@ const deleteBeam = async (req, res) => {
   }
 };
 
-// ═══════════════════════════════════════════════
+// =============================================
 // COMBINATION OPERATIONS
-// ═══════════════════════════════════════════════
+// =============================================
 
 // POST /api/beams/:beamId/combinations
 const addCombination = async (req, res) => {
@@ -693,7 +715,7 @@ const addCombination = async (req, res) => {
     const { beamId } = req.params;
     const { combination_name, current_stock = 0, minimum_stock = 20, notes, colors = [], status = 'In Stock', brand = 'KP' } = req.body;
 
-    const { data: beam } = await supabase.from('beams').select('saree_id, beam_name').eq('id', beamId).single();
+    const { data: beam } = await supabase.from('beams').select('saree_id, beam_name').eq('id', beamId).eq('owner_id', req.user.owner_id).single();
     if (!beam) return res.status(404).json({ error: 'Beam not found' });
 
     // Check duplicate combination names
@@ -702,6 +724,7 @@ const addCombination = async (req, res) => {
       .select('id')
       .eq('beam_id', beamId)
       .eq('combination_name', combination_name?.trim() || null)
+      .eq('owner_id', req.user.owner_id)
       .limit(1);
     if (dupCombo && dupCombo.length > 0) {
       return res.status(400).json({ error: `Combination '${combination_name || ''}' already exists.` });
@@ -714,7 +737,7 @@ const addCombination = async (req, res) => {
       return res.status(400).json({ error: `${dupF} already exists in this combination.` });
     }
 
-    const { data: existing } = await supabase.from('combinations').select('id').eq('beam_id', beamId);
+    const { data: existing } = await supabase.from('combinations').select('id').eq('beam_id', beamId).eq('owner_id', req.user.owner_id);
     const sort_order = (existing || []).length;
 
     const { data: combo, error } = await supabase
@@ -727,7 +750,8 @@ const addCombination = async (req, res) => {
         notes: notes || null,
         status: status || 'In Stock',
         brand: brand || 'KP',
-        sort_order
+        sort_order,
+        owner_id: req.user.owner_id
       })
       .select().single();
     if (error) {
@@ -737,11 +761,11 @@ const addCombination = async (req, res) => {
 
     if (colors.length > 0) {
       const { error: colorErr } = await supabase.from('combination_colors').insert(
-        colors.map((c, i) => ({ combination_id: combo.id, f_number: c.f_number.trim().toUpperCase(), color_name: c.color_name.trim(), company_name: c.company_name?.trim() || null, sort_order: i }))
+        colors.map((c, i) => ({ combination_id: combo.id, f_number: c.f_number.trim().toUpperCase(), color_name: c.color_name.trim(), company_name: c.company_name?.trim() || null, sort_order: i, owner_id: req.user.owner_id }))
       );
       if (colorErr) {
         // cleanup combination if color insert failed
-        await supabase.from('combinations').delete().eq('id', combo.id);
+        await supabase.from('combinations').delete().eq('id', combo.id).eq('owner_id', req.user.owner_id);
         if (colorErr.code === '23505') return res.status(400).json({ error: `Color code already exists in this combination.` });
         throw colorErr;
       }
@@ -752,14 +776,15 @@ const addCombination = async (req, res) => {
         saree_id: beam.saree_id, combination_id: combo.id, beam_name: beam.beam_name,
         combination_name: combination_name ? combination_name.trim() : `Combination ${sort_order + 1}`,
         old_stock: 0, new_stock: parseInt(current_stock), action: 'Manual Edit',
-        reason: 'New combination added', changed_by: req.user.id, changed_by_name: req.user.full_name
+        reason: 'New combination added', changed_by: req.user.id, changed_by_name: req.user.full_name,
+        owner_id: req.user.owner_id
       });
     }
 
     await logActivity(req.user, 'ADD_COMBINATION', 'combination', combo.id, { beam_id: beamId, combination_name });
 
     const { data: result } = await supabase
-      .from('combinations').select('*, combination_colors(*)').eq('id', combo.id).single();
+      .from('combinations').select('*, combination_colors(*)').eq('id', combo.id).eq('owner_id', req.user.owner_id).single();
     res.status(201).json({ combination: result });
   } catch (error) {
     console.error('AddCombination error:', error);
@@ -774,7 +799,7 @@ const updateCombination = async (req, res) => {
     const { combination_name, current_stock, minimum_stock, notes, colors, status, brand } = req.body;
 
     const { data: old } = await supabase
-      .from('combinations').select('*, beams(saree_id, beam_name, id)').eq('id', comboId).single();
+      .from('combinations').select('*, beams(saree_id, beam_name, id)').eq('id', comboId).eq('owner_id', req.user.owner_id).single();
     if (!old) return res.status(404).json({ error: 'Combination not found' });
 
     // Check duplicate combination names
@@ -784,6 +809,7 @@ const updateCombination = async (req, res) => {
         .select('id')
         .eq('beam_id', old.beams.id)
         .eq('combination_name', combination_name?.trim() || null)
+        .eq('owner_id', req.user.owner_id)
         .neq('id', comboId)
         .limit(1);
       if (dupCombo && dupCombo.length > 0) {
@@ -809,7 +835,7 @@ const updateCombination = async (req, res) => {
     if (brand !== undefined) updateData.brand = brand;
 
     const { data: combo, error } = await supabase
-      .from('combinations').update(updateData).eq('id', comboId).select().single();
+      .from('combinations').update(updateData).eq('id', comboId).eq('owner_id', req.user.owner_id).select().single();
     if (error) {
       if (error.code === '23505') return res.status(400).json({ error: `Combination '${combination_name || ''}' already exists.` });
       throw error;
@@ -828,7 +854,8 @@ const updateCombination = async (req, res) => {
         action: 'Manual Edit',
         reason: req.body.reason || 'Updated via edit page',
         changed_by: req.user.id,
-        changed_by_name: req.user.full_name
+        changed_by_name: req.user.full_name,
+        owner_id: req.user.owner_id
       });
       await logActivity(req.user, 'UPDATE_STOCK', 'combination', comboId, {
         beam: old.beams?.beam_name, combo: old.combination_name,
@@ -838,10 +865,10 @@ const updateCombination = async (req, res) => {
 
     // Update colors: replace all
     if (colors !== undefined) {
-      await supabase.from('combination_colors').delete().eq('combination_id', comboId);
+      await supabase.from('combination_colors').delete().eq('combination_id', comboId).eq('owner_id', req.user.owner_id);
       if (colors.length > 0) {
         const { error: colorErr } = await supabase.from('combination_colors').insert(
-          colors.map((c, i) => ({ combination_id: comboId, f_number: c.f_number.trim().toUpperCase(), color_name: c.color_name.trim(), company_name: c.company_name?.trim() || null, sort_order: i }))
+          colors.map((c, i) => ({ combination_id: comboId, f_number: c.f_number.trim().toUpperCase(), color_name: c.color_name.trim(), company_name: c.company_name?.trim() || null, sort_order: i, owner_id: req.user.owner_id }))
         );
         if (colorErr) {
           if (colorErr.code === '23505') return res.status(400).json({ error: `Color code already exists in this combination.` });
@@ -858,7 +885,7 @@ const updateCombination = async (req, res) => {
     }
 
     const { data: result } = await supabase
-      .from('combinations').select('*, combination_colors(*)').eq('id', comboId).single();
+      .from('combinations').select('*, combination_colors(*)').eq('id', comboId).eq('owner_id', req.user.owner_id).single();
     res.json({ combination: result });
   } catch (error) {
     console.error('UpdateCombination error:', error);
@@ -870,10 +897,11 @@ const updateCombination = async (req, res) => {
 const deleteCombination = async (req, res) => {
   try {
     const { comboId } = req.params;
-    const { data: combo } = await supabase.from('combinations').select('combination_name, beams(beam_name)').eq('id', comboId).single();
+    const { data: combo } = await supabase.from('combinations').select('combination_name, beams(beam_name)').eq('id', comboId).eq('owner_id', req.user.owner_id).single();
+    if (!combo) return res.status(404).json({ error: 'Combination not found' });
 
-    await supabase.from('stock_history').delete().eq('combination_id', comboId);
-    const { error } = await supabase.from('combinations').delete().eq('id', comboId);
+    await supabase.from('stock_history').delete().eq('combination_id', comboId).eq('owner_id', req.user.owner_id);
+    const { error } = await supabase.from('combinations').delete().eq('id', comboId).eq('owner_id', req.user.owner_id);
     if (error) throw error;
 
     await logActivity(req.user, 'DELETE_COMBINATION', 'combination', comboId, {
@@ -919,7 +947,8 @@ const advancedSearch = async (req, res) => {
         combination_colors (
           id, f_number, color_name, company_name, sort_order
         )
-      `);
+      `)
+      .eq('owner_id', req.user.owner_id);
 
     const { data: rawCombinations, error } = await query;
     if (error) throw error;
@@ -1067,6 +1096,7 @@ const advancedSearch = async (req, res) => {
     const { data: sareesList } = await supabase
       .from('sarees')
       .select('id, series_code, sari_name')
+      .eq('owner_id', req.user.owner_id)
       .order('series_code', { ascending: true });
 
     const maxStockInDb = rawCombinations.reduce((max, c) => Math.max(max, c.current_stock || 0), 100);
