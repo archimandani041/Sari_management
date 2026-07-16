@@ -15,18 +15,18 @@ ALTER TABLE stock_history ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES auth
 ALTER TABLE settings ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
 ALTER TABLE activity_logs ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
 
--- 2. Backfill owner_id for existing records
-UPDATE sarees SET owner_id = created_by WHERE owner_id IS NULL AND created_by IS NOT NULL;
-UPDATE suppliers SET owner_id = created_by WHERE owner_id IS NULL AND created_by IS NOT NULL;
-UPDATE stock_history SET owner_id = changed_by WHERE owner_id IS NULL AND changed_by IS NOT NULL;
-UPDATE stock_requests SET owner_id = requested_by WHERE owner_id IS NULL AND requested_by IS NOT NULL;
+-- 2. Backfill owner_id for existing records (only if the user still exists in auth.users)
+UPDATE sarees SET owner_id = created_by WHERE owner_id IS NULL AND created_by IN (SELECT id FROM auth.users);
+UPDATE suppliers SET owner_id = created_by WHERE owner_id IS NULL AND created_by IN (SELECT id FROM auth.users);
+UPDATE stock_history SET owner_id = changed_by WHERE owner_id IS NULL AND changed_by IN (SELECT id FROM auth.users);
+UPDATE stock_requests SET owner_id = requested_by WHERE owner_id IS NULL AND requested_by IN (SELECT id FROM auth.users);
 
 -- Backfill hierarchy
 UPDATE beams b SET owner_id = s.owner_id FROM sarees s WHERE b.saree_id = s.id AND b.owner_id IS NULL;
 UPDATE combinations c SET owner_id = b.owner_id FROM beams b WHERE c.beam_id = b.id AND c.owner_id IS NULL;
 UPDATE combination_colors cc SET owner_id = c.owner_id FROM combinations c WHERE cc.combination_id = c.id AND cc.owner_id IS NULL;
 UPDATE combination_suppliers cs SET owner_id = c.owner_id FROM combinations c WHERE cs.combination_id = c.id AND cs.owner_id IS NULL;
-UPDATE activity_logs SET owner_id = user_id WHERE owner_id IS NULL AND user_id IS NOT NULL;
+UPDATE activity_logs SET owner_id = user_id WHERE owner_id IS NULL AND user_id IN (SELECT id FROM auth.users);
 
 -- 3. Uniqueness constraint for series_code: unique per owner
 ALTER TABLE sarees DROP CONSTRAINT IF EXISTS sarees_series_base_series_letter_key;
