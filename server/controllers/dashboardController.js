@@ -41,7 +41,7 @@ const getTransactionDetails = (entry) => {
 const getDatePeriods = (range, customStart, customEnd) => {
   const endDate = new Date();
   let startDate = new Date();
-  
+
   switch (range) {
     case 'today':
       startDate.setHours(0, 0, 0, 0);
@@ -69,11 +69,11 @@ const getDatePeriods = (range, customStart, customEnd) => {
       startDate.setDate(endDate.getDate() - 30); // Default to 30 days
       break;
   }
-  
+
   const duration = endDate.getTime() - startDate.getTime();
   const prevStartDate = new Date(startDate.getTime() - duration);
   const prevEndDate = new Date(startDate.getTime());
-  
+
   return {
     startDate,
     endDate,
@@ -89,7 +89,7 @@ const getSparklineData = (historyEntries, startDate, endDate, actionType) => {
   const startMs = startDate.getTime();
   const endMs = endDate.getTime();
   const step = Math.max(1000, (endMs - startMs) / binsCount);
-  
+
   const bins = Array.from({ length: binsCount }, (_, idx) => {
     const binStart = startMs + idx * step;
     let label = '';
@@ -100,14 +100,14 @@ const getSparklineData = (historyEntries, startDate, endDate, actionType) => {
     }
     return { label, value: 0 };
   });
-  
+
   historyEntries.forEach(h => {
     const time = new Date(h.created_at).getTime();
     if (time >= startMs && time <= endMs) {
       const isMatch = actionType === 'Increase'
         ? (h.action === 'Increase' || h.details?.action === 'Stock Added')
         : (h.action === 'Decrease' || h.details?.action === 'Delivery');
-      
+
       if (isMatch) {
         const binIndex = Math.min(binsCount - 1, Math.floor((time - startMs) / step));
         if (binIndex >= 0 && bins[binIndex]) {
@@ -116,7 +116,7 @@ const getSparklineData = (historyEntries, startDate, endDate, actionType) => {
       }
     }
   });
-  
+
   return bins;
 };
 
@@ -126,7 +126,7 @@ const getRunningStockSparkline = (currentStock, historyEntries, startDate, endDa
   const startMs = startDate.getTime();
   const endMs = endDate.getTime();
   const step = Math.max(1000, (endMs - startMs) / binsCount);
-  
+
   const bins = Array.from({ length: binsCount }, (_, idx) => {
     const binEnd = startMs + (idx + 1) * step;
     let label = '';
@@ -137,9 +137,9 @@ const getRunningStockSparkline = (currentStock, historyEntries, startDate, endDa
     }
     return { label, value: currentStock, binEnd };
   });
-  
+
   const sortedHistory = [...historyEntries].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  
+
   bins.forEach(bin => {
     let netDiffAfterBin = 0;
     sortedHistory.forEach(h => {
@@ -149,7 +149,7 @@ const getRunningStockSparkline = (currentStock, historyEntries, startDate, endDa
     });
     bin.value = Math.max(0, currentStock - netDiffAfterBin);
   });
-  
+
   return bins.map(b => ({ label: b.label, value: b.value }));
 };
 
@@ -157,11 +157,11 @@ const getRunningStockSparkline = (currentStock, historyEntries, startDate, endDa
 const getStockMovementData = (historyEntries, startDate, endDate, grouping) => {
   const dataMap = {};
   const current = new Date(startDate);
-  
+
   while (current <= endDate) {
     let key = '';
     let label = '';
-    
+
     if (grouping === 'daily') {
       key = current.toISOString().split('T')[0];
       label = current.toLocaleDateString('default', { month: 'short', day: 'numeric' });
@@ -178,10 +178,10 @@ const getStockMovementData = (historyEntries, startDate, endDate, grouping) => {
       label = current.toLocaleString('default', { month: 'short', year: '2-digit' });
       current.setMonth(current.getMonth() + 1);
     }
-    
+
     dataMap[key] = { label, stockAdded: 0, stockDelivered: 0, netChange: 0 };
   }
-  
+
   historyEntries.forEach(h => {
     const createdDate = new Date(h.created_at);
     if (createdDate >= startDate && createdDate <= endDate) {
@@ -196,7 +196,7 @@ const getStockMovementData = (historyEntries, startDate, endDate, grouping) => {
       } else {
         key = `${createdDate.getFullYear()}-${String(createdDate.getMonth() + 1).padStart(2, '0')}`;
       }
-      
+
       if (dataMap[key]) {
         if (h.action === 'Increase' || h.details?.action === 'Stock Added') {
           dataMap[key].stockAdded += h.qty;
@@ -206,7 +206,7 @@ const getStockMovementData = (historyEntries, startDate, endDate, grouping) => {
       }
     }
   });
-  
+
   return Object.values(dataMap).map(d => ({
     ...d,
     netChange: d.stockAdded - d.stockDelivered
@@ -227,7 +227,7 @@ const getDashboard = async (req, res) => {
   try {
     const { range = '30days', customStart, customEnd, grouping = 'daily' } = req.query;
     const periods = getDatePeriods(range, customStart, customEnd);
-    
+
     const ownerId = req.user.owner_id;
 
     // 1. Core Counts & Dynamic details — all scoped to this owner
@@ -343,7 +343,7 @@ const getDashboard = async (req, res) => {
     const deliveredSparkline = getSparklineData(parsedHistory, periods.startDate, periods.endDate, 'Decrease');
     const addedSparkline = getSparklineData(parsedHistory, periods.startDate, periods.endDate, 'Increase');
     const stockSparkline = getRunningStockSparkline(totalStock, parsedHistory, periods.startDate, periods.endDate);
-    const sareesSparkline = Array.from({ length: 12 }, (_, i) => ({ label: `Pt ${i+1}`, value: totalSarees }));
+    const sareesSparkline = Array.from({ length: 12 }, (_, i) => ({ label: `Pt ${i + 1}`, value: totalSarees }));
 
     // Stock Movement Chart Data
     const stockMovement = getStockMovementData(parsedHistory, periods.startDate, periods.endDate, grouping);
@@ -355,10 +355,10 @@ const getDashboard = async (req, res) => {
       if (!sareeMetrics[code]) {
         sareeMetrics[code] = { code, currentDelivered: 0, prevDelivered: 0, currentAdded: 0 };
       }
-      
+
       const inCurrent = h.createdDate >= periods.startDate && h.createdDate <= periods.endDate;
       const inPrev = h.createdDate >= periods.prevStartDate && h.createdDate < periods.startDate;
-      
+
       if (h.action === 'Decrease' || h.details?.action === 'Delivery') {
         if (inCurrent) sareeMetrics[code].currentDelivered += h.qty;
         if (inPrev) sareeMetrics[code].prevDelivered += h.qty;
@@ -381,12 +381,12 @@ const getDashboard = async (req, res) => {
         const stock = sareeStockLevels[sm.code] ?? 0;
         const avgDailyDemand = sm.currentDelivered / activeDays;
         const daysRemaining = avgDailyDemand > 0 ? Math.round(stock / avgDailyDemand) : 999;
-        
+
         let trendPercent = 0;
         if (sm.prevDelivered > 0) {
           trendPercent = Math.round(((sm.currentDelivered - sm.prevDelivered) / sm.prevDelivered) * 100);
         }
-        
+
         return {
           code: sm.code,
           delivered: sm.currentDelivered,
@@ -410,10 +410,10 @@ const getDashboard = async (req, res) => {
       const seriesCode = c.beams?.sarees?.series_code || 'UNKNOWN';
       const name = `${seriesCode} - ${c.beams?.beam_name} (${c.combination_name || 'Combo'})`;
       const isLow = (c.current_stock ?? 0) <= (c.minimum_stock ?? 20);
-      
-      const hasRecentSales = parsedHistory.some(h => 
-        h.combination_id === c.id && 
-        h.createdDate >= fortyFiveDaysAgo && 
+
+      const hasRecentSales = parsedHistory.some(h =>
+        h.combination_id === c.id &&
+        h.createdDate >= fortyFiveDaysAgo &&
         (h.action === 'Decrease' || h.details?.action === 'Delivery')
       );
 
@@ -800,7 +800,7 @@ const getPrediction = async (req, res) => {
     const deliveries = parsedHistory.filter(h => h.action === 'Decrease' || h.details?.action === 'Delivery');
 
     // 1. Calculate general Saree level metrics
-    const currentSareeStock = (saree.beams || []).reduce((sum, b) => 
+    const currentSareeStock = (saree.beams || []).reduce((sum, b) =>
       sum + (b.combinations || []).reduce((cs, c) => cs + (c.current_stock || 0), 0), 0
     );
 
@@ -909,7 +909,7 @@ const getPrediction = async (req, res) => {
     const beamsBreakdown = (saree.beams || []).map(b => {
       const beamCombos = b.combinations || [];
       const beamComboIds = beamCombos.map(c => c.id);
-      
+
       const beamDeliveries = deliveries.filter(d => beamComboIds.includes(d.combination_id));
       const beamTotalDelivered = beamDeliveries.reduce((sum, d) => sum + d.qty, 0);
       const beamAvgDemand = beamTotalDelivered / activeDaysCount;

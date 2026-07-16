@@ -152,15 +152,15 @@ const CombinationCard = ({ combo: initialCombo, comboIndex, beamName, sareeId, o
 
         {/* Fields */}
         <Grid container spacing={2} sx={{ mb: 1.5 }}>
-          <Grid size={{ xs: 6, sm: 2 }}>
+          <Grid size={{ xs: 6, sm: 2.5 }}>
             <TextField size="small" fullWidth type="number" label="Current Stock" value={combo.current_stock}
               onChange={e => update('current_stock', e.target.value)} disabled={saving} slotProps={{ htmlInput: { min: 0 } }} />
           </Grid>
-          <Grid size={{ xs: 6, sm: 2 }}>
+          <Grid size={{ xs: 6, sm: 2.5 }}>
             <TextField size="small" fullWidth type="number" label="Min Stock Alert" value={combo.minimum_stock || 20}
               onChange={e => update('minimum_stock', e.target.value)} disabled={saving} slotProps={{ htmlInput: { min: 0 } }} />
           </Grid>
-          <Grid size={{ xs: 6, sm: 2.5 }}>
+          <Grid size={{ xs: 6, sm: 3 }}>
             <FormControl fullWidth size="small" disabled={saving}>
               <InputLabel>Status</InputLabel>
               <Select
@@ -173,20 +173,7 @@ const CombinationCard = ({ combo: initialCombo, comboIndex, beamName, sareeId, o
               </Select>
             </FormControl>
           </Grid>
-          <Grid size={{ xs: 6, sm: 2.5 }}>
-            <FormControl fullWidth size="small" disabled={saving}>
-              <InputLabel>Brand</InputLabel>
-              <Select
-                value={combo.brand || 'KP'}
-                label="Brand"
-                onChange={e => update('brand', e.target.value)}
-              >
-                <MenuItem value="KP">KP</MenuItem>
-                <MenuItem value="KPR">KPR</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 3 }}>
+          <Grid size={{ xs: 12, sm: 4 }}>
             <TextField size="small" fullWidth label="Notes" value={combo.notes || ''}
               onChange={e => update('notes', e.target.value)} disabled={saving} />
           </Grid>
@@ -401,6 +388,7 @@ const SareeEdit = () => {
   const [sariName, setSariName] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
+  const [brand, setBrand] = useState('KP');
   const [topDirty, setTopDirty] = useState(false);
   const [savingTop, setSavingTop] = useState(false);
 
@@ -704,7 +692,7 @@ const SareeEdit = () => {
       setSariName(data.saree.sari_name || '');
       setPrice(data.saree.price != null ? String(data.saree.price) : '');
       setDescription(data.saree.description || '');
-      // Top level status/brand removed
+      setBrand(data.saree.brand || 'KP');
       setError('');
     } catch (e) {
       setError('Failed to load saree');
@@ -716,7 +704,7 @@ const SareeEdit = () => {
   const handleSaveTop = async () => {
     setSavingTop(true);
     try {
-      await sareeAPI.update(id, { series_base: seriesBase, series_letter: seriesLetter, sari_name: sariName, price: price || null, description });
+      await sareeAPI.update(id, { series_base: seriesBase, series_letter: seriesLetter, sari_name: sariName, price: price || null, description, brand });
       setTopDirty(false);
       setSnack('Saree details saved!');
     } catch (e) { setSnack('Save failed: ' + (e.response?.data?.error || 'Error')); }
@@ -757,7 +745,7 @@ const SareeEdit = () => {
             Edit — {saree?.series_code}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Changes save per-section. Each beam and combination saves independently.
+            Saree identity saves with "Save Saree". Beams and combinations save independently.
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1.5 }}>
@@ -774,18 +762,18 @@ const SareeEdit = () => {
           <Paper sx={{ p: 3, borderRadius: 4, border: topDirty ? '1.5px solid' : '1px solid', borderColor: topDirty ? 'warning.main' : 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>Saree Identity</Typography>
-              {topDirty && (
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button size="small" variant="contained" startIcon={<SaveIcon />} onClick={handleSaveTop} disabled={savingTop}>
-                    {savingTop ? 'Saving...' : 'Save Changes'}
-                  </Button>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button size="small" variant="contained" startIcon={<SaveIcon />} onClick={handleSaveTop} disabled={savingTop}>
+                  {savingTop ? 'Saving...' : 'Save Saree'}
+                </Button>
+                {topDirty && (
                   <Button size="small" variant="outlined" onClick={() => {
                     setSeriesBase(saree.series_base); setSeriesLetter(saree.series_letter);
                     setSariName(saree.sari_name || ''); setPrice(saree.price != null ? String(saree.price) : '');
-                    setDescription(saree.description || ''); setTopDirty(false);
+                    setDescription(saree.description || ''); setBrand(saree.brand || 'KP'); setTopDirty(false);
                   }}>Discard</Button>
-                </Box>
-              )}
+                )}
+              </Box>
             </Box>
             <Grid container spacing={2}>
               <Grid size={{ xs: 6, sm: 2 }}>
@@ -796,15 +784,24 @@ const SareeEdit = () => {
                 <TextField size="small" fullWidth label="Letter" value={seriesLetter}
                   onChange={e => { setSeriesLetter(e.target.value.toUpperCase()); setTopDirty(true); }} />
               </Grid>
-              <Grid size={{ xs: 12, sm: 3.5 }}>
+              <Grid size={{ xs: 6, sm: 2 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Brand</InputLabel>
+                  <Select value={brand} label="Brand" onChange={e => { setBrand(e.target.value); setTopDirty(true); }}>
+                    <MenuItem value="KP">KP</MenuItem>
+                    <MenuItem value="KPR">KPR</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 2.5 }}>
                 <TextField size="small" fullWidth label="Sari Name" value={sariName}
                   onChange={e => { setSariName(e.target.value); setTopDirty(true); }} />
               </Grid>
-              <Grid size={{ xs: 12, sm: 1.5 }}>
+              <Grid size={{ xs: 6, sm: 1.5 }}>
                 <TextField size="small" fullWidth type="number" label="Price (₹)" value={price}
                   onChange={e => { setPrice(e.target.value); setTopDirty(true); }} slotProps={{ htmlInput: { min: 0 } }} />
               </Grid>
-              <Grid size={{ xs: 12, sm: 3.5 }}>
+              <Grid size={{ xs: 12, sm: 2.5 }}>
                 <TextField size="small" fullWidth label="Description" value={description}
                   onChange={e => { setDescription(e.target.value); setTopDirty(true); }} />
               </Grid>

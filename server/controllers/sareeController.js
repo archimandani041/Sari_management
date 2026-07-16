@@ -11,9 +11,9 @@ const { supabase } = require('../config/supabase');
 const isStaleFkError = (error) =>
   error?.code === '23503' &&
   (error?.details?.includes('created_by') ||
-   error?.details?.includes('updated_by') ||
-   error?.details?.includes('changed_by') ||
-   error?.details?.includes('user_id'));
+    error?.details?.includes('updated_by') ||
+    error?.details?.includes('changed_by') ||
+    error?.details?.includes('user_id'));
 
 // ─────────────────────────────────────────────
 // HELPER: log activity
@@ -70,11 +70,7 @@ const getSarees = async (req, res) => {
     const filterPromises = {};
 
     if (brand) {
-      filterPromises.brand = supabase
-        .from('combinations')
-        .select('beam_id, beams(saree_id)')
-        .eq('brand', brand)
-        .eq('owner_id', ownerId);
+      query = query.eq('brand', brand);
     }
     if (saree_status) {
       filterPromises.saree_status = supabase
@@ -119,11 +115,6 @@ const getSarees = async (req, res) => {
       filterData[key] = filterResults[idx].data || [];
     });
 
-    // Brand filter
-    if (brand) {
-      const brandSareeIds = filterData.brand.map(c => c.beams?.saree_id).filter(Boolean);
-      query = query.in('id', brandSareeIds.length > 0 ? brandSareeIds : ['00000000-0000-0000-0000-000000000000']);
-    }
 
     // Status (In Stock / In Delivery) filter
     if (saree_status) {
@@ -262,7 +253,7 @@ const createSaree = async (req, res) => {
   try {
     const {
       series_base, series_letter = 'A', sari_name, description,
-      price, image_url, beams = []
+      price, image_url, brand = 'KP', beams = []
     } = req.body;
 
     if (!series_base) return res.status(400).json({ error: 'Series base is required' });
@@ -314,6 +305,7 @@ const createSaree = async (req, res) => {
         description,
         price: price != null ? parseFloat(price) : null,
         image_url,
+        brand: brand || 'KP',
         owner_id: req.user.owner_id,
         created_by: req.user.id,
         updated_by: req.user.id
@@ -326,66 +318,79 @@ const createSaree = async (req, res) => {
       throw error;
     }
 
-    // Insert beams
-    for (let bi = 0; bi < beams.length; bi++) {
-      const b = beams[bi];
+    // Insert beams concurrently
+    const beamPromises = beams.map(async (b, bi) => {
       const { data: beam, error: beamErr } = await supabase
         .from('beams')
         .insert({ saree_id: saree.id, beam_name: b.beam_name.trim(), sort_order: bi, owner_id: req.user.owner_id })
         .select().single();
       if (beamErr) throw beamErr;
+      return { original: b, saved: beam };
+    });
+    const insertedBeams = await Promise.all(beamPromises);
 
-      // Insert combinations
+    // Insert combinations concurrently across all beams
+    const comboPromises = [];
+    for (const { original: b, saved: beam } of insertedBeams) {
       for (let ci = 0; ci < (b.combinations || []).length; ci++) {
         const c = b.combinations[ci];
-        const { data: combo, error: comboErr } = await supabase
-          .from('combinations')
-          .insert({
-            beam_id: beam.id,
-            combination_name: c.combination_name ? c.combination_name.trim() : null,
-            current_stock: parseInt(c.current_stock) || 0,
-            minimum_stock: parseInt(c.minimum_stock) || 20,
-            notes: c.notes || null,
-            status: c.status || 'In Stock',
-            brand: c.brand || 'KP',
-            sort_order: ci,
-            owner_id: req.user.owner_id
-          })
-          .select().single();
-        if (comboErr) throw comboErr;
-
-        // Insert colors
-        if (c.colors?.length > 0) {
-          await supabase.from('combination_colors').insert(
-            c.colors.map((col, fi) => ({
-              combination_id: combo.id,
-              f_number: col.f_number.trim().toUpperCase(),
-              color_name: col.color_name.trim(),
-              company_name: col.company_name?.trim() || null,
-              sort_order: fi,
+        comboPromises.push((async () => {
+          const { data: combo, error: comboErr } = await supabase
+            .from('combinations')
+            .insert({
+              beam_id: beam.id,
+              combination_name: c.combination_name ? c.combination_name.trim() : null,
+              current_stock: parseInt(c.current_stock) || 0,
+              minimum_stock: parseInt(c.minimum_stock) || 20,
+              notes: c.notes || null,
+              status: c.status || 'In Stock',
+              brand: c.brand || 'KP',
+              sort_order: ci,
               owner_id: req.user.owner_id
-            }))
-          );
-        }
+            })
+            .select().single();
+          if (comboErr) throw comboErr;
 
-        // Stock history for initial stock
-        if (parseInt(c.current_stock) > 0) {
-          await supabase.from('stock_history').insert({
-            saree_id: saree.id,
-            combination_id: combo.id,
-            beam_name: b.beam_name.trim(),
-            combination_name: c.combination_name ? c.combination_name.trim() : `Combination ${ci + 1}`,
-            old_stock: 0,
-            new_stock: parseInt(c.current_stock),
-            action: 'Manual Edit',
-            reason: 'Initial stock on creation',
-            owner_id: req.user.owner_id,
-            changed_by: req.user.id,
-            changed_by_name: req.user.full_name
-          });
-        }
+          const nestedPromises = [];
+          // Insert colors
+          if (c.colors?.length > 0) {
+            nestedPromises.push(
+              supabase.from('combination_colors').insert(
+                c.colors.map((col, fi) => ({
+                  combination_id: combo.id,
+                  f_number: col.f_number.trim().toUpperCase(),
+                  color_name: col.color_name.trim(),
+                  company_name: col.company_name?.trim() || null,
+                  sort_order: fi,
+                  owner_id: req.user.owner_id
+                }))
+              )
+            );
+          }
+
+          // Stock history for initial stock
+          if (parseInt(c.current_stock) > 0) {
+            nestedPromises.push(
+              supabase.from('stock_history').insert({
+                saree_id: saree.id,
+                combination_id: combo.id,
+                beam_name: b.beam_name.trim(),
+                combination_name: c.combination_name ? c.combination_name.trim() : `Combination ${ci + 1}`,
+                old_stock: 0,
+                new_stock: parseInt(c.current_stock),
+                action: 'Manual Edit',
+                reason: 'Initial stock on creation',
+                owner_id: req.user.owner_id,
+                changed_by: req.user.id,
+                changed_by_name: req.user.full_name
+              })
+            );
+          }
+          await Promise.all(nestedPromises);
+        })());
       }
     }
+    await Promise.all(comboPromises);
 
     await logActivity(req.user, 'CREATE_SAREE', 'saree', saree.id, {
       series_code: saree.series_code, sari_name
@@ -417,7 +422,7 @@ const createSaree = async (req, res) => {
 const updateSaree = async (req, res) => {
   try {
     const { id } = req.params;
-    const { series_base, series_letter, sari_name, description, price, image_url } = req.body;
+    const { series_base, series_letter, sari_name, description, price, image_url, brand } = req.body;
 
     const { data: existing } = await supabase.from('sarees').select('*').eq('id', id).eq('owner_id', req.user.owner_id).single();
     if (!existing) return res.status(404).json({ error: 'Saree not found' });
@@ -446,6 +451,7 @@ const updateSaree = async (req, res) => {
     if (description !== undefined) updateData.description = description;
     if (price !== undefined) updateData.price = price != null ? parseFloat(price) : null;
     if (image_url !== undefined) updateData.image_url = image_url;
+    if (brand !== undefined) updateData.brand = brand;
 
     const { data: saree, error } = await supabase
       .from('sarees').update(updateData).eq('id', id).select().single();
@@ -587,6 +593,41 @@ const nextSeries = async (req, res) => {
   } catch (error) {
     console.error('NextSeries error:', error);
     res.status(500).json({ error: 'Failed to advance series' });
+  }
+};
+
+// ─────────────────────────────────────────────
+// PATCH /api/sarees/:id/set-series
+// ─────────────────────────────────────────────
+const setSeries = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { series_letter } = req.body;
+    
+    if (!series_letter || series_letter.length !== 1 || series_letter < 'A' || series_letter > 'Z') {
+      return res.status(400).json({ error: 'Invalid series letter. Must be between A and Z.' });
+    }
+
+    const { data: saree } = await supabase.from('sarees').select('*').eq('id', id).eq('owner_id', req.user.owner_id).single();
+    if (!saree) return res.status(404).json({ error: 'Saree not found' });
+
+    const { data: updated, error } = await supabase
+      .from('sarees').update({ series_letter: series_letter.toUpperCase(), updated_at: new Date().toISOString(), updated_by: req.user.id })
+      .eq('id', id).select().single();
+
+    if (error) {
+      if (error.code === '23505') return res.status(400).json({ error: `Series ${saree.series_base}${series_letter.toUpperCase()} already exists` });
+      throw error;
+    }
+
+    await logActivity(req.user, 'SET_SERIES', 'saree', id, {
+      from: `${saree.series_base}${saree.series_letter}`, to: `${saree.series_base}${series_letter.toUpperCase()}`
+    });
+
+    res.json({ saree: updated });
+  } catch (error) {
+    console.error('SetSeries error:', error);
+    res.status(500).json({ error: 'Failed to set series' });
   }
 };
 
@@ -799,8 +840,11 @@ const updateCombination = async (req, res) => {
     const { combination_name, current_stock, minimum_stock, notes, colors, status, brand } = req.body;
 
     const { data: old } = await supabase
-      .from('combinations').select('*, beams(saree_id, beam_name, id)').eq('id', comboId).eq('owner_id', req.user.owner_id).single();
+      .from('combinations').select('*, beams(saree_id, beam_name, id)').eq('id', comboId).single();
     if (!old) return res.status(404).json({ error: 'Combination not found' });
+    if (old.owner_id && old.owner_id !== req.user.owner_id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
 
     // Check duplicate combination names
     if (combination_name !== undefined) {
@@ -835,7 +879,7 @@ const updateCombination = async (req, res) => {
     if (brand !== undefined) updateData.brand = brand;
 
     const { data: combo, error } = await supabase
-      .from('combinations').update(updateData).eq('id', comboId).eq('owner_id', req.user.owner_id).select().single();
+      .from('combinations').update(updateData).eq('id', comboId).select().single();
     if (error) {
       if (error.code === '23505') return res.status(400).json({ error: `Combination '${combination_name || ''}' already exists.` });
       throw error;
@@ -844,6 +888,7 @@ const updateCombination = async (req, res) => {
     // Log stock change
     if (current_stock !== undefined && parseInt(current_stock) !== old.current_stock) {
       const sareeId = old.beams?.saree_id;
+      const historyAction = req.body.action || 'Manual Edit';
       await supabase.from('stock_history').insert({
         saree_id: sareeId,
         combination_id: comboId,
@@ -851,7 +896,7 @@ const updateCombination = async (req, res) => {
         combination_name: old.combination_name || 'Combination',
         old_stock: old.current_stock,
         new_stock: parseInt(current_stock),
-        action: 'Manual Edit',
+        action: historyAction,
         reason: req.body.reason || 'Updated via edit page',
         changed_by: req.user.id,
         changed_by_name: req.user.full_name,
@@ -897,11 +942,14 @@ const updateCombination = async (req, res) => {
 const deleteCombination = async (req, res) => {
   try {
     const { comboId } = req.params;
-    const { data: combo } = await supabase.from('combinations').select('combination_name, beams(beam_name)').eq('id', comboId).eq('owner_id', req.user.owner_id).single();
+    const { data: combo } = await supabase.from('combinations').select('combination_name, owner_id, beams(beam_name)').eq('id', comboId).single();
     if (!combo) return res.status(404).json({ error: 'Combination not found' });
+    if (combo.owner_id && combo.owner_id !== req.user.owner_id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
 
-    await supabase.from('stock_history').delete().eq('combination_id', comboId).eq('owner_id', req.user.owner_id);
-    const { error } = await supabase.from('combinations').delete().eq('id', comboId).eq('owner_id', req.user.owner_id);
+    await supabase.from('stock_history').delete().eq('combination_id', comboId);
+    const { error } = await supabase.from('combinations').delete().eq('id', comboId);
     if (error) throw error;
 
     await logActivity(req.user, 'DELETE_COMBINATION', 'combination', comboId, {
@@ -986,7 +1034,7 @@ const advancedSearch = async (req, res) => {
 
     if (comboSearch) {
       const searchLower = comboSearch.toLowerCase();
-      results = results.filter(r => 
+      results = results.filter(r =>
         (r.combination_name && r.combination_name.toLowerCase().includes(searchLower)) ||
         (r.notes && r.notes.toLowerCase().includes(searchLower))
       );
@@ -994,8 +1042,8 @@ const advancedSearch = async (req, res) => {
 
     if (fColorSearch) {
       const searchLower = fColorSearch.toLowerCase();
-      results = results.filter(r => 
-        r.combination_colors.some(col => 
+      results = results.filter(r =>
+        r.combination_colors.some(col =>
           col.color_name.toLowerCase().includes(searchLower) ||
           col.f_number.toLowerCase().includes(searchLower) ||
           (col.company_name && col.company_name.toLowerCase().includes(searchLower))
@@ -1005,13 +1053,13 @@ const advancedSearch = async (req, res) => {
 
     if (q) {
       const searchLower = q.toLowerCase();
-      results = results.filter(r => 
+      results = results.filter(r =>
         (r.series_code && r.series_code.toLowerCase().includes(searchLower)) ||
         (r.sari_name && r.sari_name.toLowerCase().includes(searchLower)) ||
         (r.beam_name && r.beam_name.toLowerCase().includes(searchLower)) ||
         (r.combination_name && r.combination_name.toLowerCase().includes(searchLower)) ||
         (r.notes && r.notes.toLowerCase().includes(searchLower)) ||
-        r.combination_colors.some(col => 
+        r.combination_colors.some(col =>
           col.color_name.toLowerCase().includes(searchLower) ||
           col.f_number.toLowerCase().includes(searchLower) ||
           (col.company_name && col.company_name.toLowerCase().includes(searchLower))
@@ -1036,7 +1084,7 @@ const advancedSearch = async (req, res) => {
 
     if (companies) {
       const allowedCompanies = companies.split(',').map(c => c.trim().toLowerCase());
-      results = results.filter(r => 
+      results = results.filter(r =>
         r.combination_colors.some(col => col.company_name && allowedCompanies.includes(col.company_name.toLowerCase()))
       );
     }
@@ -1051,7 +1099,7 @@ const advancedSearch = async (req, res) => {
     if (dateRange !== 'all') {
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      
+
       results = results.filter(r => {
         const updatedDate = new Date(r.updated_at || r.created_at);
         if (dateRange === 'today') {
@@ -1117,7 +1165,10 @@ const advancedSearch = async (req, res) => {
 };
 
 module.exports = {
-  getSarees, getSareeById, createSaree, updateSaree, deleteSaree, nextSeries,
+  getSarees, getSareeById, createSaree,  updateSaree,
+  deleteSaree,
+  nextSeries,
+  setSeries,
   addBeam, updateBeam, deleteBeam,
   addCombination, updateCombination, deleteCombination, advancedSearch
 };

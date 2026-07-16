@@ -20,8 +20,6 @@ const Layout = ({ children }) => {
       display: 'flex',
       minHeight: '100vh',
       background: isLight ? APP_BACKGROUND.light : APP_BACKGROUND.dark,
-      backgroundAttachment: 'fixed',
-      backgroundRepeat: 'no-repeat',
       backgroundColor: 'background.default',
       transition: 'background 0.3s ease, background-color 0.3s ease',
     }}>

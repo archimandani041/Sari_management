@@ -188,7 +188,7 @@ const StockRequests = () => {
         {Object.entries(stats).map(([status, count]) => {
           const isFilterActive = statusFilter === status;
           return (
-            <Grid item xs={6} sm={3} key={status}>
+            <Grid xs={6} sm={3} key={status}>
               <Paper
                 onClick={() => setStatusFilter(isFilterActive ? '' : status)}
                 sx={{
@@ -283,7 +283,7 @@ const StockRequests = () => {
 
                 {/* Details grid layout matching design */}
                 <Grid container spacing={2} sx={{ mb: 2.5 }}>
-                  <Grid item xs={12} md={7}>
+                  <Grid xs={12} md={7}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
                       <Typography
                         variant="h3"
@@ -315,7 +315,7 @@ const StockRequests = () => {
                   </Grid>
 
                   {/* Quantity and Supplier columns */}
-                  <Grid item xs={6} md={2.5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
+                  <Grid xs={6} md={2.5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
                     <Box>
                       <Typography variant="caption" sx={{ fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9E8E7A', display: 'block', mb: 0.5 }}>
                         QTY
@@ -333,7 +333,7 @@ const StockRequests = () => {
                       </Typography>
                     </Box>
                   </Grid>
-                  <Grid item xs={6} md={2.5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
+                  <Grid xs={6} md={2.5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
                     <Box>
                       <Typography variant="caption" sx={{ fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9E8E7A', display: 'block', mb: 0.5 }}>
                         SUPPLIER
@@ -451,7 +451,7 @@ const StockRequests = () => {
       )}
 
       {/* Receive confirmation dialog (spec §13) */}
-      <Dialog open={!!receiveConfirm} onClose={() => setReceiveConfirm(null)} PaperProps={{ sx: { borderRadius: '8px', p: 1 } }}>
+      <Dialog open={!!receiveConfirm} onClose={() => setReceiveConfirm(null)} slotProps={{ paper: { sx: { borderRadius: '8px', p: 1 } } }}>
         <DialogTitle sx={{ fontWeight: 800, fontFamily: '"Plus Jakarta Sans", sans-serif', color: '#241C1A' }}>
           Confirm Stock Receipt
         </DialogTitle>
@@ -489,7 +489,7 @@ const StockRequests = () => {
       </Dialog>
 
       {/* Delete confirm */}
-      <Dialog open={!!deleteId} onClose={() => setDeleteId(null)} PaperProps={{ sx: { borderRadius: '8px' } }}>
+      <Dialog open={!!deleteId} onClose={() => setDeleteId(null)} slotProps={{ paper: { sx: { borderRadius: '8px' } } }}>
         <DialogTitle sx={{ fontWeight: 800, color: '#241C1A' }}>Delete Request?</DialogTitle>
         <DialogContent sx={{ color: '#7C726A' }}>This will permanently delete the stock request record.</DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>

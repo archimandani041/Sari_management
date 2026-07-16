@@ -43,12 +43,7 @@ const navSections = [
       { label: 'Stock History', path: '/history', icon: <HistoryIcon /> },
     ],
   },
-  {
-    heading: 'Business',
-    items: [
-      { label: 'Suppliers', path: '/suppliers', icon: <PeopleIcon /> },
-    ],
-  },
+
   {
     heading: 'System',
     items: [

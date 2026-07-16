@@ -29,7 +29,7 @@ const authenticate = async (req, res, next) => {
         user_metadata: decoded.user_metadata || {}
       };
     } catch (jwtError) {
-      console.warn('Local JWT verification failed, falling back to Supabase API:', jwtError.message);
+      // console.warn('Local JWT verification failed, falling back to Supabase API:', jwtError.message);
       const { data: { user: apiUser }, error: authError } = await supabase.auth.getUser(token);
       if (authError || !apiUser) {
         return res.status(401).json({ error: 'Invalid or expired session. Please log in again.' });

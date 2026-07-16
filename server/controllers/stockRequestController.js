@@ -12,7 +12,7 @@ const getStockRequests = async (req, res) => {
 
     let query = supabase
       .from('stock_requests')
-      .select('*, suppliers(id, name, company_name, mobile)', { count: 'exact' })
+      .select('*', { count: 'exact' })
       .eq('owner_id', req.user.owner_id)
       .order('created_at', { ascending: false });
 
@@ -35,33 +35,26 @@ const getStockRequests = async (req, res) => {
 const createStockRequest = async (req, res) => {
   try {
     const {
-      saree_id, combination_id, supplier_id,
+      saree_id, combination_id,
       beam_name, combination_name, series_code,
       requested_qty, current_stock, minimum_stock,
       whatsapp_message, notes, movement_type
     } = req.body;
 
     if (!combination_id) return res.status(400).json({ error: 'combination_id is required' });
-    if (!supplier_id) return res.status(400).json({ error: 'supplier_id is required' });
     if (!requested_qty || requested_qty <= 0) return res.status(400).json({ error: 'requested_qty must be > 0' });
 
-    // Fetch the target combination to get current stock and name
     const { data: combo, error: comboErr } = await supabase
       .from('combinations')
-      .select('current_stock, combination_name')
+      .select('current_stock, combination_name, owner_id')
       .eq('id', combination_id)
-      .eq('owner_id', req.user.owner_id)
       .single();
     if (comboErr || !combo) return res.status(404).json({ error: 'Combination not found' });
+    if (combo.owner_id && combo.owner_id !== req.user.owner_id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
 
-    // Fetch supplier info for stock history reason
-    const { data: supplier } = await supabase
-      .from('suppliers')
-      .select('name')
-      .eq('id', supplier_id)
-      .eq('owner_id', req.user.owner_id)
-      .single();
-    const supplierName = supplier?.name || 'Supplier';
+
 
     const isDelivery = movement_type === 'DELIVERY_OUT';
     const oldStock = combo.current_stock || 0;
@@ -72,58 +65,10 @@ const createStockRequest = async (req, res) => {
       return res.status(400).json({ error: 'Delivery quantity cannot exceed available stock.' });
     }
 
-    // 1. Update combination stock and status
-    const { error: updateErr } = await supabase
-      .from('combinations')
-      .update({ 
-        current_stock: newStock, 
-        status: newStatus, 
-        updated_at: new Date().toISOString() 
-      })
-      .eq('id', combination_id)
-      .eq('owner_id', req.user.owner_id);
-    if (updateErr) throw updateErr;
 
-    // 2. Log to stock_history (which populates the Audit History Log table)
     const userName = req.user.full_name || req.user.username;
-    const quantityChanged = isDelivery ? -parseInt(requested_qty) : parseInt(requested_qty);
-    const transactionDetails = {
-      sari_number: series_code || 'UNKNOWN',
-      beam_name: beam_name || 'UNKNOWN',
-      combination_name: combo.combination_name || combination_name || 'Combination',
-      action: isDelivery ? 'Delivery' : 'Stock Added',
-      opening_stock: oldStock,
-      quantity_changed: quantityChanged,
-      closing_stock: newStock,
-      reason_category: isDelivery ? 'Decrease' : 'Increase',
-      supplier_name: supplierName || null,
-      customer_name: null,
-      invoice_number: null,
-      delivery_notes: null,
-      remarks: isDelivery 
-        ? `Delivered via WhatsApp (Supplier: ${supplierName})` 
-        : `Requested via WhatsApp (Supplier: ${supplierName})`,
-      user_name: userName
-    };
 
-    const { error: histErr } = await supabase
-      .from('stock_history')
-      .insert({
-        saree_id: saree_id || null,
-        combination_id,
-        beam_name: beam_name || null,
-        combination_name: combo.combination_name || combination_name || null,
-        old_stock: oldStock,
-        new_stock: newStock,
-        action: isDelivery ? 'Decrease' : 'Increase',
-        reason: JSON.stringify(transactionDetails),
-        owner_id: req.user.owner_id,
-        changed_by: req.user.id,
-        changed_by_name: userName
-      });
-    if (histErr) throw histErr;
-
-    // 3. Log to activity_logs
+    // 1. Log to activity_logs
     await supabase.from('activity_logs').insert({
       action: isDelivery ? 'DELIVERY_STOCK_WHATSAPP' : 'REQUEST_STOCK_WHATSAPP',
       entity_type: 'combination',
@@ -144,13 +89,12 @@ const createStockRequest = async (req, res) => {
       ? `DELIVERY_OUT${notes ? `: ${notes}` : ''}`
       : `STOCK_IN${notes ? `: ${notes}` : ''}`;
 
-    // 4. Create the stock request record
+    // 2. Create the stock request record
     const { data, error } = await supabase
       .from('stock_requests')
       .insert({
         saree_id: saree_id || null,
         combination_id,
-        supplier_id,
         beam_name: beam_name || null,
         combination_name: combination_name || null,
         series_code: series_code || null,
@@ -164,7 +108,7 @@ const createStockRequest = async (req, res) => {
         requested_by: req.user.id,
         requested_by_name: userName
       })
-      .select('*, suppliers(id, name, company_name, mobile)')
+      .select('*')
       .single();
 
     if (error) throw error;
@@ -193,7 +137,7 @@ const updateRequestStatus = async (req, res) => {
       .update(updateData)
       .eq('id', id)
       .eq('owner_id', req.user.owner_id)
-      .select('*, suppliers(id, name, company_name, mobile)')
+      .select('*')
       .single();
 
     if (error) throw error;

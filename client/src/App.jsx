@@ -23,7 +23,6 @@ import SareeDetail from './pages/SareeDetail';
 import LowStock from './pages/LowStock';
 import StockHistory from './pages/StockHistory';
 import Settings from './pages/Settings';
-import Suppliers from './pages/Suppliers';
 import StockRequests from './pages/StockRequests';
 
 const AppContent = () => {
@@ -57,7 +56,6 @@ const AppContent = () => {
                   <Route path="/search" element={<Navigate to="/sarees" replace />} />
                   <Route path="/low-stock" element={<LowStock />} />
                   <Route path="/history" element={<StockHistory />} />
-                  <Route path="/suppliers" element={<Suppliers />} />
                   <Route path="/stock-requests" element={<StockRequests />} />
 
                   {/* Admin & Staff Saree Mutations */}

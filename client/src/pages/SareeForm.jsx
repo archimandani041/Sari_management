@@ -72,12 +72,12 @@ const CombinationCard = ({ combo, comboIndex, isDuplicateName, onUpdate, onRemov
       </Box>
 
       <Grid container spacing={2} sx={{ mb: 1.5 }}>
-        <Grid size={{ xs: 6, sm: 2.5 }}>
+        <Grid size={{ xs: 6, sm: 3 }}>
           <TextField size="small" fullWidth type="number" label="Stock" value={combo.current_stock}
             onChange={e => onUpdate(comboIndex, { ...combo, current_stock: e.target.value })}
             slotProps={{ htmlInput: { min: 0 } }} />
         </Grid>
-        <Grid size={{ xs: 6, sm: 3 }}>
+        <Grid size={{ xs: 6, sm: 4 }}>
           <FormControl fullWidth size="small">
             <InputLabel>Status</InputLabel>
             <Select
@@ -90,20 +90,7 @@ const CombinationCard = ({ combo, comboIndex, isDuplicateName, onUpdate, onRemov
             </Select>
           </FormControl>
         </Grid>
-        <Grid size={{ xs: 6, sm: 2.5 }}>
-          <FormControl fullWidth size="small">
-            <InputLabel>Brand</InputLabel>
-            <Select
-              value={combo.brand || 'KP'}
-              label="Brand"
-              onChange={e => onUpdate(comboIndex, { ...combo, brand: e.target.value })}
-            >
-              <MenuItem value="KP">KP</MenuItem>
-              <MenuItem value="KPR">KPR</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid size={{ xs: 6, sm: 4 }}>
+        <Grid size={{ xs: 12, sm: 5 }}>
           <TextField size="small" fullWidth label="Notes (optional)" value={combo.notes || ''}
             onChange={e => onUpdate(comboIndex, { ...combo, notes: e.target.value })} />
         </Grid>
@@ -139,6 +126,7 @@ const SareeForm = () => {
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [brand, setBrand] = useState('KP');
 
   // Beams structure: [{ beam_name, combinations: [{ combination_name, current_stock, notes, colors }] }]
   const [beams, setBeams] = useState([{ beam_name: '', combinations: [newCombo()] }]);
@@ -189,7 +177,7 @@ const SareeForm = () => {
   const [snack, setSnack] = useState('');
 
   function newCombo() {
-    return { combination_name: '', current_stock: 0, notes: '', status: 'In Stock', brand: 'KP', colors: [{ f_number: 'F-1', color_name: '', company_name: '' }] };
+    return { combination_name: '', current_stock: 0, notes: '', status: 'In Stock', colors: [{ f_number: 'F-1', color_name: '', company_name: '' }] };
   }
 
   useEffect(() => {
@@ -816,7 +804,7 @@ const SareeForm = () => {
         }))
       }));
 
-      const payload = { series_base: seriesBase, series_letter: seriesLetter, sari_name: sariName, price: price !== '' ? price : null, description, image_url: imageUrl, beams: cleanedBeams };
+      const payload = { series_base: seriesBase, series_letter: seriesLetter, sari_name: sariName, price: price !== '' ? price : null, description, image_url: imageUrl, brand, beams: cleanedBeams };
       if (isEdit) await sareeAPI.update(id, payload);
       else await sareeAPI.create(payload);
       navigate('/sarees');
@@ -855,18 +843,27 @@ const SareeForm = () => {
             <Paper sx={{ p: 3, borderRadius: 4, mb: 3 }}>
               <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Saree Identity</Typography>
               <Grid container spacing={2}>
-                <Grid size={{ xs: 6, sm: 3 }}>
+                <Grid size={{ xs: 6, sm: 2.5 }}>
                   <TextField fullWidth label="Series Base" placeholder="KS008" value={seriesBase}
                     error={seriesCodeError}
                     helperText={seriesCodeError ? 'Duplicate Series Code' : ''}
                     onChange={e => { setSeriesBase(e.target.value.toUpperCase()); setSeriesCodeError(false); }} required />
                 </Grid>
-                <Grid size={{ xs: 6, sm: 2 }}>
+                <Grid size={{ xs: 6, sm: 1.5 }}>
                   <TextField fullWidth label="Letter" placeholder="C" value={seriesLetter}
                     error={seriesCodeError}
                     onChange={e => { setSeriesLetter(e.target.value.toUpperCase()); setSeriesCodeError(false); }} slotProps={{ htmlInput: { maxLength: 2 } }} />
                 </Grid>
-                <Grid size={{ xs: 12, sm: 4 }}>
+                <Grid size={{ xs: 6, sm: 2 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Brand</InputLabel>
+                    <Select value={brand} label="Brand" onChange={e => setBrand(e.target.value)}>
+                      <MenuItem value="KP">KP</MenuItem>
+                      <MenuItem value="KPR">KPR</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 3 }}>
                   <TextField fullWidth label="Sari Name (optional)" placeholder="White Beam Series" value={sariName}
                     onChange={e => setSariName(e.target.value)} />
                 </Grid>
@@ -1055,7 +1052,7 @@ const SareeForm = () => {
       </Dialog>
 
       {/* Duplicate Resolution Dialog */}
-      <Dialog open={!!activeDup} onClose={() => { setActiveDup(null); setDupQueue([]); }} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
+      <Dialog open={!!activeDup} onClose={() => { setActiveDup(null); setDupQueue([]); }} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, p: 1 } } }}>
         <DialogTitle sx={{ fontWeight: 800, fontSize: '1.25rem', pb: 1 }}>This combination already exists.</DialogTitle>
         <DialogContent>
           <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2, mb: 2 }}>
@@ -1136,7 +1133,7 @@ const SareeForm = () => {
         onClose={() => { setActiveSareeExist(null); setSareeExistQueue([]); }}
         maxWidth="xs"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3, p: 1 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3, p: 1 } } }}
       >
         <DialogTitle sx={{ fontWeight: 800, fontSize: '1.25rem', pb: 1 }}>
           {activeSareeExist?.seriesCode} already exists in the system.
@@ -1170,7 +1167,7 @@ const SareeForm = () => {
         onClose={() => { setBlockedConfirmOpen(false); setPasteOpen(true); }}
         maxWidth="sm"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ fontWeight: 800, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 1 }}>
           ⚠️ Multiple Sarees Detected
@@ -1250,7 +1247,7 @@ const SareeForm = () => {
         onClose={() => { setDupConfirmOpen(false); setPasteOpen(true); }}
         maxWidth="md"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ fontWeight: 800, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 1 }}>
           🔁 Duplicate Entries Found
@@ -1329,7 +1326,7 @@ const SareeForm = () => {
         onClose={() => { setAllSareesExistOpen(false); setPasteOpen(true); }}
         maxWidth="xs"
         fullWidth
-        PaperProps={{ sx: { borderRadius: 3 } }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <DialogTitle sx={{ fontWeight: 800, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: 1 }}>
           ⚠️ All Detected Sarees Already Exist

@@ -44,6 +44,8 @@ const SareeDetail = () => {
 
   // Next Series dialog
   const [seriesConfirmOpen, setSeriesConfirmOpen] = useState(false);
+  const [seriesDialogOpen, setSeriesDialogOpen] = useState(false);
+  const [manualSeriesLetter, setManualSeriesLetter] = useState('');
 
   // Request Stock dialog
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
@@ -107,6 +109,7 @@ const SareeDetail = () => {
     try {
       const { data } = await sareeAPI.nextSeries(saree.id);
       setSeriesConfirmOpen(false);
+      setSeriesDialogOpen(false);
       setActionSuccess(`Advanced series code to ${data.saree.series_code}`);
       enqueueSnackbar(`Advanced to series ${data.saree.series_code}`, { variant: 'success' });
       fetchSareeDetails();
@@ -114,6 +117,27 @@ const SareeDetail = () => {
       console.error(err);
       setError(err.response?.data?.error || 'Failed to advance series.');
     }
+  };
+
+  const handleSetSeries = async (letter) => {
+    if (!letter || letter.length !== 1) return;
+    try {
+      const { data } = await sareeAPI.setSeries(saree.id, { series_letter: letter.toUpperCase() });
+      setSeriesDialogOpen(false);
+      setManualSeriesLetter('');
+      setActionSuccess(`Series code changed to ${data.saree.series_code}`);
+      enqueueSnackbar(`Series changed to ${data.saree.series_code}`, { variant: 'success' });
+      fetchSareeDetails();
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.error || 'Failed to set series.');
+    }
+  };
+
+  const handleUndoSeries = () => {
+    if (!saree?.series_letter || saree.series_letter === 'A') return;
+    const prevLetter = String.fromCharCode(saree.series_letter.charCodeAt(0) - 1);
+    handleSetSeries(prevLetter);
   };
 
   const handleDeleteConfirm = async () => {
@@ -184,7 +208,7 @@ const SareeDetail = () => {
           <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()}>Print Stock Sheet</Button>
           {(isAdmin || isStaff) && (
             <>
-              <Button variant="outlined" color="secondary" startIcon={<FiberNewIcon />} onClick={() => setSeriesConfirmOpen(true)}>Next Series</Button>
+              <Button variant="outlined" color="secondary" startIcon={<FiberNewIcon />} onClick={() => { setManualSeriesLetter(saree?.series_letter || 'A'); setSeriesDialogOpen(true); }}>Series Options</Button>
               <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/sarees/edit/${saree.id}`)}>Edit Saree</Button>
               <Button variant="contained" color="error" startIcon={<DeleteIcon />} onClick={() => setDeleteConfirmOpen(true)}>Delete Saree</Button>
             </>
@@ -331,11 +355,75 @@ const SareeDetail = () => {
 
 
 
-      {/* Series Confirmation dialog */}
-      <Dialog open={seriesConfirmOpen} onClose={() => setSeriesConfirmOpen(false)}>
-        <DialogTitle sx={{ fontWeight: 700 }}>Next Series Advancement</DialogTitle>
+      {/* Series Management Dialog */}
+      <Dialog open={seriesDialogOpen} onClose={() => setSeriesDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
+        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.25rem', pb: 1 }}>Series Options</DialogTitle>
         <DialogContent>
-          <DialogContentText>Are you sure you want to advance this saree series? This increments the letter (e.g. A → B), keeping all beams and combinations intact.</DialogContentText>
+          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body1" sx={{ fontWeight: 700 }}>Current Series:</Typography>
+            <Chip label={saree?.series_code} color="primary" sx={{ fontWeight: 700 }} />
+          </Box>
+          <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
+            Adjust the series letter (A-Z) for this saree. This affects the product catalog immediately.
+          </Typography>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button 
+                fullWidth 
+                variant="outlined" 
+                color="primary" 
+                onClick={handleUndoSeries}
+                disabled={!saree?.series_letter || saree.series_letter === 'A'}
+                sx={{ height: 48, fontWeight: 700 }}
+              >
+                Undo Series
+              </Button>
+              <Button 
+                fullWidth 
+                variant="contained" 
+                color="primary" 
+                onClick={() => setSeriesConfirmOpen(true)}
+                disabled={saree?.series_letter === 'Z'}
+                sx={{ height: 48, fontWeight: 700 }}
+              >
+                Next Series
+              </Button>
+            </Box>
+            
+            <Divider sx={{ my: 1 }}>OR SET MANUALLY</Divider>
+            
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Series Letter"
+                fullWidth
+                value={manualSeriesLetter}
+                onChange={(e) => setManualSeriesLetter(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1))}
+                placeholder="A-Z"
+                inputProps={{ maxLength: 1, style: { textAlign: 'center', fontWeight: 'bold' } }}
+              />
+              <Button 
+                variant="contained" 
+                color="secondary" 
+                onClick={() => handleSetSeries(manualSeriesLetter)}
+                disabled={!manualSeriesLetter || manualSeriesLetter === saree?.series_letter}
+                sx={{ px: 4 }}
+              >
+                Apply
+              </Button>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ pt: 2 }}>
+          <Button onClick={() => setSeriesDialogOpen(false)} color="inherit">Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Legacy Next Series Confirmation (Triggered from new dialog) */}
+      <Dialog open={seriesConfirmOpen} onClose={() => setSeriesConfirmOpen(false)} PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Confirm Next Series</DialogTitle>
+        <DialogContent>
+          <DialogContentText>Are you sure you want to advance this saree series? This increments the letter (e.g. A → B).</DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={() => setSeriesConfirmOpen(false)}>Cancel</Button>

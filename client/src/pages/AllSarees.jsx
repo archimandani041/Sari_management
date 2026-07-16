@@ -108,7 +108,8 @@ const AllSarees = () => {
   const [requestMovementType, setRequestMovementType] = useState('STOCK_IN');
 
   const openStockDialog = (combo, beam, saree, type = 'STOCK_IN') => {
-    setRequestCombo(combo);
+    // Inject saree-level brand so the WhatsApp message shows correct KP/KPR
+    setRequestCombo({ ...combo, brand: saree.brand || combo.brand });
     setRequestBeamName(beam.beam_name);
     setRequestSeriesCode(saree.series_code);
     setRequestSareeId(saree.id);
@@ -256,7 +257,7 @@ const AllSarees = () => {
       const matchedCombinations = [];
 
       for (const combo of (beam.combinations || [])) {
-        const brandMatch = !brandQ || (combo.brand?.toLowerCase() === brandQ);
+        const brandMatch = !brandQ || (saree.brand?.toLowerCase() === brandQ);
         const statusMatch = !statusQ || (combo.status?.toLowerCase() === statusQ);
 
         if (!brandMatch || !statusMatch) continue;
@@ -585,7 +586,6 @@ const AllSarees = () => {
             <TableBody>
               {sarees.map((saree) => {
                 const st = getStockStatus(saree.total_stock, saree.min_stock);
-                const brands = Array.from(new Set(saree.beams?.flatMap(b => b.combinations?.map(c => c.brand).filter(Boolean)) || []));
                 const sareeStatuses = Array.from(new Set(saree.beams?.flatMap(b => b.combinations?.map(c => c.status).filter(Boolean)) || []));
                 const filteredBeams = getFilteredHierarchy(saree);
                 const hasBeams = saree.beams && saree.beams.length > 0;
@@ -632,14 +632,14 @@ const AllSarees = () => {
 
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', maxWidth: 200 }}>
-                          {brands.map(b => (
-                            <Chip key={b} label={b} size="small"
+                          {saree.brand && (
+                            <Chip label={saree.brand} size="small"
                               sx={{
                                 fontSize: '0.65rem', height: 20, fontWeight: 800,
-                                bgcolor: b === 'KP' ? 'secondary.light' : 'warning.light',
-                                color: b === 'KP' ? 'secondary.contrastText' : 'warning.dark'
+                                bgcolor: saree.brand === 'KP' ? 'secondary.light' : 'warning.light',
+                                color: saree.brand === 'KP' ? 'secondary.contrastText' : 'warning.dark'
                               }} />
-                          ))}
+                          )}
                           {sareeStatuses.map(s => (
                             <Chip key={s} label={s} size="small" variant="outlined"
                               sx={{
@@ -648,7 +648,7 @@ const AllSarees = () => {
                                 borderColor: s === 'In Stock' ? 'success.main' : 'info.main'
                               }} />
                           ))}
-                          {brands.length === 0 && sareeStatuses.length === 0 && (
+                          {!saree.brand && sareeStatuses.length === 0 && (
                             <Typography sx={{ fontSize: '0.75rem', color: 'text.disabled' }}>—</Typography>
                           )}
                         </Box>
@@ -743,14 +743,14 @@ const AllSarees = () => {
                                             <Typography variant="body2" sx={{ fontWeight: 800, color: '#241C1A' }}>
                                               {combo.combination_name ? renderHighlighted(combo.combination_name) : 'Unnamed Combination'}
                                             </Typography>
-                                            {combo.brand && (
+                                            {combo.status && (
                                               <Chip
-                                                label={combo.brand}
+                                                label={combo.status}
                                                 size="small"
                                                 sx={{
                                                   height: 18, fontSize: '0.62rem', fontWeight: 800,
-                                                  bgcolor: combo.brand === 'KP' ? 'rgba(59, 17, 26, 0.08)' : 'rgba(217, 119, 6, 0.08)',
-                                                  color: combo.brand === 'KP' ? 'primary.main' : '#D97706',
+                                                  bgcolor: combo.status === 'In Stock' ? 'rgba(22,163,74,0.1)' : 'rgba(37,99,235,0.08)',
+                                                  color: combo.status === 'In Stock' ? '#16A34A' : '#2563EB',
                                                   borderRadius: '3px'
                                                 }}
                                               />
@@ -787,30 +787,36 @@ const AllSarees = () => {
                                           </Box>
 
                                           <Box sx={{ display: 'flex', gap: 1 }}>
-                                            <Button
-                                              size="small"
-                                              variant="outlined"
-                                              onClick={() => openStockDialog(combo, beam, saree, 'STOCK_IN')}
-                                              sx={{
-                                                fontSize: '0.72rem', fontWeight: 750, borderRadius: '4px',
-                                                borderColor: '#EAE6E1', color: '#241C1A', textTransform: 'none',
-                                                '&:hover': { borderColor: '#9E8E7A', bgcolor: '#FCFCFA' }
-                                              }}
-                                            >
-                                              Stock In
-                                            </Button>
-                                            <Button
-                                              size="small"
-                                              variant="outlined"
-                                              onClick={() => openStockDialog(combo, beam, saree, 'DELIVERY_OUT')}
-                                              sx={{
-                                                fontSize: '0.72rem', fontWeight: 750, borderRadius: '4px',
-                                                borderColor: '#EAE6E1', color: '#241C1A', textTransform: 'none',
-                                                '&:hover': { borderColor: '#9E8E7A', bgcolor: '#FCFCFA' }
-                                              }}
-                                            >
-                                              Delivery Out
-                                            </Button>
+                                            <Tooltip title="Stock In via WhatsApp">
+                                              <Button
+                                                size="small"
+                                                variant="outlined"
+                                                startIcon={<WhatsAppIcon sx={{ fontSize: '14px !important' }} />}
+                                                onClick={() => openStockDialog(combo, beam, saree, 'STOCK_IN')}
+                                                sx={{
+                                                  fontSize: '0.72rem', fontWeight: 750, borderRadius: '4px',
+                                                  borderColor: '#25D366', color: '#25D366', textTransform: 'none',
+                                                  '&:hover': { borderColor: '#1ebe57', bgcolor: 'rgba(37,211,102,0.06)' }
+                                                }}
+                                              >
+                                                Stock In
+                                              </Button>
+                                            </Tooltip>
+                                            <Tooltip title="Delivery Out via WhatsApp">
+                                              <Button
+                                                size="small"
+                                                variant="outlined"
+                                                startIcon={<WhatsAppIcon sx={{ fontSize: '14px !important' }} />}
+                                                onClick={() => openStockDialog(combo, beam, saree, 'DELIVERY_OUT')}
+                                                sx={{
+                                                  fontSize: '0.72rem', fontWeight: 750, borderRadius: '4px',
+                                                  borderColor: '#F59E0B', color: '#B45309', textTransform: 'none',
+                                                  '&:hover': { borderColor: '#D97706', bgcolor: 'rgba(245,158,11,0.06)' }
+                                                }}
+                                              >
+                                                Delivery Out
+                                              </Button>
+                                            </Tooltip>
                                             <IconButton
                                               size="small"
                                               onClick={() => navigate('/history')}
@@ -869,7 +875,7 @@ const AllSarees = () => {
       )}
 
       {/* Delete Dialog */}
-      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
+      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)} slotProps={{ paper: { sx: { borderRadius: 3, p: 1 } } }}>
         <DialogTitle sx={{ fontWeight: 800, fontSize: '1.25rem', pb: 1 }}>Delete Saree</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
@@ -905,7 +911,7 @@ const AllSarees = () => {
       </Dialog>
 
       {/* Success Snackbar */}
-      <Dialog open={snackbarOpen} onClose={() => setSnackbarOpen(false)} PaperProps={{ sx: { p: 1, borderRadius: 2 } }}>
+      <Dialog open={snackbarOpen} onClose={() => setSnackbarOpen(false)} slotProps={{ paper: { sx: { p: 1, borderRadius: 2 } } }}>
         <DialogContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
           <Typography sx={{ fontWeight: 700 }}>{snackbarMessage}</Typography>
         </DialogContent>

@@ -103,13 +103,12 @@ const Header = () => {
     }}>
       <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', px: 3, minHeight: 64 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          {/* Menu Toggle for mobile */}
+        {/* Menu Toggle for all screens */}
           <IconButton
             edge="start"
             color="inherit"
             aria-label="open drawer"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            sx={{ display: { md: 'none' } }}
           >
             <MenuIcon />
           </IconButton>

@@ -52,6 +52,7 @@ export const sareeAPI = {
   update: (id, data) => api.put(`/sarees/${id}`, data),
   delete: (id) => api.delete(`/sarees/${id}`),
   nextSeries: (id) => api.patch(`/sarees/${id}/next-series`),
+  setSeries: (id, data) => api.patch(`/sarees/${id}/set-series`, data),
 };
 
 // Beam APIs

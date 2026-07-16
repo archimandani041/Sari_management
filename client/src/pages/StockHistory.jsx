@@ -20,6 +20,7 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { utils as xlsxUtils, writeFile as xlsxWriteFile } from 'xlsx';
 
 // Status chip config
@@ -222,7 +223,7 @@ const StockHistory = () => {
           <Table sx={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
             <TableHead>
               <TableRow sx={{ bgcolor: 'background.default' }}>
-                {['Date & Time', 'Saree Info', 'Beam / Combination', 'Adjustment', 'Status', 'Responsible User'].map(col => (
+                {['Date & Time', 'Saree Info', 'Beam / Combination', 'Adjustment', 'Status', 'Responsible User', 'Action'].map(col => (
                   <TableCell key={col} sx={{ fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.07em', color: 'text.secondary', py: 1.5, borderBottom: '2px solid', borderColor: 'divider' }}>
                     {col}
                   </TableCell>
@@ -232,7 +233,7 @@ const StockHistory = () => {
             <TableBody>
               {history.length === 0 && !loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                     <Typography color="text.secondary" sx={{ fontWeight: 600 }}>
                       {search || action ? 'No records match your filters.' : 'No transaction history found.'}
                     </Typography>
@@ -254,6 +255,8 @@ const StockHistory = () => {
                 const isIncrease = qty >= 0;
                 const statusCfg = STATUS_CONFIG[item.action] || { label: item.action, bg: '#F3F4F6', color: '#374151' };
                 const userName  = details.user_name || item.changed_by_name || 'System';
+
+                const isWhatsAppRow = item.action === 'Increase' || item.action === 'Decrease';
 
                 return (
                   <TableRow
@@ -339,6 +342,26 @@ const StockHistory = () => {
                         <Typography sx={{ fontSize: '0.82rem', fontWeight: 600 }}>{userName}</Typography>
                       </Box>
                     </TableCell>
+
+                    {/* ACTION — WhatsApp repeat button */}
+                    <TableCell sx={{ py: 2.5, verticalAlign: 'middle', width: 70, textAlign: 'center' }}>
+                      <Tooltip title="Repeat via WhatsApp">
+                        <IconButton
+                          onClick={() => handleInitiateMovement(item)}
+                          sx={{
+                            width: 36, height: 36,
+                            bgcolor: '#25D366',
+                            borderRadius: '50%',
+                            color: '#fff',
+                            '&:hover': { bgcolor: '#1ebe57', transform: 'scale(1.1)' },
+                            transition: 'all 0.18s ease',
+                            boxShadow: '0 2px 8px rgba(37,211,102,0.35)',
+                          }}
+                        >
+                          <WhatsAppIcon sx={{ fontSize: 20 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -349,7 +372,7 @@ const StockHistory = () => {
         {/* Pagination row */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2.5, py: 1.5, borderTop: '1px solid', borderColor: 'divider', flexWrap: 'wrap', gap: 1 }}>
           <Typography sx={{ fontSize: '0.78rem', color: 'text.secondary', fontWeight: 500 }}>
-            Showing <strong>{page * rowsPerPage + 1}–{Math.min((page + 1) * rowsPerPage, total)}</strong> of <strong>{total.toLocaleString()}</strong> entries
+            Showing <strong>{Math.min(page * rowsPerPage + 1, total)}–{Math.min((page + 1) * rowsPerPage, total)}</strong> of <strong>{total.toLocaleString()}</strong> entries
           </Typography>
           <TablePagination
             component="div"
