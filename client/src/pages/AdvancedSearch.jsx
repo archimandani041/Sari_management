@@ -418,12 +418,27 @@ const AdvancedSearch = () => {
                 return (
                   <Grid size={{ xs: 12, sm: 6 }} key={combo.id}>
                     <Card sx={{ borderRadius: 4, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
-                      <CardMedia
-                        component="img"
-                        height={160}
-                        image={combo.image_url || '/placeholder-sari.png'}
-                        alt={combo.combination_name}
-                      />
+                      {/* Combination image or "No Image" placeholder */}
+                      {combo.image_url ? (
+                        <Box
+                          component="img"
+                          src={combo.image_url}
+                          alt={combo.combination_name || 'Combination'}
+                          loading="lazy"
+                          sx={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }}
+                        />
+                      ) : (
+                        <Box sx={{
+                          height: 160, display: 'flex', flexDirection: 'column',
+                          alignItems: 'center', justifyContent: 'center',
+                          bgcolor: 'rgba(59,17,26,0.04)', gap: 1
+                        }}>
+                          <Box sx={{ fontSize: 36, opacity: 0.25 }}>🧵</Box>
+                          <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 700, letterSpacing: '0.12em' }}>
+                            NO IMAGE
+                          </Typography>
+                        </Box>
+                      )}
                       <CardContent sx={{ p: 2.5, flexGrow: 1, display: 'flex', flexDirection: 'column', justifyBetween: 'space-between' }}>
                         <Box>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>

@@ -292,6 +292,18 @@ const SareeDetail = () => {
                     return (
                       <Grid size={12} key={c.id}>
                         <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: isLow ? 'warning.light' : 'divider' }}>
+                          {/* Combination image */}
+                          {c.image_url && (
+                            <Box sx={{ mb: 1.5, borderRadius: 1.5, overflow: 'hidden', maxHeight: 200 }}>
+                              <Box
+                                component="img"
+                                src={c.image_url}
+                                alt={c.combination_name || `Combination ${ci + 1}`}
+                                loading="lazy"
+                                sx={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }}
+                              />
+                            </Box>
+                          )}
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
                               <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>

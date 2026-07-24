@@ -2,9 +2,9 @@
  * Add / Edit Saree Form — V2 Hierarchical
  * Supports WhatsApp message paste, beam + combination + F-color management
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { sareeAPI, parserAPI, uploadAPI } from '../services/api';
+import { sareeAPI, parserAPI, uploadAPI, combinationImageAPI } from '../services/api';
 import {
   Box, Paper, TextField, Button, Typography, Grid, IconButton,
   Divider, Alert, CircularProgress, Chip, Accordion, AccordionSummary,
@@ -21,6 +21,7 @@ import ArrowBack from '@mui/icons-material/ArrowBack';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
 import CurrencyRupeeIcon from '@mui/icons-material/CurrencyRupee';
+import CombinationImageUpload from '../components/common/CombinationImageUpload';
 
 // ── A single F-color row ──────────────────────────────────────────
 const ColorRow = ({ color, index, onChange, onRemove, isDuplicate }) => (
@@ -69,6 +70,23 @@ const CombinationCard = ({ combo, comboIndex, isDuplicateName, onUpdate, onRemov
             <DeleteIcon fontSize="small" />
           </IconButton></Tooltip>
         </Box>
+      </Box>
+
+      {/* Per-combination image upload (compact — stores file locally until save) */}
+      <Box sx={{ mb: 1.5 }}>
+        <CombinationImageUpload
+          compact
+          imageUrl={combo._imagePreview || ''}
+          onUploaded={(_, file) => {
+            // file is the raw File object in compact/add mode
+            const preview = file ? URL.createObjectURL(file) : null;
+            onUpdate(comboIndex, { ...combo, _pendingImageFile: file, _imagePreview: preview || '' });
+          }}
+          onDeleted={() => {
+            onUpdate(comboIndex, { ...combo, _pendingImageFile: null, _imagePreview: '' });
+          }}
+          isAdmin
+        />
       </Box>
 
       <Grid container spacing={2} sx={{ mb: 1.5 }}>
@@ -805,8 +823,34 @@ const SareeForm = () => {
       }));
 
       const payload = { series_base: seriesBase, series_letter: seriesLetter, sari_name: sariName, price: price !== '' ? price : null, description, image_url: imageUrl, brand, beams: cleanedBeams };
-      if (isEdit) await sareeAPI.update(id, payload);
-      else await sareeAPI.create(payload);
+      let savedSaree = null;
+      if (isEdit) {
+        await sareeAPI.update(id, payload);
+      } else {
+        const { data } = await sareeAPI.create(payload);
+        savedSaree = data.saree;
+      }
+
+      // Upload pending combination images (only on create — edit uses CombinationImageUpload directly)
+      if (savedSaree) {
+        const uploadTasks = [];
+        (savedSaree.beams || []).forEach((savedBeam, bi) => {
+          const localBeam = cleanedBeams[bi];
+          (savedBeam.combinations || []).forEach((savedCombo, ci) => {
+            const localCombo = localBeam?.combinations?.[ci];
+            if (localCombo?._pendingImageFile) {
+              uploadTasks.push(
+                combinationImageAPI.upload(savedCombo.id, localCombo._pendingImageFile, {
+                  seriesCode: seriesBase,
+                  beamName: savedBeam.beam_name
+                }).catch(() => {}) // non-blocking — don't fail the whole save
+              );
+            }
+          });
+        });
+        if (uploadTasks.length > 0) await Promise.all(uploadTasks);
+      }
+
       navigate('/sarees');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save');

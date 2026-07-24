@@ -289,7 +289,8 @@ const getDashboard = async (req, res) => {
               saree_id: saree.id,
               beam_name: beam.beam_name,
               sarees: { series_code: saree.series_code, price: saree.price, owner_id: ownerId }
-            }
+            },
+            image_url: combo.image_url || null
           });
         });
       });
@@ -418,11 +419,11 @@ const getDashboard = async (req, res) => {
       );
 
       if (c.current_stock === 0) {
-        needsAttention.push({ id: c.id, name, type: 'Out of Stock', detail: '0 pcs available', severity: 'error', sareeId: c.beams?.saree_id });
+        needsAttention.push({ id: c.id, name, type: 'Out of Stock', detail: '0 pcs available', severity: 'error', sareeId: c.beams?.saree_id, image_url: c.image_url || null });
       } else if (isLow) {
-        needsAttention.push({ id: c.id, name, type: 'Low Stock', detail: `Under safety level (${c.current_stock} pcs)`, severity: 'warning', sareeId: c.beams?.saree_id });
+        needsAttention.push({ id: c.id, name, type: 'Low Stock', detail: `Under safety level (${c.current_stock} pcs)`, severity: 'warning', sareeId: c.beams?.saree_id, image_url: c.image_url || null });
       } else if (!hasRecentSales && c.current_stock > 50) {
-        needsAttention.push({ id: c.id, name, type: 'Stagnant Stock', detail: `No movement for 45+ days (${c.current_stock} pcs)`, severity: 'info', sareeId: c.beams?.saree_id });
+        needsAttention.push({ id: c.id, name, type: 'Stagnant Stock', detail: `No movement for 45+ days (${c.current_stock} pcs)`, severity: 'info', sareeId: c.beams?.saree_id, image_url: c.image_url || null });
       }
 
       // Check Opportunities
@@ -435,9 +436,9 @@ const getDashboard = async (req, res) => {
         .reduce((sum, h) => sum + (h.action === 'Decrease' || h.details?.action === 'Delivery' ? h.qty : 0), 0);
 
       if (recentSalesQty > 100) {
-        opportunities.push({ id: c.id, name, type: 'High Velocity', detail: `${recentSalesQty} pcs delivered`, sareeId: c.beams?.saree_id });
+        opportunities.push({ id: c.id, name, type: 'High Velocity', detail: `${recentSalesQty} pcs delivered`, sareeId: c.beams?.saree_id, image_url: c.image_url || null });
       } else if (recentSalesQty > 0 && recentSalesQty > prevSalesQty * 1.3) {
-        opportunities.push({ id: c.id, name, type: 'Growing Demand', detail: `Up +${prevSalesQty > 0 ? Math.round(((recentSalesQty - prevSalesQty) / prevSalesQty) * 100) : 100}%`, sareeId: c.beams?.saree_id });
+        opportunities.push({ id: c.id, name, type: 'Growing Demand', detail: `Up +${prevSalesQty > 0 ? Math.round(((recentSalesQty - prevSalesQty) / prevSalesQty) * 100) : 100}%`, sareeId: c.beams?.saree_id, image_url: c.image_url || null });
       }
     });
 

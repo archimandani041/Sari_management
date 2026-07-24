@@ -546,11 +546,25 @@ const Dashboard = () => {
                         '&:hover': { borderColor: theme.palette.primary.light }
                       }}>
                         {/* Thumbnail */}
-                        <Box sx={{
-                          width: 44, height: 44, borderRadius: '6px', flexShrink: 0,
-                          bgcolor: 'rgba(59,17,26,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '1.2rem'
-                        }}>🧵</Box>
+                        {item.image_url ? (
+                          <Box sx={{
+                            width: 44, height: 44, borderRadius: '6px', flexShrink: 0, overflow: 'hidden'
+                          }}>
+                            <Box
+                              component="img"
+                              src={item.image_url}
+                              alt={item.name}
+                              loading="lazy"
+                              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            />
+                          </Box>
+                        ) : (
+                          <Box sx={{
+                            width: 44, height: 44, borderRadius: '6px', flexShrink: 0,
+                            bgcolor: 'rgba(59,17,26,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.2rem'
+                          }}>🧵</Box>
+                        )}
                         {/* Info */}
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>
@@ -601,11 +615,25 @@ const Dashboard = () => {
                         '&:hover': { borderColor: theme.palette.success.light }
                       }}>
                         {/* Thumbnail */}
-                        <Box sx={{
-                          width: 44, height: 44, borderRadius: '6px', flexShrink: 0,
-                          bgcolor: 'rgba(34,197,94,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '1.2rem'
-                        }}>🧵</Box>
+                        {item.image_url ? (
+                          <Box sx={{
+                            width: 44, height: 44, borderRadius: '6px', flexShrink: 0, overflow: 'hidden'
+                          }}>
+                            <Box
+                              component="img"
+                              src={item.image_url}
+                              alt={item.name}
+                              loading="lazy"
+                              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            />
+                          </Box>
+                        ) : (
+                          <Box sx={{
+                            width: 44, height: 44, borderRadius: '6px', flexShrink: 0,
+                            bgcolor: 'rgba(34,197,94,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '1.2rem'
+                          }}>🧵</Box>
+                        )}
                         {/* Info */}
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>

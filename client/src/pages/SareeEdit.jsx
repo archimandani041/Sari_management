@@ -6,6 +6,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { sareeAPI, beamAPI, combinationAPI, parserAPI } from '../services/api';
+import CombinationImageUpload from '../components/common/CombinationImageUpload';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Box, Paper, TextField, Button, Typography, Grid, IconButton,
   Divider, Alert, CircularProgress, Chip, Accordion, AccordionSummary,
@@ -57,7 +59,8 @@ const ColorRow = ({ color, index, onChange, onRemove, disabled, isDuplicate }) =
 // ─────────────────────────────────────────────────────
 // Combination Card — independently saveable
 // ─────────────────────────────────────────────────────
-const CombinationCard = ({ combo: initialCombo, comboIndex, beamName, sareeId, onSaved, onDeleted }) => {
+const CombinationCard = ({ combo: initialCombo, comboIndex, beamName, sareeId, sareeSeriesCode, onSaved, onDeleted }) => {
+  const { isAdmin } = useAuth();
   const [combo, setCombo] = useState(JSON.parse(JSON.stringify(initialCombo)));
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -134,6 +137,25 @@ const CombinationCard = ({ combo: initialCombo, comboIndex, beamName, sareeId, o
     }}>
       {saving && <LinearProgress />}
       <Box sx={{ p: 2 }}>
+        {/* Combination image */}
+        <Box sx={{ mb: 2 }}>
+          <CombinationImageUpload
+            comboId={combo.id}
+            imageUrl={combo.image_url || ''}
+            seriesCode={sareeSeriesCode || ''}
+            beamName={beamName || ''}
+            isAdmin={isAdmin}
+            disabled={saving}
+            onUploaded={(newUrl) => {
+              setCombo(c => ({ ...c, image_url: newUrl }));
+              onSaved({ action: 'updated', combo: { ...combo, image_url: newUrl } });
+            }}
+            onDeleted={() => {
+              setCombo(c => ({ ...c, image_url: null, image_path: null }));
+              onSaved({ action: 'updated', combo: { ...combo, image_url: null, image_path: null } });
+            }}
+          />
+        </Box>
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -225,7 +247,7 @@ const CombinationCard = ({ combo: initialCombo, comboIndex, beamName, sareeId, o
 // ─────────────────────────────────────────────────────
 // Beam Section
 // ─────────────────────────────────────────────────────
-const BeamSection = ({ beam: initialBeam, sareeId, onBeamUpdated, onBeamDeleted }) => {
+const BeamSection = ({ beam: initialBeam, sareeId, sareeSeriesCode, onBeamUpdated, onBeamDeleted }) => {
   const [beamName, setBeamName] = useState(initialBeam.beam_name);
   const [nameDirty, setNameDirty] = useState(false);
   const [combinations, setCombinations] = useState(initialBeam.combinations || []);
@@ -341,6 +363,7 @@ const BeamSection = ({ beam: initialBeam, sareeId, onBeamUpdated, onBeamDeleted 
             combo={{ ...combo, colors: combo.combination_colors || combo.colors || [] }}
             beamName={beamName}
             sareeId={sareeId}
+            sareeSeriesCode={sareeSeriesCode || ''}
             onSaved={handleCombinationSaved}
             onDeleted={handleCombinationDeleted}
           />
@@ -828,6 +851,7 @@ const SareeEdit = () => {
 
           {beams.map((beam) => (
             <BeamSection key={beam.id} beam={beam} sareeId={id}
+              sareeSeriesCode={seriesBase || ''}
               onBeamUpdated={handleBeamUpdated} onBeamDeleted={handleBeamDeleted} />
           ))}
         </Grid>

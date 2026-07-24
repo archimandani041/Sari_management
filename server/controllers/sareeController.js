@@ -759,16 +759,19 @@ const addCombination = async (req, res) => {
     const { data: beam } = await supabase.from('beams').select('saree_id, beam_name').eq('id', beamId).eq('owner_id', req.user.owner_id).single();
     if (!beam) return res.status(404).json({ error: 'Beam not found' });
 
-    // Check duplicate combination names
-    const { data: dupCombo } = await supabase
-      .from('combinations')
-      .select('id')
-      .eq('beam_id', beamId)
-      .eq('combination_name', combination_name?.trim() || null)
-      .eq('owner_id', req.user.owner_id)
-      .limit(1);
-    if (dupCombo && dupCombo.length > 0) {
-      return res.status(400).json({ error: `Combination '${combination_name || ''}' already exists.` });
+    // Check duplicate combination names — only enforce when a non-empty name is given.
+    // Blank/unnamed combinations have no meaningful name to deduplicate against.
+    if (combination_name?.trim()) {
+      const { data: dupCombo } = await supabase
+        .from('combinations')
+        .select('id')
+        .eq('beam_id', beamId)
+        .eq('combination_name', combination_name.trim())
+        .eq('owner_id', req.user.owner_id)
+        .limit(1);
+      if (dupCombo && dupCombo.length > 0) {
+        return res.status(400).json({ error: `Combination '${combination_name}' already exists.` });
+      }
     }
 
     // Check duplicate F numbers locally

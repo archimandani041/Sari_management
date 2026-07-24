@@ -69,6 +69,22 @@ export const combinationAPI = {
   delete: (comboId) => api.delete(`/sarees/combinations/${comboId}`),
 };
 
+// Combination Image APIs
+export const combinationImageAPI = {
+  upload: (comboId, file, { seriesCode = '', beamName = '' } = {}) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const params = new URLSearchParams();
+    if (seriesCode) params.set('seriesCode', seriesCode);
+    if (beamName) params.set('beamName', beamName);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return api.post(`/upload/combination/${comboId}${query}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  delete: (comboId) => api.delete(`/upload/combination/${comboId}`),
+};
+
 // Parser API
 export const parserAPI = {
   parseWhatsApp: (message) => api.post('/parser/whatsapp', { message }),
