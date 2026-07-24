@@ -5,7 +5,6 @@
  *   - Per-combination images (bucket: sari-combination-images)
  */
 const { supabase } = require('../config/supabase');
-const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 const { randomUUID } = require('crypto');
 
@@ -14,15 +13,6 @@ const COMBO_BUCKET = 'sari-combination-images';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
-
-// Helper to create user-authenticated Supabase client (respects RLS auth.uid())
-const getUserClient = (req) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) return null;
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } }
-  });
-};
 
 // ─── Existing: Saree-level image upload ───────────────────────────────────────
 const uploadImage = async (req, res) => {
@@ -55,6 +45,8 @@ const uploadImage = async (req, res) => {
 // Query params (optional): seriesCode, beamName  — used to build folder path
 const uploadCombinationImage = async (req, res) => {
   try {
+    console.log('[uploadCombinationImage] Starting upload for comboId:', req.params.comboId);
+
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     if (!ALLOWED_TYPES.includes(req.file.mimetype))
       return res.status(400).json({ error: 'Only JPG, PNG or WEBP images up to 5 MB are allowed.' });
@@ -65,83 +57,49 @@ const uploadCombinationImage = async (req, res) => {
     const seriesCode = (req.query.seriesCode || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '');
     const beamName   = (req.query.beamName   || 'beam').replace(/[^a-zA-Z0-9_-]/g, '-');
 
-    // 1. Verify the combination exists and belongs to this owner (or null owner_id legacy)
-    let combo = null;
-    let { data: fetchedCombo, error: comboErr } = await supabase
+    // 1. Verify the combination exists (service_role key bypasses RLS)
+    let { data: combo, error: comboErr } = await supabase
       .from('combinations')
-      .select('id, owner_id, image_path')
+      .select('id, owner_id')
       .eq('id', comboId)
       .maybeSingle();
 
-    // Fallback if image_path column does not exist in DB table yet
-    if (comboErr && (comboErr.code === '42703' || comboErr.message?.includes('image_path'))) {
-      const fallback = await supabase
-        .from('combinations')
-        .select('id, owner_id')
-        .eq('id', comboId)
-        .maybeSingle();
-      fetchedCombo = fallback.data;
-      comboErr = fallback.error;
-    }
-
-    // If service_role client returned no rows, attempt query with User Auth Token
-    if (!fetchedCombo) {
-      const userClient = getUserClient(req);
-      if (userClient) {
-        try {
-          const userRes = await userClient
-            .from('combinations')
-            .select('id, owner_id')
-            .eq('id', comboId)
-            .maybeSingle();
-          if (userRes.data) {
-            fetchedCombo = userRes.data;
-            comboErr = null;
-          }
-        } catch (e) {
-          console.warn('userClient lookup failed:', e.message);
-        }
-      }
-    }
+    console.log('[uploadCombinationImage] DB lookup result:', { combo, comboErr });
 
     if (comboErr) {
       console.error('Combination query error:', comboErr);
-      return res.status(500).json({ error: 'Database error verifying combination' });
+      return res.status(500).json({ error: `Database error: ${comboErr.message}` });
     }
-    if (!fetchedCombo) {
-      console.error(`Combination ${comboId} not found in DB for user ${req.user.id} (owner ${req.user.owner_id})`);
+    if (!combo) {
+      console.error(`Combination ${comboId} not found for user ${req.user?.id} (owner ${req.user?.owner_id})`);
       return res.status(404).json({ error: 'Combination not found' });
     }
-    combo = fetchedCombo;
 
     if (combo.owner_id && combo.owner_id !== req.user.owner_id) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    // 2. Delete old image from storage if one exists
-    if (combo.image_path) {
-      await supabase.storage.from(COMBO_BUCKET).remove([combo.image_path]).catch(() => {});
-    }
-
-    // 3. Upload new image: sari-combination-images/{seriesCode}/{beamName}/{comboId}.{ext}
+    // 2. Upload image to storage: sari-combination-images/{seriesCode}/{beamName}/{comboId}.{ext}
     const ext = path.extname(req.file.originalname) || '.jpg';
     const filePath = `${seriesCode}/${beamName}/${comboId}${ext}`;
+
+    console.log('[uploadCombinationImage] Uploading to storage:', filePath);
 
     const { error: uploadErr } = await supabase.storage
       .from(COMBO_BUCKET)
       .upload(filePath, req.file.buffer, {
         contentType: req.file.mimetype,
-        upsert: true   // overwrite if re-uploading same combo
+        upsert: true
       });
     if (uploadErr) {
       console.error('Supabase storage upload error:', uploadErr);
-      return res.status(500).json({ error: `Storage upload failed: ${uploadErr.message || 'Check bucket settings'}` });
+      return res.status(500).json({ error: `Storage upload failed: ${uploadErr.message}` });
     }
 
     const { data: urlData } = supabase.storage.from(COMBO_BUCKET).getPublicUrl(filePath);
     const publicUrl = urlData.publicUrl;
 
-    // 4. Persist url & path back to the combination row
+    // 3. Persist url & path back to the combination row
     const updateData = {
       image_url: publicUrl,
       image_path: filePath,
@@ -150,33 +108,23 @@ const uploadCombinationImage = async (req, res) => {
     };
     if (!combo.owner_id) updateData.owner_id = req.user.owner_id;
 
-    let { error: updateErr } = await supabase
+    const { error: updateErr } = await supabase
       .from('combinations')
       .update(updateData)
       .eq('id', comboId);
 
-    // If service role update failed or missed, try user client
-    if (updateErr) {
-      const userClient = getUserClient(req);
-      if (userClient) {
-        const userUpdateRes = await userClient
-          .from('combinations')
-          .update(updateData)
-          .eq('id', comboId);
-        updateErr = userUpdateRes.error;
-      }
-    }
-
     if (updateErr) {
       console.error('Supabase DB update error:', updateErr);
+      // If the image columns don't exist yet, return a helpful message
       if (updateErr.code === '42703' || updateErr.message?.includes('image_url')) {
         return res.status(400).json({
-          error: 'Database columns missing: Please run the SQL migration in Supabase SQL Editor to add image_url & image_path to the combinations table.'
+          error: 'Database migration needed: Run the ALTER TABLE statement to add image_url/image_path columns to combinations.'
         });
       }
       throw updateErr;
     }
 
+    console.log('[uploadCombinationImage] Success:', publicUrl);
     res.json({ url: publicUrl, path: filePath });
   } catch (error) {
     console.error('uploadCombinationImage error:', error);
@@ -184,7 +132,7 @@ const uploadCombinationImage = async (req, res) => {
   }
 };
 
-// ─── New: Delete combination image ────────────────────────────────────────────
+// ─── Delete combination image ─────────────────────────────────────────────────
 // DELETE /api/upload/combination/:comboId
 const deleteCombinationImage = async (req, res) => {
   try {
@@ -197,7 +145,8 @@ const deleteCombinationImage = async (req, res) => {
       .from('combinations')
       .select('id, image_path, owner_id')
       .eq('id', comboId)
-      .single();
+      .maybeSingle();
+
     if (comboErr || !combo) return res.status(404).json({ error: 'Combination not found' });
     if (combo.owner_id && combo.owner_id !== req.user.owner_id) {
       return res.status(403).json({ error: 'Unauthorized' });
@@ -222,4 +171,3 @@ const deleteCombinationImage = async (req, res) => {
 };
 
 module.exports = { uploadImage, uploadCombinationImage, deleteCombinationImage };
-

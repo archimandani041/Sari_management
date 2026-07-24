@@ -54,7 +54,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 
 // Rate limiting
 const isDev = process.env.NODE_ENV !== 'production';
@@ -103,11 +102,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
-  const message = isDev ? (err.message || 'Internal server error') : 'Internal server error';
-  res.status(500).json({ error: message });
+  res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
 // 404 handler
