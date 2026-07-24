@@ -26,7 +26,7 @@ const productionOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
   : (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []);
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     // Allow server-to-server / curl with no origin header
     if (!origin) return callback(null, true);
@@ -49,8 +49,12 @@ app.use(cors({
       }
     }
   },
-  credentials: true
-}));
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Rate limiting
 const isDev = process.env.NODE_ENV !== 'production';
