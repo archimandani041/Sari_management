@@ -55,14 +55,16 @@ const uploadCombinationImage = async (req, res) => {
     const seriesCode = (req.query.seriesCode || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '');
     const beamName   = (req.query.beamName   || 'beam').replace(/[^a-zA-Z0-9_-]/g, '-');
 
-    // 1. Verify the combination exists and belongs to this owner
+    // 1. Verify the combination exists and belongs to this owner (or null owner_id legacy)
     const { data: combo, error: comboErr } = await supabase
       .from('combinations')
       .select('id, image_path, owner_id')
       .eq('id', comboId)
-      .eq('owner_id', req.user.owner_id)
       .single();
     if (comboErr || !combo) return res.status(404).json({ error: 'Combination not found' });
+    if (combo.owner_id && combo.owner_id !== req.user.owner_id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
 
     // 2. Delete old image from storage if one exists
     if (combo.image_path) {
@@ -85,16 +87,18 @@ const uploadCombinationImage = async (req, res) => {
     const publicUrl = urlData.publicUrl;
 
     // 4. Persist url & path back to the combination row
+    const updateData = {
+      image_url: publicUrl,
+      image_path: filePath,
+      image_uploaded_at: new Date().toISOString(),
+      image_uploaded_by: req.user.id
+    };
+    if (!combo.owner_id) updateData.owner_id = req.user.owner_id;
+
     const { error: updateErr } = await supabase
       .from('combinations')
-      .update({
-        image_url: publicUrl,
-        image_path: filePath,
-        image_uploaded_at: new Date().toISOString(),
-        image_uploaded_by: req.user.id
-      })
-      .eq('id', comboId)
-      .eq('owner_id', req.user.owner_id);
+      .update(updateData)
+      .eq('id', comboId);
     if (updateErr) throw updateErr;
 
     res.json({ url: publicUrl, path: filePath });
@@ -117,9 +121,11 @@ const deleteCombinationImage = async (req, res) => {
       .from('combinations')
       .select('id, image_path, owner_id')
       .eq('id', comboId)
-      .eq('owner_id', req.user.owner_id)
       .single();
     if (comboErr || !combo) return res.status(404).json({ error: 'Combination not found' });
+    if (combo.owner_id && combo.owner_id !== req.user.owner_id) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
     if (!combo.image_path) return res.status(400).json({ error: 'No image to delete' });
 
     // Delete from storage
@@ -129,8 +135,7 @@ const deleteCombinationImage = async (req, res) => {
     const { error: updateErr } = await supabase
       .from('combinations')
       .update({ image_url: null, image_path: null, image_uploaded_at: null, image_uploaded_by: null })
-      .eq('id', comboId)
-      .eq('owner_id', req.user.owner_id);
+      .eq('id', comboId);
     if (updateErr) throw updateErr;
 
     res.json({ message: 'Image deleted successfully' });
