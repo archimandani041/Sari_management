@@ -1,6 +1,10 @@
 /**
- * Stock Controller - V2 Hierarchical Model
- * Handles stock updates, history, and undo operations targeting combinations
+ * Stock Controller - V3 ERP Stock Actions Model
+ * Supports:
+ *  - Stock (New stock received, +qty)
+ *  - Delivery (Sent to machine for production, 0 stock change)
+ *  - Stock Delivery (Delivered from existing stock, -qty with stock check validation)
+ *  - Future Actions: Return, Damage, Transfer, Adjustment, Sample, Manual Edit
  */
 const { supabase } = require('../config/supabase');
 
@@ -8,11 +12,12 @@ const updateStock = async (req, res) => {
   try {
     const { 
       saree_id, combination_id, action, quantity, reason,
-      action_detail, supplier_name, customer_name, invoice_number, delivery_notes, remarks
+      action_detail, supplier_name, customer_name, machine, operator_name, invoice_number, remarks
     } = req.body;
     
     if (!combination_id) return res.status(400).json({ error: 'Combination ID is required' });
 
+    // 1. Fetch current combination state
     const { data: combo, error: fetchError } = await supabase
       .from('combinations')
       .select('*, beams(saree_id, beam_name, sarees(series_code, owner_id))')
@@ -22,81 +27,189 @@ const updateStock = async (req, res) => {
 
     if (fetchError || !combo) return res.status(404).json({ error: 'Combination not found' });
 
-    let newStock;
-    const oldStock = combo.current_stock;
-    const qtyInt = parseInt(quantity) || 0;
+    const oldStock = combo.current_stock ?? 0;
+    const qtyInt = Math.abs(parseInt(quantity) || 0);
+    const actionNormalized = (action || '').trim();
 
-    switch (action) {
-      case 'Increase': newStock = oldStock + qtyInt; break;
+    let newStock = oldStock;
+    let netQuantityChange = 0;
+    let computedReason = reason || '';
+
+    // 2. Action Logic
+    switch (actionNormalized) {
+      case 'Stock':
+      case 'Increase':
+        newStock = oldStock + qtyInt;
+        netQuantityChange = qtyInt;
+        computedReason = computedReason || 'Purchase / WhatsApp / Manual';
+        break;
+
+      case 'Delivery':
+        // Machine Delivery — inventory must NOT change (0 deduction)
+        newStock = oldStock;
+        netQuantityChange = qtyInt; // tracked quantity, but stock change is 0
+        computedReason = computedReason || 'Machine Delivery';
+        break;
+
+      case 'Stock Delivery':
       case 'Decrease':
+        // Validation: Cannot deliver more than current available stock
+        if (qtyInt > oldStock) {
+          return res.status(400).json({ 
+            error: `Only ${oldStock} pieces are available in stock.` 
+          });
+        }
         newStock = oldStock - qtyInt;
-        if (newStock < 0) return res.status(400).json({ error: 'Stock cannot go below zero' });
+        netQuantityChange = -qtyInt;
+        computedReason = computedReason || 'Stock Delivered';
         break;
+
+      case 'Return':
+        newStock = oldStock + qtyInt;
+        netQuantityChange = qtyInt;
+        computedReason = computedReason || 'Return to Stock';
+        break;
+
+      case 'Damage':
+        if (qtyInt > oldStock) {
+          return res.status(400).json({ error: `Only ${oldStock} pieces are available in stock.` });
+        }
+        newStock = oldStock - qtyInt;
+        netQuantityChange = -qtyInt;
+        computedReason = computedReason || 'Damaged Stock';
+        break;
+
+      case 'Transfer':
+        if (qtyInt > oldStock) {
+          return res.status(400).json({ error: `Only ${oldStock} pieces are available in stock.` });
+        }
+        newStock = oldStock - qtyInt;
+        netQuantityChange = -qtyInt;
+        computedReason = computedReason || 'Stock Transfer';
+        break;
+
+      case 'Sample':
+        if (qtyInt > oldStock) {
+          return res.status(400).json({ error: `Only ${oldStock} pieces are available in stock.` });
+        }
+        newStock = oldStock - qtyInt;
+        netQuantityChange = -qtyInt;
+        computedReason = computedReason || 'Sample Issued';
+        break;
+
+      case 'Adjustment':
       case 'Manual Edit':
-        newStock = qtyInt;
+        newStock = parseInt(quantity) || 0;
         if (newStock < 0) return res.status(400).json({ error: 'Stock cannot be negative' });
+        netQuantityChange = newStock - oldStock;
+        computedReason = computedReason || 'Manual Adjustment';
         break;
-      default: return res.status(400).json({ error: 'Invalid action' });
+
+      default:
+        return res.status(400).json({ error: `Invalid action '${action}'` });
     }
 
-    await supabase.from('combinations').update({
-      current_stock: newStock, updated_at: new Date().toISOString()
-    }).eq('id', combination_id).eq('owner_id', req.user.owner_id);
+    // 3. Update stock in DB if stock changed
+    if (newStock !== oldStock) {
+      const { error: updateErr } = await supabase
+        .from('combinations')
+        .update({
+          current_stock: newStock, 
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', combination_id)
+        .eq('owner_id', req.user.owner_id);
 
-    const quantityChanged = action === 'Manual Edit' ? newStock - oldStock : qtyInt;
-    
+      if (updateErr) throw updateErr;
+    }
+
+    // 4. Build detailed record for history & reports
+    const sariNumber = combo.beams?.sarees?.series_code || 'UNKNOWN';
+    const beamName = combo.beams?.beam_name || 'UNKNOWN';
+    const combinationName = combo.combination_name || 'Combination';
+
     const transactionDetails = {
-      sari_number: combo.beams?.sarees?.series_code || 'UNKNOWN',
-      beam_name: combo.beams?.beam_name || 'UNKNOWN',
-      combination_name: combo.combination_name || 'Combination',
-      action: action_detail || (action === 'Increase' ? 'Stock Added' : action === 'Decrease' ? 'Delivery' : 'Manual Adjustment'),
+      sari_number: sariNumber,
+      beam_name: beamName,
+      combination_name: combinationName,
+      action: actionNormalized,
       opening_stock: oldStock,
-      quantity_changed: quantityChanged,
+      quantity: qtyInt,
+      quantity_changed: netQuantityChange,
       closing_stock: newStock,
-      reason_category: action_detail || action,
+      reason: computedReason,
       supplier_name: supplier_name || null,
       customer_name: customer_name || null,
+      machine: machine || null,
+      operator_name: operator_name || null,
       invoice_number: invoice_number || null,
-      delivery_notes: delivery_notes || null,
-      remarks: remarks || reason || '',
+      remarks: remarks || computedReason,
       user_name: req.user.full_name || req.user.username
     };
 
-    const { data: historyEntry } = await supabase.from('stock_history').insert({
+    // 5. Insert history entry (writing to both explicit columns and JSON reason for maximum safety)
+    const historyPayload = {
       saree_id: combo.beams?.saree_id,
       combination_id,
-      beam_name: combo.beams?.beam_name,
-      combination_name: combo.combination_name || 'Combination',
+      beam_name: beamName,
+      combination_name: combinationName,
       old_stock: oldStock,
       new_stock: newStock,
-      action,
+      action: actionNormalized,
       reason: JSON.stringify(transactionDetails),
       owner_id: req.user.owner_id,
       changed_by: req.user.id,
-      changed_by_name: req.user.full_name
-    }).select().single();
+      changed_by_name: req.user.full_name || req.user.username,
+      quantity: qtyInt,
+      supplier_name: supplier_name || null,
+      customer_name: customer_name || null,
+      machine: machine || null,
+      operator_name: operator_name || null,
+      invoice_number: invoice_number || null,
+      remarks: remarks || computedReason
+    };
 
+    const { data: historyEntry, error: histErr } = await supabase
+      .from('stock_history')
+      .insert(historyPayload)
+      .select()
+      .single();
+
+    if (histErr) {
+      console.warn('stock_history insert warning (retrying without new columns):', histErr.message);
+      // Fallback if DB hasn't run the migration for columns yet
+      delete historyPayload.quantity;
+      delete historyPayload.supplier_name;
+      delete historyPayload.customer_name;
+      delete historyPayload.machine;
+      delete historyPayload.operator_name;
+      delete historyPayload.invoice_number;
+      delete historyPayload.remarks;
+      await supabase.from('stock_history').insert(historyPayload);
+    }
+
+    // 6. Log activity
     await supabase.from('activity_logs').insert({
       user_id: req.user.id,
-      user_name: req.user.full_name,
+      user_name: req.user.full_name || req.user.username,
       action: 'STOCK_UPDATE',
       entity_type: 'saree',
       entity_id: combo.beams?.saree_id,
       owner_id: req.user.owner_id,
-      details: {
-        beam_name: combo.beams?.beam_name,
-        combination_name: combo.combination_name,
-        old_stock: oldStock,
-        new_stock: newStock,
-        change_action: action,
-        transaction_details: transactionDetails
-      }
+      details: transactionDetails
     });
 
-    res.json({ message: 'Stock updated', old_stock: oldStock, new_stock: newStock, history_id: historyEntry?.id });
+    res.json({ 
+      message: 'Stock action recorded successfully', 
+      action: actionNormalized,
+      old_stock: oldStock, 
+      new_stock: newStock, 
+      history_id: historyEntry?.id,
+      details: transactionDetails 
+    });
   } catch (error) {
     console.error('UpdateStock error:', error);
-    res.status(500).json({ error: 'Failed to update stock' });
+    res.status(500).json({ error: error.message || 'Failed to process stock action' });
   }
 };
 
@@ -104,16 +217,26 @@ const undoStockChange = async (req, res) => {
   try {
     const { historyId } = req.params;
     const { data: entry } = await supabase
-      .from('stock_history').select('*').eq('id', historyId).eq('owner_id', req.user.owner_id).eq('is_undone', false).single();
+      .from('stock_history')
+      .select('*')
+      .eq('id', historyId)
+      .eq('owner_id', req.user.owner_id)
+      .eq('is_undone', false)
+      .single();
 
     if (!entry) return res.status(404).json({ error: 'History entry not found or already undone' });
     if (!entry.combination_id) return res.status(400).json({ error: 'Cannot undo: combination no longer exists' });
 
     const { data: combo } = await supabase
-      .from('combinations').select('current_stock').eq('id', entry.combination_id).eq('owner_id', req.user.owner_id).single();
+      .from('combinations')
+      .select('current_stock')
+      .eq('id', entry.combination_id)
+      .eq('owner_id', req.user.owner_id)
+      .single();
 
     if (!combo) return res.status(404).json({ error: 'Combination not found' });
 
+    // Revert stock to old_stock
     await supabase.from('combinations').update({
       current_stock: entry.old_stock, updated_at: new Date().toISOString()
     }).eq('id', entry.combination_id).eq('owner_id', req.user.owner_id);
@@ -144,8 +267,8 @@ const undoStockChange = async (req, res) => {
 const getHistory = async (req, res) => {
   try {
     const { 
-      saree_id, page = 1, limit = 50, action, from_date, to_date, search,
-      supplier_name, customer_name, reason_category, user_name
+      saree_id, page = 1, limit = 50, action, date_range, from_date, to_date, search,
+      supplier_name, customer_name, machine, user_name
     } = req.query;
     
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -161,18 +284,28 @@ const getHistory = async (req, res) => {
     if (action) {
       query = query.eq('action', action);
     }
+
+    // Date filtering
     if (from_date) {
       query = query.gte('created_at', from_date);
     }
     if (to_date) {
       query = query.lte('created_at', to_date);
     }
+    if (date_range === 'today') {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      query = query.gte('created_at', todayStart.toISOString());
+    } else if (date_range === 'monthly') {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      query = query.gte('created_at', monthStart.toISOString());
+    }
 
-    // Apply text filters
+    // Search filters
     if (search) {
       const cleanSearch = search.trim();
-      
-      // 1. Fetch matching Saree IDs (case-insensitive series_code or sari_name)
       const { data: matchedSarees } = await supabase
         .from('sarees')
         .select('id')
@@ -181,12 +314,12 @@ const getHistory = async (req, res) => {
       
       const matchedSareeIds = (matchedSarees || []).map(s => s.id);
 
-      // 2. Build multi-field PostgREST OR conditions
       const orParts = [
         `beam_name.ilike.%${cleanSearch}%`,
         `combination_name.ilike.%${cleanSearch}%`,
         `changed_by_name.ilike.%${cleanSearch}%`,
-        `reason.ilike.%${cleanSearch}%`
+        `reason.ilike.%${cleanSearch}%`,
+        `action.ilike.%${cleanSearch}%`
       ];
 
       if (matchedSareeIds.length > 0) {
@@ -195,14 +328,15 @@ const getHistory = async (req, res) => {
 
       query = query.or(orParts.join(','));
     }
+
     if (supplier_name) {
-      query = query.ilike('reason', `%supplier_name%:${supplier_name}%`);
+      query = query.or(`supplier_name.ilike.%${supplier_name}%,reason.ilike.%supplier_name%:${supplier_name}%`);
     }
     if (customer_name) {
-      query = query.ilike('reason', `%customer_name%:${customer_name}%`);
+      query = query.or(`customer_name.ilike.%${customer_name}%,reason.ilike.%customer_name%:${customer_name}%`);
     }
-    if (reason_category) {
-      query = query.ilike('reason', `%reason_category%:${reason_category}%`);
+    if (machine) {
+      query = query.or(`machine.ilike.%${machine}%,reason.ilike.%machine%:${machine}%`);
     }
     if (user_name) {
       query = query.or(`changed_by_name.ilike.%${user_name}%,reason.ilike.%user_name%:${user_name}%`);
@@ -220,26 +354,25 @@ const getHistory = async (req, res) => {
         if (entry.reason && (entry.reason.startsWith('{') || entry.reason.startsWith('['))) {
           details = JSON.parse(entry.reason);
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
 
       if (!details) {
-        const qtyChanged = entry.new_stock - entry.old_stock;
         details = {
           sari_number: entry.sarees?.series_code || entry.series_code || 'UNKNOWN',
           beam_name: entry.beam_name || 'UNKNOWN',
           combination_name: entry.combination_name || 'Combination',
-          action: entry.action === 'Increase' ? 'Stock Added' : entry.action === 'Decrease' ? 'Delivery' : 'Manual Edit',
+          action: entry.action,
           opening_stock: entry.old_stock,
-          quantity_changed: qtyChanged,
+          quantity: entry.quantity || Math.abs(entry.new_stock - entry.old_stock),
+          quantity_changed: entry.new_stock - entry.old_stock,
           closing_stock: entry.new_stock,
-          reason_category: entry.action,
-          supplier_name: null,
-          customer_name: null,
-          invoice_number: null,
-          delivery_notes: null,
-          remarks: entry.reason || '',
+          reason: entry.remarks || entry.reason || '',
+          supplier_name: entry.supplier_name || null,
+          customer_name: entry.customer_name || null,
+          machine: entry.machine || null,
+          operator_name: entry.operator_name || null,
+          invoice_number: entry.invoice_number || null,
+          remarks: entry.remarks || entry.reason || '',
           user_name: entry.changed_by_name || 'System'
         };
       }

@@ -533,13 +533,66 @@ const getDashboard = async (req, res) => {
         timestamp: h.created_at
       }));
 
+    // Calculate Today's specific metrics
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const todayHistory = parsedHistory.filter(h => h.createdDate >= startOfToday);
+
+    let todayStockAdded = 0;
+    let todayMachineDeliveries = 0;
+    let todayStockDeliveries = 0;
+
+    todayHistory.forEach(h => {
+      const act = h.action;
+      const qty = h.qty;
+      if (act === 'Stock' || act === 'Increase') todayStockAdded += qty;
+      else if (act === 'Delivery') todayMachineDeliveries += qty;
+      else if (act === 'Stock Delivery' || act === 'Decrease') todayStockDeliveries += qty;
+    });
+
+    // Period Totals
+    let totalStockAdded = 0;
+    let totalMachineDeliveries = 0;
+    let totalStockDeliveries = 0;
+
+    currentPeriodHistory.forEach(h => {
+      const act = h.action;
+      const qty = h.qty;
+      if (act === 'Stock' || act === 'Increase') totalStockAdded += qty;
+      else if (act === 'Delivery') totalMachineDeliveries += qty;
+      else if (act === 'Stock Delivery' || act === 'Decrease') totalStockDeliveries += qty;
+    });
+
+    const numDaysInPeriod = Math.max(1, (periods.endDate - periods.startDate) / (1000 * 60 * 60 * 24));
+    const averageDailyDeliveries = Math.round((totalStockDeliveries / numDaysInPeriod) * 10) / 10;
+    const averageMonthlyDeliveries = Math.round(averageDailyDeliveries * 30);
+
+    // Generate Sparklines for all 3 Actions
+    const stockAddedSparkline = getSparklineData(parsedHistory, periods.startDate, periods.endDate, 'Stock');
+    const machineDeliverySparkline = getSparklineData(parsedHistory, periods.startDate, periods.endDate, 'Delivery');
+    const stockDeliverySparkline = getSparklineData(parsedHistory, periods.startDate, periods.endDate, 'Stock Delivery');
+
     res.json({
       range,
       stats: {
         totalSarees,
         currentStock: totalStock,
+        currentInventory: totalStock,
         delivered: currentDelivered,
         added: currentAdded,
+
+        // 3 Action Cards for Today
+        todayStockAdded,
+        todayMachineDeliveries,
+        todayStockDeliveries,
+
+        // Period Analytics
+        totalStockAdded,
+        totalMachineDeliveries,
+        totalStockDeliveries,
+        currentAvailableStock: totalStock,
+        averageDailyDeliveries,
+        averageMonthlyDeliveries,
+
         comparison: {
           deliveredPercent: deliveredChange,
           addedPercent: addedChange,
@@ -554,6 +607,9 @@ const getDashboard = async (req, res) => {
       sparklines: {
         sarees: sareesSparkline,
         stock: stockSparkline,
+        stockAdded: stockAddedSparkline,
+        machineDelivery: machineDeliverySparkline,
+        stockDelivery: stockDeliverySparkline,
         delivered: deliveredSparkline,
         added: addedSparkline
       },
