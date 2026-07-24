@@ -5,6 +5,7 @@
  *   - Per-combination images (bucket: sari-combination-images)
  */
 const { supabase } = require('../config/supabase');
+const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 const { randomUUID } = require('crypto');
 
@@ -13,6 +14,15 @@ const COMBO_BUCKET = 'sari-combination-images';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+
+// Helper to create user-authenticated Supabase client (respects RLS auth.uid())
+const getUserClient = (req) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) return null;
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } }
+  });
+};
 
 // ─── Existing: Saree-level image upload ───────────────────────────────────────
 const uploadImage = async (req, res) => {
@@ -74,11 +84,32 @@ const uploadCombinationImage = async (req, res) => {
       comboErr = fallback.error;
     }
 
+    // If service_role client returned no rows, attempt query with User Auth Token
+    if (!fetchedCombo) {
+      const userClient = getUserClient(req);
+      if (userClient) {
+        try {
+          const userRes = await userClient
+            .from('combinations')
+            .select('id, owner_id')
+            .eq('id', comboId)
+            .maybeSingle();
+          if (userRes.data) {
+            fetchedCombo = userRes.data;
+            comboErr = null;
+          }
+        } catch (e) {
+          console.warn('userClient lookup failed:', e.message);
+        }
+      }
+    }
+
     if (comboErr) {
       console.error('Combination query error:', comboErr);
       return res.status(500).json({ error: 'Database error verifying combination' });
     }
     if (!fetchedCombo) {
+      console.error(`Combination ${comboId} not found in DB for user ${req.user.id} (owner ${req.user.owner_id})`);
       return res.status(404).json({ error: 'Combination not found' });
     }
     combo = fetchedCombo;
@@ -119,10 +150,22 @@ const uploadCombinationImage = async (req, res) => {
     };
     if (!combo.owner_id) updateData.owner_id = req.user.owner_id;
 
-    const { error: updateErr } = await supabase
+    let { error: updateErr } = await supabase
       .from('combinations')
       .update(updateData)
       .eq('id', comboId);
+
+    // If service role update failed or missed, try user client
+    if (updateErr) {
+      const userClient = getUserClient(req);
+      if (userClient) {
+        const userUpdateRes = await userClient
+          .from('combinations')
+          .update(updateData)
+          .eq('id', comboId);
+        updateErr = userUpdateRes.error;
+      }
+    }
 
     if (updateErr) {
       console.error('Supabase DB update error:', updateErr);
