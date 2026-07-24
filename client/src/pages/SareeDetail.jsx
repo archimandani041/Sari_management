@@ -226,9 +226,55 @@ const SareeDetail = () => {
       <Grid container spacing={3}>
         {/* Left column */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <Card sx={{ borderRadius: 4, overflow: 'hidden', mb: 3 }}>
-            <CardMedia component="img" height={320} image={saree.image_url || '/placeholder-sari.png'} alt={saree.sari_name} sx={{ objectFit: 'cover' }} />
-          </Card>
+          {(() => {
+            const mainImageUrl = saree.image_url || saree.beams?.flatMap(b => b.combinations || []).find(c => c.image_url)?.image_url;
+            return mainImageUrl ? (
+              <Card sx={{ borderRadius: 4, overflow: 'hidden', mb: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                <CardMedia component="img" height={320} image={mainImageUrl} alt={saree.sari_name || saree.series_code} sx={{ objectFit: 'cover' }} />
+              </Card>
+            ) : (
+              <Paper
+                variant="outlined"
+                sx={{
+                  height: 320,
+                  mb: 3,
+                  borderRadius: 4,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1.5,
+                  p: 3,
+                  textAlign: 'center',
+                  bgcolor: 'rgba(59, 17, 26, 0.02)',
+                  borderColor: 'divider'
+                }}
+              >
+                <Box sx={{ width: 64, height: 64, borderRadius: '50%', bgcolor: 'rgba(59, 17, 26, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'primary.main', fontSize: '2rem' }}>
+                  🧵
+                </Box>
+                <Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'text.primary' }}>
+                    {saree.series_code}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, display: 'block', mt: 0.5 }}>
+                    No image uploaded yet
+                  </Typography>
+                </Box>
+                {(isAdmin || isStaff) && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    onClick={() => navigate(`/sarees/edit/${saree.id}`)}
+                    sx={{ mt: 0.5, borderRadius: 2, fontWeight: 700, textTransform: 'none' }}
+                  >
+                    Upload Combination Image
+                  </Button>
+                )}
+              </Paper>
+            );
+          })()}
 
           <Paper sx={{ p: 3, borderRadius: 4, mb: 3 }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Saree Info</Typography>

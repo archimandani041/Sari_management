@@ -613,7 +613,7 @@ const AllSarees = () => {
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                           <Avatar
-                            src={saree.image_url}
+                            src={saree.image_url || saree.beams?.flatMap(b => b.combinations || []).find(c => c.image_url)?.image_url}
                             variant="rounded"
                             sx={{ width: 46, height: 46, borderRadius: 2.5, bgcolor: 'sidebar.active', color: 'primary.main', fontSize: '1.2rem' }}
                           >

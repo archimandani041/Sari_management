@@ -59,7 +59,7 @@ const getSarees = async (req, res) => {
         beams (
           id, beam_name, sort_order,
           combinations (
-            id, combination_name, current_stock, minimum_stock, notes, status, brand, sort_order,
+            id, combination_name, current_stock, minimum_stock, notes, status, brand, sort_order, image_url, image_path, image_uploaded_at,
             combination_colors ( id, f_number, color_name, company_name, sort_order )
           )
         )
@@ -212,7 +212,7 @@ const getSareeById = async (req, res) => {
         beams (
           id, beam_name, sort_order,
           combinations (
-            id, combination_name, current_stock, minimum_stock, notes, status, brand, sort_order,
+            id, combination_name, current_stock, minimum_stock, notes, status, brand, sort_order, image_url, image_path, image_uploaded_at,
             combination_colors ( id, f_number, color_name, company_name, sort_order )
           )
         )
@@ -399,7 +399,7 @@ const createSaree = async (req, res) => {
     // Return complete saree
     const { data: result } = await supabase
       .from('sarees')
-      .select(`*, beams(id, beam_name, sort_order, combinations(id, combination_name, current_stock, minimum_stock, notes, status, brand, sort_order, combination_colors(id, f_number, color_name, company_name, sort_order)))`)
+      .select(`*, beams(id, beam_name, sort_order, combinations(id, combination_name, current_stock, minimum_stock, notes, status, brand, sort_order, image_url, image_path, image_uploaded_at, combination_colors(id, f_number, color_name, company_name, sort_order)))`)
       .eq('id', saree.id).single();
 
     res.status(201).json({ saree: result });
@@ -1021,7 +1021,7 @@ const advancedSearch = async (req, res) => {
         saree_id: combo.beams?.saree_id,
         series_code: saree?.series_code,
         sari_name: saree?.sari_name,
-        image_url: saree?.image_url,
+        image_url: combo.image_url || saree?.image_url,
         price: saree?.price,
         combination_colors: combo.combination_colors || []
       };
