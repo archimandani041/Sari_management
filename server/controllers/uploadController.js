@@ -56,12 +56,33 @@ const uploadCombinationImage = async (req, res) => {
     const beamName   = (req.query.beamName   || 'beam').replace(/[^a-zA-Z0-9_-]/g, '-');
 
     // 1. Verify the combination exists and belongs to this owner (or null owner_id legacy)
-    const { data: combo, error: comboErr } = await supabase
+    let combo = null;
+    let { data: fetchedCombo, error: comboErr } = await supabase
       .from('combinations')
-      .select('id, image_path, owner_id')
+      .select('id, owner_id, image_path')
       .eq('id', comboId)
-      .single();
-    if (comboErr || !combo) return res.status(404).json({ error: 'Combination not found' });
+      .maybeSingle();
+
+    // Fallback if image_path column does not exist in DB table yet
+    if (comboErr && (comboErr.code === '42703' || comboErr.message?.includes('image_path'))) {
+      const fallback = await supabase
+        .from('combinations')
+        .select('id, owner_id')
+        .eq('id', comboId)
+        .maybeSingle();
+      fetchedCombo = fallback.data;
+      comboErr = fallback.error;
+    }
+
+    if (comboErr) {
+      console.error('Combination query error:', comboErr);
+      return res.status(500).json({ error: 'Database error verifying combination' });
+    }
+    if (!fetchedCombo) {
+      return res.status(404).json({ error: 'Combination not found' });
+    }
+    combo = fetchedCombo;
+
     if (combo.owner_id && combo.owner_id !== req.user.owner_id) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
@@ -81,7 +102,10 @@ const uploadCombinationImage = async (req, res) => {
         contentType: req.file.mimetype,
         upsert: true   // overwrite if re-uploading same combo
       });
-    if (uploadErr) throw uploadErr;
+    if (uploadErr) {
+      console.error('Supabase storage upload error:', uploadErr);
+      return res.status(500).json({ error: `Storage upload failed: ${uploadErr.message || 'Check bucket settings'}` });
+    }
 
     const { data: urlData } = supabase.storage.from(COMBO_BUCKET).getPublicUrl(filePath);
     const publicUrl = urlData.publicUrl;
@@ -99,12 +123,21 @@ const uploadCombinationImage = async (req, res) => {
       .from('combinations')
       .update(updateData)
       .eq('id', comboId);
-    if (updateErr) throw updateErr;
+
+    if (updateErr) {
+      console.error('Supabase DB update error:', updateErr);
+      if (updateErr.code === '42703' || updateErr.message?.includes('image_url')) {
+        return res.status(400).json({
+          error: 'Database columns missing: Please run the SQL migration in Supabase SQL Editor to add image_url & image_path to the combinations table.'
+        });
+      }
+      throw updateErr;
+    }
 
     res.json({ url: publicUrl, path: filePath });
   } catch (error) {
     console.error('uploadCombinationImage error:', error);
-    res.status(500).json({ error: 'Failed to upload combination image' });
+    res.status(500).json({ error: error.message || 'Failed to upload combination image' });
   }
 };
 
