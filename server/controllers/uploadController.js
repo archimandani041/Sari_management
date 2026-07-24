@@ -55,7 +55,7 @@ const uploadCombinationImage = async (req, res) => {
 
     const { comboId } = req.params;
     const seriesCode = (req.query.seriesCode || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '');
-    const beamName   = (req.query.beamName   || 'beam').replace(/[^a-zA-Z0-9_-]/g, '-');
+    const beamName = (req.query.beamName || 'beam').replace(/[^a-zA-Z0-9_-]/g, '-');
 
     // 1. Verify the combination exists (service_role key bypasses RLS)
     let { data: combo, error: comboErr } = await supabase
@@ -85,35 +85,14 @@ const uploadCombinationImage = async (req, res) => {
 
     console.log('[uploadCombinationImage] Uploading to storage:', filePath);
 
-    let { error: uploadErr } = await supabase.storage
+    const { error: uploadErr } = await supabase.storage
       .from(COMBO_BUCKET)
       .upload(filePath, req.file.buffer, {
         contentType: req.file.mimetype,
         upsert: true
       });
-
-    // If bucket is missing, attempt to create it automatically and retry upload once
-    if (uploadErr && (uploadErr.message?.toLowerCase().includes('bucket not found') || uploadErr.error === 'Bucket not found')) {
-      console.log(`[uploadCombinationImage] Bucket ${COMBO_BUCKET} not found. Attempting auto-creation...`);
-      const { error: createErr } = await supabase.storage.createBucket(COMBO_BUCKET, { public: true });
-      if (!createErr || createErr.message?.includes('already exists')) {
-        const retry = await supabase.storage
-          .from(COMBO_BUCKET)
-          .upload(filePath, req.file.buffer, {
-            contentType: req.file.mimetype,
-            upsert: true
-          });
-        uploadErr = retry.error;
-      }
-    }
-
     if (uploadErr) {
       console.error('Supabase storage upload error:', uploadErr);
-      if (uploadErr.message?.toLowerCase().includes('bucket not found') || uploadErr.error === 'Bucket not found') {
-        return res.status(400).json({
-          error: `Storage bucket missing: Please go to Supabase Dashboard -> Storage -> Create New Bucket named "${COMBO_BUCKET}" with Public access.`
-        });
-      }
       return res.status(500).json({ error: `Storage upload failed: ${uploadErr.message}` });
     }
 

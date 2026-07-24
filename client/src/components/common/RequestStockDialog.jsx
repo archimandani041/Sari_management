@@ -1,73 +1,47 @@
 /**
- * RequestStockDialog - Stock Movement & Action Dialog
- * Supports 3 Actions:
- *  1. Stock (Green Badge 🟢 ➕): New stock received from supplier (+Qty)
- *  2. Delivery (Blue Badge 🔵 🏭): Machine delivery for production (0 stock change)
- *  3. Stock Delivery (Orange Badge 🟠 📦): Delivered from existing inventory (-Qty with stock validation)
+ * RequestStockDialog
+ * Direct WhatsApp trigger — opens WhatsApp with pre-filled message
+ * AND immediately updates the combination stock in the database.
  */
 import { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Box, Typography, TextField, Chip, Divider,
-  CircularProgress, Alert, Paper, Snackbar, IconButton, Tooltip,
-  Stack, Grid
+  CircularProgress, Alert, Paper, Snackbar, IconButton, Tooltip
 } from '@mui/material';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
-import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import { stockAPI, stockRequestAPI } from '../../services/api';
+import { stockRequestAPI, combinationAPI } from '../../services/api';
 
-// Build WhatsApp message tailored to action type
-const buildWhatsAppMessage = ({ action, seriesCode, beamName, comboName, colors, requestedQty, supplierName, customerName, machineName, invoiceNum, remarks }) => {
+// ── Build compact WhatsApp message (no blank lines) ──────────
+const buildWhatsAppMessage = ({ brand, movementType, seriesCode, beamName, colors, requestedQty }) => {
   const lines = [];
-  const beamHeader = beamName ? (beamName.endsWith(':') ? beamName : `${beamName}:`) : 'Beam:';
-  
-  if (action === 'Stock') {
-    lines.push(`🟢 [ STOCK ADDED ]`);
-    lines.push(`${seriesCode || 'Sari'} · ${beamHeader}`);
-    lines.push(`Combination: ${comboName || 'Standard'}`);
-    (colors || []).forEach(c => lines.push(`${c.f_number || 'F'}: ${c.color_name || ''}`));
-    lines.push(`Added Quantity: +${requestedQty} pcs`);
-    if (supplierName) lines.push(`Supplier: ${supplierName}`);
-    if (remarks) lines.push(`Remarks: ${remarks}`);
-  } else if (action === 'Delivery') {
-    lines.push(`🏭 [ MACHINE DELIVERY ]`);
-    lines.push(`${seriesCode || 'Sari'} · ${beamHeader}`);
-    lines.push(`Combination: ${comboName || 'Standard'}`);
-    (colors || []).forEach(c => lines.push(`${c.f_number || 'F'}: ${c.color_name || ''}`));
-    lines.push(`Machine Delivery Quantity: ${requestedQty} pcs (Production Only)`);
-    if (machineName) lines.push(`Machine: ${machineName}`);
-    if (remarks) lines.push(`Remarks: ${remarks}`);
-  } else {
-    lines.push(`📦 [ STOCK DELIVERED ]`);
-    lines.push(`${seriesCode || 'Sari'} · ${beamHeader}`);
-    lines.push(`Combination: ${comboName || 'Standard'}`);
-    (colors || []).forEach(c => lines.push(`${c.f_number || 'F'}: ${c.color_name || ''}`));
-    lines.push(`Dispatched Quantity: -${requestedQty} pcs`);
-    if (customerName) lines.push(`Customer: ${customerName}`);
-    if (invoiceNum) lines.push(`Invoice #: ${invoiceNum}`);
-    if (remarks) lines.push(`Remarks: ${remarks}`);
-  }
-  
+  if (brand) lines.push(brand.trim());
+  const beamHeader = beamName
+    ? (beamName.trim().endsWith(':') ? beamName.trim() : `${beamName.trim()}:`)
+    : 'Beam:';
+  lines.push(beamHeader);
+  const isStockIn = movementType === 'STOCK_IN';
+  const statusLabel = isStockIn ? '( IN STOCK )' : '( DELIVERY )';
+  if (seriesCode) lines.push(`${seriesCode} ${statusLabel}`);
+  else lines.push(statusLabel);
+  (colors || []).forEach(c => {
+    const fPart = c.f_number || 'F';
+    const colorPart = c.color_name || '';
+    const companyPart = c.company_name ? ` ( ${c.company_name.trim()} )` : '';
+    lines.push(`${fPart} : ${colorPart}${companyPart}`);
+  });
+  lines.push(`${requestedQty} pcs/-`);
   return lines.join('\n');
 };
 
 const RequestStockDialog = ({
   open, onClose, combination, beamName, seriesCode, sareeId, onSuccess,
-  initialAction = 'Stock'
+  initialMovementType = 'STOCK_IN'
 }) => {
-  const [action, setAction] = useState(initialAction); // 'Stock', 'Delivery', 'Stock Delivery'
-  const [requestedQty, setRequestedQty] = useState(10);
-  const [supplierName, setSupplierName] = useState('');
-  const [customerName, setCustomerName] = useState('');
-  const [machineName, setMachineName] = useState('');
-  const [operatorName, setOperatorName] = useState('');
-  const [invoiceNumber, setInvoiceNumber] = useState('');
-  const [remarks, setRemarks] = useState('');
-
+  const [movementType, setMovementType] = useState(initialMovementType);
+  const [requestedQty, setRequestedQty] = useState(100);
   const [saving, setSaving] = useState(false);
   const [snack, setSnack] = useState('');
   const [sent, setSent] = useState(false);
@@ -75,81 +49,80 @@ const RequestStockDialog = ({
 
   useEffect(() => {
     if (open) {
-      setAction(initialAction);
-      setRequestedQty(10);
-      setSupplierName('');
-      setCustomerName('');
-      setMachineName('');
-      setOperatorName('');
-      setInvoiceNumber('');
-      setRemarks('');
+      setMovementType(initialMovementType);
+      setRequestedQty(100);
       setSent(false);
       setError('');
     }
-  }, [open, initialAction]);
+  }, [open, initialMovementType]);
 
   const currentStock = combination?.current_stock ?? 0;
+  const isDelivery = movementType === 'DELIVERY_OUT';
+  const isLowStock = currentStock <= (combination?.minimum_stock ?? 20);
+  const newStock = isDelivery
+    ? Math.max(0, currentStock - requestedQty)
+    : currentStock + requestedQty;
 
-  // Compute preview stock based on action
-  let previewStock = currentStock;
-  if (action === 'Stock') previewStock = currentStock + requestedQty;
-  else if (action === 'Stock Delivery') previewStock = Math.max(0, currentStock - requestedQty);
-  else previewStock = currentStock; // Delivery does NOT change inventory
-
-  // Validation
-  let validationError = '';
-  if (action === 'Stock Delivery' && requestedQty > currentStock) {
-    validationError = `Only ${currentStock} pieces are available in stock.`;
-  }
-  if (!requestedQty || requestedQty <= 0) {
-    validationError = 'Please enter a valid quantity greater than zero.';
-  }
+  const validationError = isDelivery && requestedQty > currentStock
+    ? 'Delivery quantity cannot exceed available stock.'
+    : '';
 
   const message = buildWhatsAppMessage({
-    action,
+    brand: combination?.brand,
+    movementType,
     seriesCode,
     beamName,
-    comboName: combination?.combination_name,
     colors: combination?.combination_colors,
     requestedQty,
-    supplierName,
-    customerName,
-    machineName,
-    invoiceNum: invoiceNumber,
-    remarks
   });
 
   const openWhatsApp = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  const handleSubmit = async () => {
+  const handleSend = async () => {
     if (validationError) return;
     setSaving(true);
     setError('');
-
     try {
+      // 1. Update actual stock in database
       if (combination?.id) {
-        await stockAPI.update({
-          saree_id: sareeId,
-          combination_id: combination.id,
-          action,
-          quantity: requestedQty,
-          supplier_name: supplierName,
-          customer_name: customerName,
-          machine: machineName,
-          operator_name: operatorName,
-          invoice_number: invoiceNumber,
-          remarks: remarks || (action === 'Stock' ? 'Purchase / Received' : action === 'Delivery' ? 'Machine Delivery' : 'Stock Delivered')
+        await combinationAPI.update(combination.id, {
+          current_stock: newStock,
+          action: isDelivery ? 'Decrease' : 'Increase',
+          reason: isDelivery
+            ? `Delivery Out via WhatsApp (${requestedQty} pcs)`
+            : `Stock In via WhatsApp (${requestedQty} pcs)`,
         });
       }
 
+      // 2. Log stock request (optional record-keeping, fail silently)
+      try {
+        await stockRequestAPI.create({
+          saree_id: sareeId,
+          combination_id: combination?.id,
+          supplier_id: null,
+          beam_name: beamName,
+          combination_name: combination?.combination_name,
+          series_code: seriesCode,
+          requested_qty: requestedQty,
+          current_stock: currentStock,
+          minimum_stock: combination?.minimum_stock ?? 20,
+          whatsapp_message: message,
+          movement_type: movementType,
+        });
+      } catch (_) { /* non-critical */ }
+
+      // 3. Open WhatsApp
       openWhatsApp();
       setSent(true);
-      setSnack(`✓ ${action} action recorded successfully. WhatsApp opened!`);
+      setSnack(isDelivery
+        ? `✓ Delivery Out: ${requestedQty} pcs recorded. WhatsApp opened!`
+        : `✓ Stock In: +${requestedQty} pcs recorded. WhatsApp opened!`
+      );
       if (onSuccess) onSuccess();
     } catch (e) {
-      setError(e?.response?.data?.error || e.message || 'Failed to record stock action.');
+      setError(e?.response?.data?.error || 'Failed to update stock. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -157,28 +130,25 @@ const RequestStockDialog = ({
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message);
-    setSnack('Message copied to clipboard!');
+    setSnack('Message copied!');
   };
 
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
-        {/* Title Bar */}
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{
-              width: 42, height: 42, borderRadius: '50%',
-              bgcolor: action === 'Stock' ? '#DCFCE7' : action === 'Delivery' ? '#E0F2FE' : '#FFEDD5',
-              color: action === 'Stock' ? '#15803D' : action === 'Delivery' ? '#0284C7' : '#EA580C',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
+              width: 40, height: 40, borderRadius: '50%',
+              bgcolor: '#25D366',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background-color 0.2s'
             }}>
-              {action === 'Stock' && <AddCircleIcon sx={{ fontSize: 24 }} />}
-              {action === 'Delivery' && <PrecisionManufacturingIcon sx={{ fontSize: 24 }} />}
-              {action === 'Stock Delivery' && <LocalShippingIcon sx={{ fontSize: 24 }} />}
+              <WhatsAppIcon sx={{ color: '#fff', fontSize: 22 }} />
             </Box>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-                Stock Management Action
+                Stock Movement via WhatsApp
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {seriesCode} · {beamName} · {combination?.combination_name || 'Combination'}
@@ -188,185 +158,88 @@ const RequestStockDialog = ({
           <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
         </DialogTitle>
 
-        <DialogContent sx={{ p: 0 }}>
-          <Box sx={{ display: 'flex', height: { xs: 'auto', md: 500 }, flexDirection: { xs: 'column', md: 'row' } }}>
+        <DialogContent dividers sx={{ p: 0 }}>
+          <Box sx={{ display: 'flex', height: { xs: 'auto', md: 480 }, flexDirection: { xs: 'column', md: 'row' } }}>
 
-            {/* Left Configuration Form */}
-            <Box sx={{ width: { xs: '100%', md: 360 }, borderRight: '1px solid', borderColor: 'divider', p: 2.5, overflowY: 'auto' }}>
-              
-              {/* 1. Action Selector */}
-              <Typography variant="overline" sx={{ fontWeight: 800, color: 'text.secondary', fontSize: '0.68rem', display: 'block', mb: 1 }}>
-                SELECT ACTION
+            {/* ── Left panel ── */}
+            <Box sx={{ width: { xs: '100%', md: 280 }, borderRight: '1px solid', borderColor: 'divider', p: 2.5, overflowY: 'auto' }}>
+
+              {/* Movement Type */}
+              <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem', display: 'block', mb: 0.5 }}>
+                Movement Type
               </Typography>
-
-              <Stack direction="row" spacing={1} sx={{ mb: 2.5 }}>
-                {/* Action 1: Stock */}
+              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
                 <Button
-                  variant={action === 'Stock' ? 'contained' : 'outlined'}
-                  onClick={() => setAction('Stock')}
-                  fullWidth size="small"
-                  startIcon={<AddCircleIcon />}
-                  sx={{
-                    py: 1, fontWeight: 700, fontSize: '0.75rem',
-                    bgcolor: action === 'Stock' ? '#15803D' : 'transparent',
-                    color: action === 'Stock' ? '#fff' : '#15803D',
-                    borderColor: '#15803D',
-                    '&:hover': { bgcolor: action === 'Stock' ? '#166534' : '#DCFCE7' }
-                  }}
+                  variant={movementType === 'STOCK_IN' ? 'contained' : 'outlined'}
+                  color="success" fullWidth size="small"
+                  onClick={() => setMovementType('STOCK_IN')}
+                  sx={{ py: 0.8, fontWeight: 700 }}
                 >
-                  Stock
+                  Stock In
                 </Button>
-
-                {/* Action 2: Delivery */}
                 <Button
-                  variant={action === 'Delivery' ? 'contained' : 'outlined'}
-                  onClick={() => setAction('Delivery')}
-                  fullWidth size="small"
-                  startIcon={<PrecisionManufacturingIcon />}
-                  sx={{
-                    py: 1, fontWeight: 700, fontSize: '0.75rem',
-                    bgcolor: action === 'Delivery' ? '#0284C7' : 'transparent',
-                    color: action === 'Delivery' ? '#fff' : '#0284C7',
-                    borderColor: '#0284C7',
-                    '&:hover': { bgcolor: action === 'Delivery' ? '#0369A1' : '#E0F2FE' }
-                  }}
+                  variant={movementType === 'DELIVERY_OUT' ? 'contained' : 'outlined'}
+                  color="warning" fullWidth size="small"
+                  onClick={() => setMovementType('DELIVERY_OUT')}
+                  sx={{ py: 0.8, fontWeight: 700 }}
                 >
-                  Delivery
+                  Delivery Out
                 </Button>
+              </Box>
 
-                {/* Action 3: Stock Delivery */}
-                <Button
-                  variant={action === 'Stock Delivery' ? 'contained' : 'outlined'}
-                  onClick={() => setAction('Stock Delivery')}
-                  fullWidth size="small"
-                  startIcon={<LocalShippingIcon />}
-                  sx={{
-                    py: 1, fontWeight: 700, fontSize: '0.75rem',
-                    bgcolor: action === 'Stock Delivery' ? '#EA580C' : 'transparent',
-                    color: action === 'Stock Delivery' ? '#fff' : '#EA580C',
-                    borderColor: '#EA580C',
-                    '&:hover': { bgcolor: action === 'Stock Delivery' ? '#C2410C' : '#FFEDD5' }
-                  }}
-                >
-                  Stock Delivery
-                </Button>
-              </Stack>
-
-              {/* Action Description Banner */}
-              <Paper elevation={0} sx={{
-                p: 1.5, mb: 2, borderRadius: 2, border: '1px solid',
-                borderColor: action === 'Stock' ? '#86EFAC' : action === 'Delivery' ? '#7DD3FC' : '#FDBA74',
-                bgcolor: action === 'Stock' ? '#F0FDF4' : action === 'Delivery' ? '#F0F9FF' : '#FFF7ED'
-              }}>
-                <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.8rem', color: action === 'Stock' ? '#15803D' : action === 'Delivery' ? '#0284C7' : '#EA580C' }}>
-                  {action === 'Stock' && '🟢 Stock: Add new stock received from supplier.'}
-                  {action === 'Delivery' && '🔵 Delivery: Send to machine for production. Inventory will NOT change.'}
-                  {action === 'Stock Delivery' && '🟠 Stock Delivery: Deliver directly from existing stock. Deducts inventory.'}
-                </Typography>
-              </Paper>
-
-              {/* Current Stock Preview */}
-              <Box sx={{ display: 'flex', gap: 1, mb: 2.5, alignItems: 'center', flexWrap: 'wrap' }}>
-                <Chip label={`Current Stock: ${currentStock} pcs`} variant="outlined" size="small" sx={{ fontWeight: 700 }} />
+              {/* Stock Info */}
+              <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>Stock Info</Typography>
+              <Box sx={{ display: 'flex', gap: 1, mt: 0.5, mb: 2, flexWrap: 'wrap' }}>
+                <Chip label={`Current: ${currentStock} pcs`} color={isLowStock ? 'error' : 'success'} size="small" sx={{ fontWeight: 700 }} />
+                <Chip label={`Min: ${combination?.minimum_stock ?? 20} pcs`} variant="outlined" size="small" />
                 <Chip
-                  label={
-                    action === 'Stock' ? `New Stock: ${previewStock} pcs (+${requestedQty})` :
-                    action === 'Stock Delivery' ? `New Stock: ${previewStock} pcs (-${requestedQty})` :
-                    `Current Stock Unchanged (${currentStock} pcs)`
-                  }
-                  size="small"
-                  sx={{
-                    fontWeight: 800,
-                    bgcolor: action === 'Stock' ? '#DCFCE7' : action === 'Delivery' ? '#E0F2FE' : '#FFEDD5',
-                    color: action === 'Stock' ? '#15803D' : action === 'Delivery' ? '#0284C7' : '#EA580C'
-                  }}
+                  label={isDelivery ? `After: ${newStock} pcs` : `After: +${requestedQty} → ${newStock} pcs`}
+                  variant="outlined" color={isDelivery ? 'warning' : 'success'} size="small" sx={{ fontWeight: 700 }}
                 />
               </Box>
 
-              {/* Quantity Input */}
+              {/* F-Colors summary */}
+              {combination?.combination_colors?.length > 0 && (
+                <>
+                  <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>F-Colors</Typography>
+                  <Box sx={{ mt: 0.5, mb: 2, display: 'flex', flexWrap: 'wrap', gap: 0.6 }}>
+                    {combination.combination_colors.map(c => (
+                      <Chip key={c.id} size="small" variant="outlined"
+                        label={`${c.f_number}: ${c.color_name}${c.company_name ? ` (${c.company_name})` : ''}`}
+                      />
+                    ))}
+                  </Box>
+                </>
+              )}
+
+              <Divider sx={{ mb: 2 }} />
+
+              {/* Quantity */}
+              <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>
+                {isDelivery ? 'Delivery Quantity' : 'Requested Quantity'}
+              </Typography>
               <TextField
-                type="number" fullWidth size="small" sx={{ mb: 2 }}
-                label="Quantity (pcs)"
+                type="number" fullWidth size="small" sx={{ mt: 0.5, mb: 1 }}
                 value={requestedQty}
-                onChange={e => setRequestedQty(Math.max(1, parseInt(e.target.value) || 0))}
+                onChange={e => setRequestedQty(Math.max(1, parseInt(e.target.value) || 1))}
                 slotProps={{ htmlInput: { min: 1 } }}
+                label={isDelivery ? 'Delivery Quantity (pcs)' : 'Stock Quantity (pcs)'}
                 error={!!validationError}
                 helperText={validationError}
               />
 
-              {/* Conditional Inputs based on Action */}
-              {action === 'Stock' && (
-                <TextField
-                  fullWidth size="small" sx={{ mb: 2 }}
-                  label="Supplier Name (Optional)"
-                  placeholder="e.g. Surat Weaving Mills"
-                  value={supplierName}
-                  onChange={e => setSupplierName(e.target.value)}
-                />
-              )}
-
-              {action === 'Delivery' && (
-                <Grid container spacing={1.5} sx={{ mb: 2 }}>
-                  <Grid size={6}>
-                    <TextField
-                      fullWidth size="small"
-                      label="Machine Name / #"
-                      placeholder="e.g. Machine 4"
-                      value={machineName}
-                      onChange={e => setMachineName(e.target.value)}
-                    />
-                  </Grid>
-                  <Grid size={6}>
-                    <TextField
-                      fullWidth size="small"
-                      label="Operator"
-                      placeholder="e.g. Ramesh"
-                      value={operatorName}
-                      onChange={e => setOperatorName(e.target.value)}
-                    />
-                  </Grid>
-                </Grid>
-              )}
-
-              {action === 'Stock Delivery' && (
-                <Grid container spacing={1.5} sx={{ mb: 2 }}>
-                  <Grid size={6}>
-                    <TextField
-                      fullWidth size="small"
-                      label="Customer Name"
-                      placeholder="e.g. Apex Traders"
-                      value={customerName}
-                      onChange={e => setCustomerName(e.target.value)}
-                    />
-                  </Grid>
-                  <Grid size={6}>
-                    <TextField
-                      fullWidth size="small"
-                      label="Invoice #"
-                      placeholder="e.g. INV-9902"
-                      value={invoiceNumber}
-                      onChange={e => setInvoiceNumber(e.target.value)}
-                    />
-                  </Grid>
-                </Grid>
-              )}
-
-              <TextField
-                fullWidth size="small" sx={{ mb: 1 }}
-                label="Remarks / Reason"
-                placeholder="Add optional notes..."
-                value={remarks}
-                onChange={e => setRemarks(e.target.value)}
-              />
+              <Alert severity="info" sx={{ mt: 1.5, fontSize: '0.75rem' }} icon={<WhatsAppIcon fontSize="small" />}>
+                Stock will update immediately. WhatsApp will open to notify your contact.
+              </Alert>
             </Box>
 
-            {/* Right Message & Confirmation Preview */}
-            <Box sx={{ flex: 1, p: 2.5, display: 'flex', flexDirection: 'column', overflowY: 'auto', bgcolor: 'background.default' }}>
+            {/* ── Right panel: Message Preview ── */}
+            <Box sx={{ flex: 1, p: 2.5, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                <Typography variant="overline" sx={{ fontWeight: 800, color: 'text.secondary', fontSize: '0.68rem' }}>
-                  WHATSAPP MESSAGE PREVIEW
+                <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>
+                  Message Preview
                 </Typography>
-                <Tooltip title="Copy text">
+                <Tooltip title="Copy message">
                   <IconButton size="small" onClick={handleCopy}><ContentCopyIcon fontSize="small" /></IconButton>
                 </Tooltip>
               </Box>
@@ -380,40 +253,55 @@ const RequestStockDialog = ({
                 {message}
               </Paper>
 
-              {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+              {error && (
+                <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+              )}
               {sent && !error && (
                 <Alert severity="success" sx={{ mt: 2 }}>
-                  Action recorded! WhatsApp window opened.
+                  Stock updated! WhatsApp opened — select a contact and press Send.
                 </Alert>
               )}
             </Box>
-
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, py: 2, gap: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Button onClick={onClose} variant="outlined" color="inherit">Cancel</Button>
+        {validationError && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{validationError}</Alert>}
+
+        <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+          <Button onClick={onClose} variant="outlined" size="large">Cancel</Button>
+          {sent && (
+            <Button
+              variant="outlined" color="success" size="large"
+              startIcon={<WhatsAppIcon />}
+              onClick={openWhatsApp}
+            >
+              Open Again
+            </Button>
+          )}
           <Button
             variant="contained" size="large"
             startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <WhatsAppIcon />}
             disabled={saving || !!validationError}
-            onClick={handleSubmit}
+            onClick={handleSend}
             sx={{
-              minWidth: 220,
-              bgcolor: action === 'Stock' ? '#15803D' : action === 'Delivery' ? '#0284C7' : '#EA580C',
-              '&:hover': {
-                bgcolor: action === 'Stock' ? '#166534' : action === 'Delivery' ? '#0369A1' : '#C2410C'
-              }
+              minWidth: 240,
+              bgcolor: '#25D366',
+              '&:hover': { bgcolor: '#1ebe57' },
+              '&.Mui-disabled': { bgcolor: 'action.disabledBackground' }
             }}
           >
-            {saving ? 'Processing...' : `Record ${action} & Send`}
+            {saving
+              ? (isDelivery ? 'Updating delivery...' : 'Updating stock...')
+              : (isDelivery ? 'Open WhatsApp — Delivery Out' : 'Open WhatsApp — Stock In')
+            }
           </Button>
         </DialogActions>
       </Dialog>
 
       <Snackbar
         open={!!snack} autoHideDuration={4000} onClose={() => setSnack('')}
-        message={snack} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        message={snack}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </>
   );

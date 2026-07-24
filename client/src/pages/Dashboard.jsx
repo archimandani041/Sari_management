@@ -27,10 +27,7 @@ import {
   ChevronRight as ChevronRightIcon,
   SwapVert as SwapVertIcon,
   AutoAwesome as SparklesIcon,
-  ArrowForward as ArrowForwardIcon,
-  AddCircle as AddCircleOutlineIcon,
-  PrecisionManufacturing as PrecisionManufacturingIcon,
-  LocalShipping as LocalShippingIcon
+  ArrowForward as ArrowForwardIcon
 } from '@mui/icons-material';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -351,54 +348,23 @@ const Dashboard = () => {
       {/* ══════════════════════ TAB 0: OVERVIEW ══════════════════════ */}
       {activeTab === 0 && (
         <Box>
-          {/* 3 ACTION CARDS & INVENTORY STATS */}
-          <Grid container spacing={2} sx={{ mb: 2.5 }}>
-            {/* 1. Today's Stock Added (Green 🟢 ➕) */}
+          {/* KPI CARDS */}
+          <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard
-                label="Today's Stock Added"
-                sublabel="New stock received (+)"
-                value={(stats.todayStockAdded || 0).toLocaleString()}
-                unit="pcs"
-                icon={<AddCircleOutlineIcon />}
-                tint="#15803D"
-              />
+              <KpiCard label="Total Sarees" sublabel="Master catalog items" value={stats.totalSarees}
+                icon={<SareeIcon />} tint={theme.palette.primary.main} />
             </Grid>
-
-            {/* 2. Today's Machine Deliveries (Blue 🔵 🏭) */}
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard
-                label="Today's Machine Deliveries"
-                sublabel="Production tracking (0 change)"
-                value={(stats.todayMachineDeliveries || 0).toLocaleString()}
-                unit="pcs"
-                icon={<PrecisionManufacturingIcon />}
-                tint="#0284C7"
-              />
+              <KpiCard label="Current Stock" sublabel="Total physical units" value={stats.currentStock.toLocaleString()} unit="pcs"
+                icon={<GridIcon />} tint={theme.palette.secondary.main} />
             </Grid>
-
-            {/* 3. Today's Stock Deliveries (Orange 🟠 📦) */}
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard
-                label="Today's Stock Deliveries"
-                sublabel="Delivered from inventory (-)"
-                value={(stats.todayStockDeliveries || 0).toLocaleString()}
-                unit="pcs"
-                icon={<LocalShippingIcon />}
-                tint="#EA580C"
-              />
+              <KpiCard label="Delivery Out" sublabel="vs prior period" value={stats.delivered.toLocaleString()} unit="pcs"
+                icon={<DeliveryIcon />} tint={theme.palette.error.main} trendPercent={stats.comparison.deliveredPercent} />
             </Grid>
-
-            {/* 4. Current Inventory */}
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard
-                label="Current Inventory"
-                sublabel="Total available stock"
-                value={(stats.currentInventory || stats.currentStock || 0).toLocaleString()}
-                unit="pcs"
-                icon={<GridIcon />}
-                tint={theme.palette.primary.main}
-              />
+              <KpiCard label="Stock In" sublabel="vs prior period" value={stats.added.toLocaleString()} unit="pcs"
+                icon={<PurchaseIcon />} tint={theme.palette.success.main} trendPercent={stats.comparison.addedPercent} />
             </Grid>
           </Grid>
 

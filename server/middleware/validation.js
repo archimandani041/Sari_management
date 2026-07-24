@@ -33,15 +33,18 @@ const validateSaree = (req, res, next) => {
 };
 
 const validateStockUpdate = (req, res, next) => {
-  const { saree_id, combination_id, action, quantity } = req.body;
+  const { saree_id, action, quantity } = req.body;
   const errors = [];
 
-  if (!combination_id && !saree_id) errors.push('Combination ID or Saree ID is required');
-  if (!action || typeof action !== 'string' || action.trim().length === 0) {
-    errors.push('Action name is required (e.g. Stock, Delivery, Stock Delivery)');
+  if (!saree_id) errors.push('Saree ID is required');
+  if (!action || !['Increase', 'Decrease', 'Manual Edit'].includes(action)) {
+    errors.push('Valid action is required (Increase, Decrease, Manual Edit)');
   }
-  if (quantity === undefined || quantity === null || isNaN(parseInt(quantity))) {
-    errors.push('Valid numeric quantity is required');
+  if (quantity === undefined || quantity === null) {
+    errors.push('Quantity is required');
+  }
+  if (typeof quantity === 'number' && quantity < 0 && action !== 'Manual Edit') {
+    errors.push('Quantity cannot be negative');
   }
 
   if (errors.length > 0) {
@@ -51,4 +54,3 @@ const validateStockUpdate = (req, res, next) => {
 };
 
 module.exports = { validateSaree, validateStockUpdate };
-
