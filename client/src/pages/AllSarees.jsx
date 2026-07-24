@@ -291,10 +291,9 @@ const AllSarees = () => {
         const isBeamOrSareeMatch = sareeMatch || beamNameMatch;
 
         if (isColorMatch || isBeamOrSareeMatch) {
-          const colorsToReturn = (query && matchedColors.length > 0) ? matchedColors : combo.combination_colors;
           matchedCombinations.push({
             ...combo,
-            combination_colors: colorsToReturn || []
+            combination_colors: combo.combination_colors || []
           });
         }
       }
@@ -737,34 +736,58 @@ const AllSarees = () => {
                                           '&:hover': { borderColor: isHighlighted ? '#3B111A' : '#AC9C94' }
                                         }}
                                       >
-                                        {/* Left part: name + metadata chips + F-Colors */}
-                                        <Box sx={{ flex: 1, minWidth: 250 }}>
-                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 800, color: '#241C1A' }}>
-                                              {combo.combination_name ? renderHighlighted(combo.combination_name) : 'Unnamed Combination'}
-                                            </Typography>
-                                            {combo.status && (
-                                              <Chip
-                                                label={combo.status}
-                                                size="small"
-                                                sx={{
-                                                  height: 18, fontSize: '0.62rem', fontWeight: 800,
-                                                  bgcolor: combo.status === 'In Stock' ? 'rgba(22,163,74,0.1)' : 'rgba(37,99,235,0.08)',
-                                                  color: combo.status === 'In Stock' ? '#16A34A' : '#2563EB',
-                                                  borderRadius: '3px'
-                                                }}
-                                              />
-                                            )}
-                                          </Box>
+                                        {/* Left part: Combination Image + Details */}
+                                        <Box sx={{ flex: 1, minWidth: 250, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                          {combo.image_url && (
+                                            <Box
+                                              component="img"
+                                              src={combo.image_url}
+                                              alt={combo.combination_name || 'Combination Image'}
+                                              loading="lazy"
+                                              sx={{
+                                                width: 54,
+                                                height: 54,
+                                                borderRadius: '6px',
+                                                objectFit: 'cover',
+                                                border: '1px solid #EAE6E1',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                                                flexShrink: 0,
+                                                cursor: 'pointer',
+                                                transition: 'transform 0.15s ease',
+                                                '&:hover': { transform: 'scale(1.05)' }
+                                              }}
+                                              onClick={() => navigate(`/sarees/${saree.id}`)}
+                                            />
+                                          )}
 
-                                          {/* F-Colors inline */}
-                                          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                                            {combo.combination_colors?.map((col, idx) => (
-                                              <Typography key={col.id} component="span" sx={{ fontSize: '0.75rem', color: '#7C726A' }}>
-                                                <strong>{col.f_number}</strong> {renderHighlighted(col.color_name, 'color')}{col.company_name ? ` (${renderHighlighted(col.company_name, 'company')})` : ''}
-                                                {idx < combo.combination_colors.length - 1 ? ' · ' : ''}
+                                          <Box sx={{ flex: 1 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                              <Typography variant="body2" sx={{ fontWeight: 800, color: '#241C1A' }}>
+                                                {combo.combination_name ? renderHighlighted(combo.combination_name) : 'Unnamed Combination'}
                                               </Typography>
-                                            ))}
+                                              {combo.status && (
+                                                <Chip
+                                                  label={combo.status}
+                                                  size="small"
+                                                  sx={{
+                                                    height: 18, fontSize: '0.62rem', fontWeight: 800,
+                                                    bgcolor: combo.status === 'In Stock' ? 'rgba(22,163,74,0.1)' : 'rgba(37,99,235,0.08)',
+                                                    color: combo.status === 'In Stock' ? '#16A34A' : '#2563EB',
+                                                    borderRadius: '3px'
+                                                  }}
+                                                />
+                                              )}
+                                            </Box>
+
+                                            {/* F-Colors inline */}
+                                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                              {combo.combination_colors?.map((col, idx) => (
+                                                <Typography key={col.id} component="span" sx={{ fontSize: '0.75rem', color: '#7C726A' }}>
+                                                  <strong>{col.f_number}</strong> {renderHighlighted(col.color_name, 'color')}{col.company_name ? ` (${renderHighlighted(col.company_name, 'company')})` : ''}
+                                                  {idx < combo.combination_colors.length - 1 ? ' · ' : ''}
+                                                </Typography>
+                                              ))}
+                                            </Box>
                                           </Box>
                                         </Box>
 
@@ -787,35 +810,21 @@ const AllSarees = () => {
                                           </Box>
 
                                           <Box sx={{ display: 'flex', gap: 1 }}>
-                                            <Tooltip title="Stock In via WhatsApp">
+                                            <Tooltip title="Request Stock">
                                               <Button
-                                                size="small"
-                                                variant="outlined"
-                                                startIcon={<WhatsAppIcon sx={{ fontSize: '14px !important' }} />}
-                                                onClick={() => openStockDialog(combo, beam, saree, 'STOCK_IN')}
-                                                sx={{
-                                                  fontSize: '0.72rem', fontWeight: 750, borderRadius: '4px',
-                                                  borderColor: '#25D366', color: '#25D366', textTransform: 'none',
-                                                  '&:hover': { borderColor: '#1ebe57', bgcolor: 'rgba(37,211,102,0.06)' }
-                                                }}
-                                              >
-                                                Stock In
-                                              </Button>
-                                            </Tooltip>
-                                            <Tooltip title="Delivery Out via WhatsApp">
-                                              <Button
-                                                size="small"
-                                                variant="outlined"
-                                                startIcon={<WhatsAppIcon sx={{ fontSize: '14px !important' }} />}
-                                                onClick={() => openStockDialog(combo, beam, saree, 'DELIVERY_OUT')}
-                                                sx={{
-                                                  fontSize: '0.72rem', fontWeight: 750, borderRadius: '4px',
-                                                  borderColor: '#F59E0B', color: '#B45309', textTransform: 'none',
-                                                  '&:hover': { borderColor: '#D97706', bgcolor: 'rgba(245,158,11,0.06)' }
-                                                }}
-                                              >
-                                                Delivery Out
-                                              </Button>
+                                               size="small"
+                                               variant="outlined"
+                                               color="success"
+                                               startIcon={<WhatsAppIcon sx={{ fontSize: '14px !important' }} />}
+                                               onClick={() => openStockDialog(combo, beam, saree, 'STOCK')}
+                                               sx={{
+                                                 fontSize: '0.72rem', fontWeight: 750, borderRadius: '4px',
+                                                 borderColor: '#25D366', color: '#25D366', textTransform: 'none',
+                                                 '&:hover': { borderColor: '#1ebe57', bgcolor: 'rgba(37,211,102,0.06)' }
+                                               }}
+                                             >
+                                               Request Stock
+                                             </Button>
                                             </Tooltip>
                                             <IconButton
                                               size="small"

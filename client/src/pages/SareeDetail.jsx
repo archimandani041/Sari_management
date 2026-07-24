@@ -226,56 +226,6 @@ const SareeDetail = () => {
       <Grid container spacing={3}>
         {/* Left column */}
         <Grid size={{ xs: 12, md: 4 }}>
-          {(() => {
-            const mainImageUrl = saree.image_url || saree.beams?.flatMap(b => b.combinations || []).find(c => c.image_url)?.image_url;
-            return mainImageUrl ? (
-              <Card sx={{ borderRadius: 4, overflow: 'hidden', mb: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-                <CardMedia component="img" height={320} image={mainImageUrl} alt={saree.sari_name || saree.series_code} sx={{ objectFit: 'cover' }} />
-              </Card>
-            ) : (
-              <Paper
-                variant="outlined"
-                sx={{
-                  height: 320,
-                  mb: 3,
-                  borderRadius: 4,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1.5,
-                  p: 3,
-                  textAlign: 'center',
-                  bgcolor: 'rgba(59, 17, 26, 0.02)',
-                  borderColor: 'divider'
-                }}
-              >
-                <Box sx={{ width: 64, height: 64, borderRadius: '50%', bgcolor: 'rgba(59, 17, 26, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'primary.main', fontSize: '2rem' }}>
-                  🧵
-                </Box>
-                <Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'text.primary' }}>
-                    {saree.series_code}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, display: 'block', mt: 0.5 }}>
-                    No image uploaded yet
-                  </Typography>
-                </Box>
-                {(isAdmin || isStaff) && (
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<EditIcon />}
-                    onClick={() => navigate(`/sarees/edit/${saree.id}`)}
-                    sx={{ mt: 0.5, borderRadius: 2, fontWeight: 700, textTransform: 'none' }}
-                  >
-                    Upload Combination Image
-                  </Button>
-                )}
-              </Paper>
-            );
-          })()}
-
           <Paper sx={{ p: 3, borderRadius: 4, mb: 3 }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Saree Info</Typography>
             <TableContainer>
@@ -338,65 +288,82 @@ const SareeDetail = () => {
                     return (
                       <Grid size={12} key={c.id}>
                         <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: isLow ? 'warning.light' : 'divider' }}>
-                          {/* Combination image */}
-                          {c.image_url && (
-                            <Box sx={{ mb: 1.5, borderRadius: 1.5, overflow: 'hidden', maxHeight: 200 }}>
+                          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: { sm: 'center' } }}>
+                            {/* Left: Medium Square Combination Image */}
+                            {c.image_url && (
                               <Box
-                                component="img"
-                                src={c.image_url}
-                                alt={c.combination_name || `Combination ${ci + 1}`}
-                                loading="lazy"
-                                sx={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }}
-                              />
-                            </Box>
-                          )}
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                                {c.combination_name || `Combination ${ci + 1}`}
-                              </Typography>
-                              <Chip
-                                label={c.brand || 'KP'}
-                                color="secondary"
-                                size="small"
-                                sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
-                              />
-                              <Chip
-                                label={c.status || 'In Stock'}
-                                variant="outlined"
-                                color={(c.status || 'In Stock') === 'In Stock' ? 'success' : 'info'}
-                                size="small"
-                                sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
-                              />
-                              {c.notes && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', width: '100%' }}>Notes: {c.notes}</Typography>}
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Chip
-                                label={`${c.current_stock} pcs`}
-                                color={isLow ? (c.current_stock === 0 ? 'error' : 'warning') : 'primary'}
-                                size="small"
-                              />
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                color="success"
-                                startIcon={<WhatsAppIcon fontSize="small" />}
-                                onClick={() => {
-                                  setRequestCombo(c);
-                                  setRequestBeamName(beam.beam_name);
-                                  setRequestDialogOpen(true);
+                                sx={{
+                                  width: { xs: '100%', sm: 105 },
+                                  height: { xs: 160, sm: 105 },
+                                  minWidth: { sm: 105 },
+                                  borderRadius: 2,
+                                  overflow: 'hidden',
+                                  border: '1px solid',
+                                  borderColor: 'divider',
+                                  bgcolor: 'background.paper',
+                                  flexShrink: 0
                                 }}
-                                sx={{ whiteSpace: 'nowrap', fontSize: '0.72rem' }}
                               >
-                                Request Stock
-                              </Button>
+                                <Box
+                                  component="img"
+                                  src={c.image_url}
+                                  alt={c.combination_name || `Combination ${ci + 1}`}
+                                  loading="lazy"
+                                  sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                />
+                              </Box>
+                            )}
 
+                            {/* Right: Combination Details & Actions */}
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, flexWrap: 'wrap', gap: 1 }}>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                    {c.combination_name || `Combination ${ci + 1}`}
+                                  </Typography>
+                                  <Chip
+                                    label={c.brand || 'KP'}
+                                    color="secondary"
+                                    size="small"
+                                    sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
+                                  />
+                                  <Chip
+                                    label={c.status || 'In Stock'}
+                                    variant="outlined"
+                                    color={(c.status || 'In Stock') === 'In Stock' ? 'success' : 'info'}
+                                    size="small"
+                                    sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
+                                  />
+                                  {c.notes && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', width: '100%' }}>Notes: {c.notes}</Typography>}
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <Chip
+                                    label={`${c.current_stock} pcs`}
+                                    color={isLow ? (c.current_stock === 0 ? 'error' : 'warning') : 'primary'}
+                                    size="small"
+                                  />
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="success"
+                                    startIcon={<WhatsAppIcon fontSize="small" />}
+                                    onClick={() => {
+                                      setRequestCombo(c);
+                                      setRequestBeamName(beam.beam_name);
+                                      setRequestDialogOpen(true);
+                                    }}
+                                    sx={{ whiteSpace: 'nowrap', fontSize: '0.72rem' }}
+                                  >
+                                    Request Stock
+                                  </Button>
+                                </Box>
+                              </Box>
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                {c.combination_colors?.map((col) => (
+                                  <Chip key={col.id} label={`${col.f_number}: ${col.color_name} ${col.company_name ? `(${col.company_name})` : ''}`} size="small" variant="outlined" />
+                                ))}
+                              </Box>
                             </Box>
-                          </Box>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                            {c.combination_colors?.map((col) => (
-                              <Chip key={col.id} label={`${col.f_number}: ${col.color_name} ${col.company_name ? `(${col.company_name})` : ''}`} size="small" variant="outlined" />
-                            ))}
                           </Box>
                         </Paper>
                       </Grid>

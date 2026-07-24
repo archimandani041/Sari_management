@@ -533,6 +533,21 @@ const getDashboard = async (req, res) => {
         timestamp: h.created_at
       }));
 
+    // Calculate Rollbacks Stats
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const rollbackHistoryItems = (rawHistory || []).filter(h => h.action === 'Rollback' || h.is_undone || (h.details && h.details.is_rolled_back));
+    const totalRollbacks = rollbackHistoryItems.length;
+    const todayRollbacks = rollbackHistoryItems.filter(h => new Date(h.created_at) >= startOfToday).length;
+    const lastRollbackItem = rollbackHistoryItems.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] || null;
+    const lastRollback = lastRollbackItem ? {
+      id: lastRollbackItem.id,
+      timestamp: lastRollbackItem.created_at,
+      user_name: lastRollbackItem.changed_by_name || 'Administrator',
+      series_code: lastRollbackItem.sarees?.series_code || lastRollbackItem.details?.series_code || '—',
+      combination_name: lastRollbackItem.combination_name || lastRollbackItem.details?.combination_name || '—',
+      reason: lastRollbackItem.details?.rollback_reason || lastRollbackItem.details?.remarks || 'Rollback'
+    } : null;
+
     res.json({
       range,
       stats: {
@@ -549,7 +564,10 @@ const getDashboard = async (req, res) => {
         lowStock: lowStockCount,
         outOfStock,
         pendingRequests,
-        inDelivery: combos.filter(c => c.status === 'In Delivery').length
+        inDelivery: combos.filter(c => c.status === 'In Delivery').length,
+        totalRollbacks,
+        todayRollbacks,
+        lastRollback
       },
       sparklines: {
         sarees: sareesSparkline,

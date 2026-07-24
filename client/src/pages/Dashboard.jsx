@@ -351,24 +351,24 @@ const Dashboard = () => {
           {/* KPI CARDS */}
           <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard label="Total Sarees" sublabel="Master catalog items" value={stats.totalSarees}
+              <KpiCard label="Total Sarees" sublabel="Master catalog items" value={(stats.totalSarees ?? 0).toLocaleString()}
                 icon={<SareeIcon />} tint={theme.palette.primary.main} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard label="Current Stock" sublabel="Total physical units" value={stats.currentStock.toLocaleString()} unit="pcs"
+              <KpiCard label="Current Stock" sublabel="Total physical units" value={(stats.currentStock ?? 0).toLocaleString()} unit="pcs"
                 icon={<GridIcon />} tint={theme.palette.secondary.main} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard label="Delivery Out" sublabel="vs prior period" value={stats.delivered.toLocaleString()} unit="pcs"
-                icon={<DeliveryIcon />} tint={theme.palette.error.main} trendPercent={stats.comparison.deliveredPercent} />
+              <KpiCard label="Delivery Out" sublabel="vs prior period" value={(stats.delivered ?? 0).toLocaleString()} unit="pcs"
+                icon={<DeliveryIcon />} tint={theme.palette.error.main} trendPercent={stats?.comparison?.deliveredPercent ?? 0} />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <KpiCard label="Stock In" sublabel="vs prior period" value={stats.added.toLocaleString()} unit="pcs"
-                icon={<PurchaseIcon />} tint={theme.palette.success.main} trendPercent={stats.comparison.addedPercent} />
+              <KpiCard label="Stock In" sublabel="vs prior period" value={(stats.added ?? 0).toLocaleString()} unit="pcs"
+                icon={<PurchaseIcon />} tint={theme.palette.success.main} trendPercent={stats?.comparison?.addedPercent ?? 0} />
             </Grid>
           </Grid>
 
-          {/* ALERT STRIP */}
+          {/* ALERT & ROLLBACK STRIP */}
           <Paper sx={{ py: 1.5, px: 2.5, mb: 2.5, border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', borderRadius: '8px' }} elevation={0}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, flexWrap: 'wrap' }}>
@@ -387,9 +387,12 @@ const Dashboard = () => {
                   <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Pending <Box component="span" sx={{ color: 'info.main', fontWeight: 800 }}>{stats.pendingRequests}</Box></Typography>
                 </Box>
                 <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ bgcolor: 'rgba(192,173,141,0.15)', p: 0.6, borderRadius: '5px', display: 'flex' }}><DeliveryIcon color="secondary" sx={{ fontSize: 16 }} /></Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>In Delivery <Box component="span" sx={{ color: 'secondary.main', fontWeight: 800 }}>{stats.inDelivery}</Box></Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/stock-history?action=Rollback')}>
+                  <Box sx={{ bgcolor: 'rgba(168,85,247,0.12)', p: 0.6, borderRadius: '5px', display: 'flex' }}><SwapVertIcon sx={{ color: '#A855F7', fontSize: 16 }} /></Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                    Today's Rollbacks <Box component="span" sx={{ color: '#A855F7', fontWeight: 800 }}>{stats.todayRollbacks || 0}</Box>
+                    <Box component="span" sx={{ color: 'text.secondary', ml: 0.75, fontSize: '0.72rem' }}>(Total: {stats.totalRollbacks || 0})</Box>
+                  </Typography>
                 </Box>
               </Box>
               <Button variant="contained" size="small" onClick={() => navigate('/stock-requests')}
@@ -397,6 +400,14 @@ const Dashboard = () => {
                 Create Purchase Order
               </Button>
             </Box>
+            {stats.lastRollback && (
+              <Box sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: '#A855F7', letterSpacing: '0.04em' }}>LAST ROLLBACK:</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                  {stats.lastRollback.series_code} · {stats.lastRollback.combination_name} by <b>{stats.lastRollback.user_name}</b> ({new Date(stats.lastRollback.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}) — <i>"{stats.lastRollback.reason}"</i>
+                </Typography>
+              </Box>
+            )}
           </Paper>
 
           {/* STOCK MOVEMENT + HEALTH ANALYTICS */}

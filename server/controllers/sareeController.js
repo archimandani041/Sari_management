@@ -889,18 +889,36 @@ const updateCombination = async (req, res) => {
     }
 
     // Log stock change
-    if (current_stock !== undefined && parseInt(current_stock) !== old.current_stock) {
+    const historyAction = req.body.history_action || req.body.action || 'Manual Edit';
+    const isStockChanged = current_stock !== undefined && parseInt(current_stock) !== old.current_stock;
+    const hasExplicitHistory = Boolean(req.body.history_action || (req.body.action && req.body.action !== 'Manual Edit'));
+
+    if (isStockChanged || hasExplicitHistory) {
       const sareeId = old.beams?.saree_id;
-      const historyAction = req.body.action || 'Manual Edit';
+
       await supabase.from('stock_history').insert({
         saree_id: sareeId,
         combination_id: comboId,
         beam_name: old.beams?.beam_name,
         combination_name: old.combination_name || 'Combination',
         old_stock: old.current_stock,
-        new_stock: parseInt(current_stock),
-        action: historyAction,
-        reason: req.body.reason || 'Updated via edit page',
+        new_stock: current_stock !== undefined ? parseInt(current_stock) : old.current_stock,
+        action: historyAction === 'Stock' || historyAction === 'Increase' ? 'Increase' : (historyAction === 'Stock Delivery' || historyAction === 'Decrease' ? 'Decrease' : 'Manual Edit'),
+        reason: JSON.stringify({
+          sari_number: old.beams?.sarees?.series_code || 'UNKNOWN',
+          beam_name: old.beams?.beam_name || 'UNKNOWN',
+          combination_name: old.combination_name || 'Combination',
+          action: historyAction,
+          action_detail: historyAction,
+          opening_stock: old.current_stock,
+          quantity_changed: (historyAction === 'Stock Delivery' || historyAction === 'Decrease')
+            ? -(req.body.quantity !== undefined ? parseInt(req.body.quantity) : Math.abs((current_stock !== undefined ? parseInt(current_stock) : old.current_stock) - old.current_stock))
+            : (req.body.quantity !== undefined ? parseInt(req.body.quantity) : Math.abs((current_stock !== undefined ? parseInt(current_stock) : old.current_stock) - old.current_stock)),
+          closing_stock: current_stock !== undefined ? parseInt(current_stock) : old.current_stock,
+          reason_category: historyAction,
+          remarks: req.body.reason || '',
+          user_name: req.user.full_name || req.user.username || 'System'
+        }),
         changed_by: req.user.id,
         changed_by_name: req.user.full_name,
         owner_id: req.user.owner_id

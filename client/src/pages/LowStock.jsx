@@ -152,6 +152,28 @@ const LowStock = () => {
                     <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                       {item.beam ? `${item.beam.beam_name} · ` : ''}{item.combo?.combination_name || item.saree.sari_name || 'Unnamed'}
                     </Typography>
+
+                    {/* Saree Combination Colors */}
+                    {item.combo?.combination_colors && item.combo.combination_colors.length > 0 && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.6, mt: 1 }}>
+                        {item.combo.combination_colors.map((col, cIdx) => (
+                          <Chip
+                            key={col.id || cIdx}
+                            label={`${col.f_number || `F-${cIdx + 1}`}: ${col.color_name}${col.company_name ? ` (${col.company_name})` : ''}`}
+                            size="small"
+                            sx={{
+                              height: 22,
+                              fontSize: '0.7rem',
+                              fontWeight: 700,
+                              bgcolor: 'rgba(59, 130, 246, 0.08)',
+                              color: '#1E40AF',
+                              border: '1px solid rgba(59, 130, 246, 0.2)',
+                              borderRadius: '6px'
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    )}
                   </Box>
                 </Box>
 

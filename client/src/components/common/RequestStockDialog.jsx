@@ -22,8 +22,11 @@ const buildWhatsAppMessage = ({ brand, movementType, seriesCode, beamName, color
     ? (beamName.trim().endsWith(':') ? beamName.trim() : `${beamName.trim()}:`)
     : 'Beam:';
   lines.push(beamHeader);
-  const isStockIn = movementType === 'STOCK_IN';
-  const statusLabel = isStockIn ? '( IN STOCK )' : '( DELIVERY )';
+
+  let statusLabel = '( IN STOCK )';
+  if (movementType === 'DELIVERY') statusLabel = '( MACHINE DELIVERY )';
+  else if (movementType === 'STOCK_DELIVERY' || movementType === 'DELIVERY_OUT') statusLabel = '( STOCK DELIVERY )';
+
   if (seriesCode) lines.push(`${seriesCode} ${statusLabel}`);
   else lines.push(statusLabel);
   (colors || []).forEach(c => {
@@ -38,7 +41,7 @@ const buildWhatsAppMessage = ({ brand, movementType, seriesCode, beamName, color
 
 const RequestStockDialog = ({
   open, onClose, combination, beamName, seriesCode, sareeId, onSuccess,
-  initialMovementType = 'STOCK_IN'
+  initialMovementType = 'STOCK'
 }) => {
   const [movementType, setMovementType] = useState(initialMovementType);
   const [requestedQty, setRequestedQty] = useState(100);
@@ -57,14 +60,25 @@ const RequestStockDialog = ({
   }, [open, initialMovementType]);
 
   const currentStock = combination?.current_stock ?? 0;
-  const isDelivery = movementType === 'DELIVERY_OUT';
-  const isLowStock = currentStock <= (combination?.minimum_stock ?? 20);
-  const newStock = isDelivery
-    ? Math.max(0, currentStock - requestedQty)
-    : currentStock + requestedQty;
+  const isStock = movementType === 'STOCK' || movementType === 'STOCK_IN';
+  const isMachineDelivery = movementType === 'DELIVERY';
+  const isStockDelivery = movementType === 'STOCK_DELIVERY' || movementType === 'DELIVERY_OUT';
 
-  const validationError = isDelivery && requestedQty > currentStock
-    ? 'Delivery quantity cannot exceed available stock.'
+  const isLowStock = currentStock <= (combination?.minimum_stock ?? 20);
+
+  const qtyVal = typeof requestedQty === 'number' ? requestedQty : (parseInt(requestedQty, 10) || 0);
+
+  let newStock = currentStock;
+  if (isStock) {
+    newStock = currentStock + qtyVal;
+  } else if (isStockDelivery) {
+    newStock = Math.max(0, currentStock - qtyVal);
+  } else if (isMachineDelivery) {
+    newStock = currentStock; // Inventory must NOT change
+  }
+
+  const validationError = isStockDelivery && qtyVal > currentStock
+    ? `Only ${currentStock} pieces are available in stock.`
     : '';
 
   const message = buildWhatsAppMessage({
@@ -73,7 +87,7 @@ const RequestStockDialog = ({
     seriesCode,
     beamName,
     colors: combination?.combination_colors,
-    requestedQty,
+    requestedQty: qtyVal,
   });
 
   const openWhatsApp = () => {
@@ -85,14 +99,28 @@ const RequestStockDialog = ({
     setSaving(true);
     setError('');
     try {
+      let dbAction = 'Increase';
+      let reasonText = `Stock In via WhatsApp (+${qtyVal} pcs)`;
+      let historyAction = 'Stock';
+
+      if (isMachineDelivery) {
+        dbAction = 'No Change';
+        reasonText = `Machine Delivery via WhatsApp (${qtyVal} pcs)`;
+        historyAction = 'Delivery';
+      } else if (isStockDelivery) {
+        dbAction = 'Decrease';
+        reasonText = `Stock Delivered via WhatsApp (-${qtyVal} pcs)`;
+        historyAction = 'Stock Delivery';
+      }
+
       // 1. Update actual stock in database
       if (combination?.id) {
         await combinationAPI.update(combination.id, {
           current_stock: newStock,
-          action: isDelivery ? 'Decrease' : 'Increase',
-          reason: isDelivery
-            ? `Delivery Out via WhatsApp (${requestedQty} pcs)`
-            : `Stock In via WhatsApp (${requestedQty} pcs)`,
+          action: dbAction,
+          reason: reasonText,
+          history_action: historyAction,
+          quantity: qtyVal
         });
       }
 
@@ -116,9 +144,11 @@ const RequestStockDialog = ({
       // 3. Open WhatsApp
       openWhatsApp();
       setSent(true);
-      setSnack(isDelivery
-        ? `✓ Delivery Out: ${requestedQty} pcs recorded. WhatsApp opened!`
-        : `✓ Stock In: +${requestedQty} pcs recorded. WhatsApp opened!`
+      setSnack(isMachineDelivery
+        ? `✓ Machine Delivery: ${requestedQty} pcs recorded (Stock unchanged: ${currentStock}).`
+        : isStockDelivery
+        ? `✓ Stock Delivery: -${requestedQty} pcs recorded. Stock is now ${newStock}.`
+        : `✓ Stock Received: +${requestedQty} pcs recorded. Stock is now ${newStock}.`
       );
       if (onSuccess) onSuccess();
     } catch (e) {
@@ -140,7 +170,7 @@ const RequestStockDialog = ({
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Box sx={{
               width: 40, height: 40, borderRadius: '50%',
-              bgcolor: '#25D366',
+              bgcolor: isStock ? '#25D366' : isMachineDelivery ? '#2563EB' : '#F59E0B',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'background-color 0.2s'
             }}>
@@ -162,46 +192,75 @@ const RequestStockDialog = ({
           <Box sx={{ display: 'flex', height: { xs: 'auto', md: 480 }, flexDirection: { xs: 'column', md: 'row' } }}>
 
             {/* ── Left panel ── */}
-            <Box sx={{ width: { xs: '100%', md: 280 }, borderRight: '1px solid', borderColor: 'divider', p: 2.5, overflowY: 'auto' }}>
+            <Box sx={{ width: { xs: '100%', md: 320 }, borderRight: '1px solid', borderColor: 'divider', p: 2.5, overflowY: 'auto' }}>
 
-              {/* Movement Type */}
-              <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem', display: 'block', mb: 0.5 }}>
-                Movement Type
+              {/* Movement Type (3 Actions) */}
+              <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem', display: 'block', mb: 0.75 }}>
+                MOVEMENT TYPE
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2.5 }}>
                 <Button
-                  variant={movementType === 'STOCK_IN' ? 'contained' : 'outlined'}
-                  color="success" fullWidth size="small"
-                  onClick={() => setMovementType('STOCK_IN')}
-                  sx={{ py: 0.8, fontWeight: 700 }}
+                  variant={isStock ? 'contained' : 'outlined'}
+                  onClick={() => setMovementType('STOCK')}
+                  sx={{
+                    py: 1, fontWeight: 800, fontSize: '0.8rem', justifyContent: 'flex-start',
+                    bgcolor: isStock ? '#25D366' : 'transparent',
+                    borderColor: '#25D366', color: isStock ? '#fff' : '#16A34A',
+                    '&:hover': { bgcolor: isStock ? '#1ebe57' : 'rgba(37,211,102,0.08)' }
+                  }}
                 >
-                  Stock In
+                  🟢 &nbsp; Stock (Received)
                 </Button>
                 <Button
-                  variant={movementType === 'DELIVERY_OUT' ? 'contained' : 'outlined'}
-                  color="warning" fullWidth size="small"
-                  onClick={() => setMovementType('DELIVERY_OUT')}
-                  sx={{ py: 0.8, fontWeight: 700 }}
+                  variant={isMachineDelivery ? 'contained' : 'outlined'}
+                  onClick={() => setMovementType('DELIVERY')}
+                  sx={{
+                    py: 1, fontWeight: 800, fontSize: '0.8rem', justifyContent: 'flex-start',
+                    bgcolor: isMachineDelivery ? '#2563EB' : 'transparent',
+                    borderColor: '#2563EB', color: isMachineDelivery ? '#fff' : '#2563EB',
+                    '&:hover': { bgcolor: isMachineDelivery ? '#1d4ed8' : 'rgba(37,99,235,0.08)' }
+                  }}
                 >
-                  Delivery Out
+                  🔵 &nbsp; Delivery (Machine)
+                </Button>
+                <Button
+                  variant={isStockDelivery ? 'contained' : 'outlined'}
+                  onClick={() => setMovementType('STOCK_DELIVERY')}
+                  sx={{
+                    py: 1, fontWeight: 800, fontSize: '0.8rem', justifyContent: 'flex-start',
+                    bgcolor: isStockDelivery ? '#F59E0B' : 'transparent',
+                    borderColor: '#F59E0B', color: isStockDelivery ? '#fff' : '#D97706',
+                    '&:hover': { bgcolor: isStockDelivery ? '#d97706' : 'rgba(245,158,11,0.08)' }
+                  }}
+                >
+                  🟠 &nbsp; Stock Delivery (Customer)
                 </Button>
               </Box>
 
               {/* Stock Info */}
-              <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>Stock Info</Typography>
+              <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>STOCK INFO</Typography>
               <Box sx={{ display: 'flex', gap: 1, mt: 0.5, mb: 2, flexWrap: 'wrap' }}>
                 <Chip label={`Current: ${currentStock} pcs`} color={isLowStock ? 'error' : 'success'} size="small" sx={{ fontWeight: 700 }} />
                 <Chip label={`Min: ${combination?.minimum_stock ?? 20} pcs`} variant="outlined" size="small" />
                 <Chip
-                  label={isDelivery ? `After: ${newStock} pcs` : `After: +${requestedQty} → ${newStock} pcs`}
-                  variant="outlined" color={isDelivery ? 'warning' : 'success'} size="small" sx={{ fontWeight: 700 }}
+                  label={
+                    isStock
+                      ? `After: +${requestedQty} → ${newStock} pcs`
+                      : isMachineDelivery
+                      ? `After: ${newStock} pcs (Unchanged)`
+                      : `After: -${requestedQty} → ${newStock} pcs`
+                  }
+                  variant="outlined"
+                  color={isStock ? 'success' : isMachineDelivery ? 'info' : 'warning'}
+                  size="small"
+                  sx={{ fontWeight: 700 }}
                 />
               </Box>
 
               {/* F-Colors summary */}
               {combination?.combination_colors?.length > 0 && (
                 <>
-                  <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>F-Colors</Typography>
+                  <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>F-COLORS</Typography>
                   <Box sx={{ mt: 0.5, mb: 2, display: 'flex', flexWrap: 'wrap', gap: 0.6 }}>
                     {combination.combination_colors.map(c => (
                       <Chip key={c.id} size="small" variant="outlined"
@@ -216,20 +275,35 @@ const RequestStockDialog = ({
 
               {/* Quantity */}
               <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>
-                {isDelivery ? 'Delivery Quantity' : 'Requested Quantity'}
+                QUANTITY (PCS)
               </Typography>
               <TextField
                 type="number" fullWidth size="small" sx={{ mt: 0.5, mb: 1 }}
                 value={requestedQty}
-                onChange={e => setRequestedQty(Math.max(1, parseInt(e.target.value) || 1))}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setRequestedQty('');
+                  } else {
+                    const parsed = parseInt(val, 10);
+                    setRequestedQty(isNaN(parsed) ? '' : Math.max(0, parsed));
+                  }
+                }}
+                onBlur={() => {
+                  if (requestedQty === '' || requestedQty <= 0) {
+                    setRequestedQty(1);
+                  }
+                }}
                 slotProps={{ htmlInput: { min: 1 } }}
-                label={isDelivery ? 'Delivery Quantity (pcs)' : 'Stock Quantity (pcs)'}
+                label="Quantity (pcs)"
                 error={!!validationError}
                 helperText={validationError}
               />
 
               <Alert severity="info" sx={{ mt: 1.5, fontSize: '0.75rem' }} icon={<WhatsAppIcon fontSize="small" />}>
-                Stock will update immediately. WhatsApp will open to notify your contact.
+                {isMachineDelivery
+                  ? 'Sent to machine. Stock will remain unchanged.'
+                  : 'Stock will update in DB immediately & WhatsApp will open.'}
               </Alert>
             </Box>
 
@@ -237,7 +311,7 @@ const RequestStockDialog = ({
             <Box sx={{ flex: 1, p: 2.5, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                 <Typography variant="overline" sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.65rem' }}>
-                  Message Preview
+                  MESSAGE PREVIEW
                 </Typography>
                 <Tooltip title="Copy message">
                   <IconButton size="small" onClick={handleCopy}><ContentCopyIcon fontSize="small" /></IconButton>
@@ -285,14 +359,14 @@ const RequestStockDialog = ({
             onClick={handleSend}
             sx={{
               minWidth: 240,
-              bgcolor: '#25D366',
-              '&:hover': { bgcolor: '#1ebe57' },
+              bgcolor: isStock ? '#25D366' : isMachineDelivery ? '#2563EB' : '#F59E0B',
+              '&:hover': { bgcolor: isStock ? '#1ebe57' : isMachineDelivery ? '#1d4ed8' : '#d97706' },
               '&.Mui-disabled': { bgcolor: 'action.disabledBackground' }
             }}
           >
             {saving
-              ? (isDelivery ? 'Updating delivery...' : 'Updating stock...')
-              : (isDelivery ? 'Open WhatsApp — Delivery Out' : 'Open WhatsApp — Stock In')
+              ? 'Updating...'
+              : (isStock ? 'Open WhatsApp — Stock In' : isMachineDelivery ? 'Open WhatsApp — Machine Delivery' : 'Open WhatsApp — Stock Delivery')
             }
           </Button>
         </DialogActions>
