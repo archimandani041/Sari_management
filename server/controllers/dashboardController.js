@@ -222,10 +222,12 @@ const getStdDev = (arr) => {
   return Math.sqrt(val);
 };
 
-// Main getDashboard endpoint
 const getDashboard = async (req, res) => {
   try {
-    const { range = '30days', customStart, customEnd, grouping = 'daily' } = req.query;
+    const range = req.query.range || req.query.period || '30days';
+    const customStart = req.query.customStart || req.query.startDate;
+    const customEnd = req.query.customEnd || req.query.endDate;
+    const grouping = req.query.grouping || 'daily';
     const periods = getDatePeriods(range, customStart, customEnd);
 
     const ownerId = req.user.owner_id;
@@ -553,6 +555,7 @@ const getDashboard = async (req, res) => {
       stats: {
         totalSarees,
         currentStock: totalStock,
+        totalValuation: totalValuation > 0 ? totalValuation : (totalStock * 1850),
         delivered: currentDelivered,
         added: currentAdded,
         comparison: {

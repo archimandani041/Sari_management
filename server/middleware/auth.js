@@ -12,6 +12,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'sari_stock_jwt_secret';
  */
 const authenticate = async (req, res, next) => {
   try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database connection not initialized. Please configure Supabase credentials in server/.env.' });
+    }
+
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
