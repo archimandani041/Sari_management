@@ -1,47 +1,63 @@
+/**
+ * Dashboard Component — Redesigned with shadcn/ui & Tailwind CSS
+ * Editorial Luxury Executive Analytics Dashboard
+ * Features:
+ * - High-impact KPI stat cards with trend percentage indicators
+ * - Recharts Stock In vs Stock Out visual telemetry
+ * - Interactive AI Demand Prediction engine with multi-day forecasting
+ * - Real-time inventory status sync via Supabase
+ * - Direct actionable stock replenishment triggers
+ */
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dashboardAPI, sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
 import { useDebouncedCallback } from '../hooks/useDebounce';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Progress } from '../components/ui/progress';
+import { Skeleton } from '../components/ui/skeleton';
 import {
-  Grid, Paper, Box, Typography,
-  Table, TableBody, TableCell, TableContainer, TableRow, TableHead,
-  Button, useTheme, Skeleton, Chip, MenuItem, Select, FormControl,
-  ButtonGroup, Autocomplete, TextField, LinearProgress,
-  List, ListItem, ListItemIcon, ListItemText, Divider, Collapse, IconButton,
-  Tabs, Tab
-} from '@mui/material';
-import {
-  TrendingUp as TrendingUpIcon,
-  WarningAmber as WarningIcon,
-  Checkroom as SareeIcon,
-  GridOn as GridIcon,
-  ShoppingCart as PurchaseIcon,
-  LocalShipping as DeliveryIcon,
-  Schedule as PendingIcon,
-  Bolt as InsightsIcon,
-  Refresh as RefreshIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-  Error as ErrorIcon,
-  ChevronRight as ChevronRightIcon,
-  SwapVert as SwapVertIcon,
-  AutoAwesome as SparklesIcon,
-  ArrowForward as ArrowForwardIcon
-} from '@mui/icons-material';
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from '../components/ui/table';
+import { cn } from '../lib/utils';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   Legend, AreaChart, Area, ReferenceLine
 } from 'recharts';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import RequestStockDialog from '../components/common/RequestStockDialog';
-import StatCard from '../components/common/StatCard';
-import { DashboardSkeleton } from '../components/common/SkeletonLoader';
+import {
+  LayoutDashboard,
+  Shirt,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  AlertCircle,
+  Package,
+  Truck,
+  Clock,
+  RotateCcw,
+  Sparkles,
+  RefreshCw,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  MessageCircle,
+  ArrowRight,
+  CheckCircle2,
+  ExternalLink,
+  Layers,
+  Zap
+} from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isLight = theme.palette.mode === 'light';
 
   // State Management
   const [data, setData] = useState(null);
@@ -161,7 +177,7 @@ const Dashboard = () => {
     }
   }, [selectedSaree, forecastHorizon, fetchPrediction]);
 
-  // Debounced realtime callback to avoid rapid multiple fetches
+  // Debounced realtime callback
   const handleRealtimeUpdate = useDebouncedCallback(() => {
     fetchDashboardData();
     if (selectedSaree?.id) {
@@ -199,25 +215,14 @@ const Dashboard = () => {
     };
   }, [handleRealtimeUpdate]);
 
-  // Frosted surface style (single source of truth — no glass-on-glass nesting inside)
-  const glassCard = {
-    backgroundColor: theme.palette.glass?.bg || 'rgba(255, 255, 255, 0.45)',
-    backdropFilter: theme.palette.glass?.blur || 'blur(16px)',
-    WebkitBackdropFilter: theme.palette.glass?.blur || 'blur(16px)',
-    border: `1px solid ${theme.palette.glass?.border || 'rgba(255, 255, 255, 0.5)'}`,
-    boxShadow: theme.palette.glass?.shadow || '0 8px 32px rgba(29, 29, 29, 0.08)',
-    borderRadius: 4,
-    overflow: 'hidden'
-  };
-
+  // Tooltip theme
   const tooltipStyle = {
-    backgroundColor: isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(30, 27, 22, 0.95)',
-    backdropFilter: 'blur(8px)',
-    border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 12,
-    color: theme.palette.text.primary,
+    backgroundColor: 'hsl(var(--card))',
+    border: '1px solid hsl(var(--border))',
+    borderRadius: '8px',
+    color: 'hsl(var(--foreground))',
     fontSize: 12,
-    boxShadow: '0 8px 32px rgba(0,0,0,0.15)'
+    boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
   };
 
   // KPI Calculations
@@ -234,741 +239,1169 @@ const Dashboard = () => {
   const opportunities = data?.opportunities || [];
   const recentActivity = data?.recentActivity || [];
 
-  // Helper values for Stock Movement Analytics side statistics
   const activeDays = dateRange === 'today' ? 1 : (dateRange === '7days' ? 7 : (dateRange === '30days' ? 30 : (dateRange === '3months' ? 90 : (dateRange === '6months' ? 180 : (dateRange === '12months' ? 365 : 30)))));
   const avgDailyDelivery = Math.round((stats.delivered / activeDays) * 10) / 10;
   const stockTurnover = stats.currentStock > 0 ? Math.round((stats.delivered / stats.currentStock) * 1000) / 10 : 0;
   const stockDemandRatio = avgDailyDelivery > 0 ? Math.round((stats.currentStock / avgDailyDelivery) * 10) / 10 : 999;
 
-  // KpiCard is now StatCard — keeping this alias for any inline uses
-  const KpiCard = (props) => <StatCard {...props} loading={loading && !data} />;
-
-  const statusMeta = {
-    live: { label: 'Live', color: theme.palette.success.main },
-    connecting: { label: 'Syncing', color: theme.palette.warning.main },
-    offline: { label: 'Offline', color: theme.palette.text.disabled },
-    disabled: { label: 'Offline', color: theme.palette.text.disabled }
-  }[realtimeStatus] || { label: 'Offline', color: theme.palette.text.disabled };
-
-  // Full dashboard skeleton on initial load
-  if (loading && !data) {
-    return <DashboardSkeleton />;
-  }
-
   return (
-    <Box sx={{ flexGrow: 1, p: { xs: 1.5, md: 3 }, maxWidth: 1500, mx: 'auto', position: 'relative' }}>
-      {loading && data && (
-        <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, height: 2, borderRadius: 0 }} color="primary" />
-      )}
-
-      {/* HEADER */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, flexWrap: 'wrap', gap: 2, mb: 3 }}>
-        <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography variant="h4" sx={{ fontWeight: 850, letterSpacing: '-0.5px' }}>
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Top Header & Filters */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-border">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
               Dashboard
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1, py: 0.4, borderRadius: 2, bgcolor: 'action.selected' }}>
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: statusMeta.color }} />
-              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>{statusMeta.label}</Typography>
-            </Box>
-          </Box>
-          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, mt: 0.5 }}>
-            Stock health, movement trends, and per-saree demand forecasts.
-          </Typography>
-        </Box>
+            </h1>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted/60 border border-border text-[11px] font-semibold">
+              <span
+                className={cn(
+                  "w-2 h-2 rounded-full",
+                  realtimeStatus === 'live'
+                    ? "bg-emerald-500 animate-pulse"
+                    : realtimeStatus === 'connecting'
+                    ? "bg-amber-500"
+                    : "bg-muted-foreground/50"
+                )}
+              />
+              <span className="capitalize text-muted-foreground">
+                {realtimeStatus}
+              </span>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Enterprise overview of live warehouse inventory, distribution analytics, and AI forecasts.
+          </p>
+        </div>
 
-        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="flex items-center gap-2 flex-wrap">
           {dateRange === 'custom' && (
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <TextField type="date" size="small" value={customDates.start} onChange={(e) => setCustomDates({ ...customDates, start: e.target.value })} sx={{ width: 150 }} />
-              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>to</Typography>
-              <TextField type="date" size="small" value={customDates.end} onChange={(e) => setCustomDates({ ...customDates, end: e.target.value })} sx={{ width: 150 }} />
-            </Box>
+            <div className="flex items-center gap-1.5 text-xs">
+              <input
+                type="date"
+                value={customDates.start}
+                onChange={(e) => setCustomDates({ ...customDates, start: e.target.value })}
+                className="h-9 px-2 rounded-lg border border-input bg-background text-xs"
+              />
+              <span className="text-muted-foreground">to</span>
+              <input
+                type="date"
+                value={customDates.end}
+                onChange={(e) => setCustomDates({ ...customDates, end: e.target.value })}
+                className="h-9 px-2 rounded-lg border border-input bg-background text-xs"
+              />
+            </div>
           )}
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <Select value={dateRange} onChange={(e) => setDateRange(e.target.value)} sx={{ borderRadius: 2.5, fontWeight: 700 }}>
-              <MenuItem value="today">Today</MenuItem>
-              <MenuItem value="7days">Last 7 Days</MenuItem>
-              <MenuItem value="30days">Last 30 Days</MenuItem>
-              <MenuItem value="3months">Last 3 Months</MenuItem>
-              <MenuItem value="6months">Last 6 Months</MenuItem>
-              <MenuItem value="12months">Last 12 Months</MenuItem>
-              <MenuItem value="custom">Custom Range</MenuItem>
-            </Select>
-          </FormControl>
-          <IconButton
+
+          <select
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value)}
+            className="h-9 px-3 rounded-lg border border-input bg-background text-xs font-semibold text-foreground focus:ring-2 focus:ring-ring"
+          >
+            <option value="today">Today</option>
+            <option value="7days">Last 7 Days</option>
+            <option value="30days">Last 30 Days</option>
+            <option value="3months">Last 3 Months</option>
+            <option value="6months">Last 6 Months</option>
+            <option value="12months">Last 12 Months</option>
+            <option value="custom">Custom Range</option>
+          </select>
+
+          <Button
+            variant="outline"
+            size="icon-sm"
             onClick={() => {
               setLoading(true);
               fetchDashboardData();
               if (selectedSaree?.id) fetchPrediction(selectedSaree.id, forecastHorizon);
             }}
-            color="primary"
-            sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 2.5, p: 1 }}
+            title="Refresh Metrics"
+            className="h-9 w-9 text-muted-foreground hover:text-foreground"
           >
-            <RefreshIcon />
-          </IconButton>
-        </Box>
-      </Box>
+            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin text-burgundy-900")} />
+          </Button>
+        </div>
+      </div>
 
-      {/* TABS */}
-      <Tabs
-        value={activeTab}
-        onChange={(e, val) => setActiveTab(val)}
-        sx={{ mb: 3, minHeight: 44, '& .MuiTab-root': { minHeight: 44, fontWeight: 800, fontSize: '0.95rem', textTransform: 'none', gap: 1 } }}
-      >
-        <Tab label="Overview" icon={<GridIcon sx={{ fontSize: '1.15rem' }} />} iconPosition="start" />
-        <Tab label="Prediction" icon={<SparklesIcon sx={{ fontSize: '1.15rem' }} />} iconPosition="start" />
-      </Tabs>
+      {/* Mode Tabs: Overview vs Prediction */}
+      <div className="flex items-center gap-2 border-b border-border/80 pb-px">
+        <button
+          type="button"
+          onClick={() => setActiveTab(0)}
+          className={cn(
+            "flex items-center gap-2 pb-3 px-4 text-sm font-bold border-b-2 transition-all",
+            activeTab === 0
+              ? "border-burgundy-900 text-burgundy-900 dark:border-burgundy-300 dark:text-burgundy-300"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          <span>Operational Overview</span>
+        </button>
 
-      {/* ══════════════════════ TAB 0: OVERVIEW ══════════════════════ */}
+        <button
+          type="button"
+          onClick={() => setActiveTab(1)}
+          className={cn(
+            "flex items-center gap-2 pb-3 px-4 text-sm font-bold border-b-2 transition-all",
+            activeTab === 1
+              ? "border-burgundy-900 text-burgundy-900 dark:border-burgundy-300 dark:text-burgundy-300"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Sparkles className="w-4 h-4 text-amber-500" />
+          <span>AI Demand Forecast</span>
+        </button>
+      </div>
+
+      {/* ══════════════════════ TAB 0: OPERATIONAL OVERVIEW ══════════════════════ */}
       {activeTab === 0 && (
-        <Box>
-          {/* KPI CARDS */}
-          <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <StatCard
-                label="Total Sarees" sublabel="Master catalog items"
-                value={(stats.totalSarees ?? 0).toLocaleString()}
-                icon={<SareeIcon />} tint={theme.palette.primary.main}
-                onClick={() => navigate('/sarees')}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <StatCard
-                label="Current Stock" sublabel="Total physical units"
-                value={(stats.currentStock ?? 0).toLocaleString()} unit="pcs"
-                icon={<GridIcon />} tint='#7C3AED'
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <StatCard
-                label="Delivered Out" sublabel="vs prior period"
-                value={(stats.delivered ?? 0).toLocaleString()} unit="pcs"
-                icon={<DeliveryIcon />} tint={theme.palette.error.main}
-                trendPercent={stats?.comparison?.deliveredPercent ?? 0}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <StatCard
-                label="Stock Added" sublabel="vs prior period"
-                value={(stats.added ?? 0).toLocaleString()} unit="pcs"
-                icon={<PurchaseIcon />} tint={theme.palette.success.main}
-                trendPercent={stats?.comparison?.addedPercent ?? 0}
-              />
-            </Grid>
-          </Grid>
+        <div className="space-y-6">
+          {/* KPI Cards (4 grid) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Total Sarees */}
+            <Card className="border border-border shadow-luxury hover:shadow-luxury-hover transition-all">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Catalog Items
+                  </span>
+                  <div className="p-2 rounded-xl bg-burgundy-900/10 text-burgundy-900 dark:text-burgundy-300">
+                    <Shirt className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="text-3xl font-bold font-mono tracking-tight text-foreground">
+                    {(stats.totalSarees ?? 0).toLocaleString()}
+                  </span>
+                </div>
+                <span className="text-[11px] text-muted-foreground mt-1 block">
+                  Master saree designs registered
+                </span>
+              </CardContent>
+            </Card>
 
-          {/* ALERT & ROLLBACK STRIP */}
-          <Paper sx={{ py: 1.5, px: 2.5, mb: 2.5, border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', borderRadius: '8px' }} elevation={0}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, flexWrap: 'wrap' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/low-stock')}>
-                  <Box sx={{ bgcolor: 'rgba(245,158,11,0.12)', p: 0.6, borderRadius: '5px', display: 'flex' }}><WarningIcon color="warning" sx={{ fontSize: 16 }} /></Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Low Stock <Box component="span" sx={{ color: 'warning.main', fontWeight: 800 }}>{stats.lowStock}</Box></Typography>
-                </Box>
-                <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/sarees?status=out')}>
-                  <Box sx={{ bgcolor: 'rgba(239,68,68,0.1)', p: 0.6, borderRadius: '5px', display: 'flex' }}><ErrorIcon color="error" sx={{ fontSize: 16 }} /></Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Out of Stock <Box component="span" sx={{ color: 'error.main', fontWeight: 800 }}>{stats.outOfStock}</Box></Typography>
-                </Box>
-                <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/stock-requests')}>
-                  <Box sx={{ bgcolor: 'rgba(56,189,248,0.12)', p: 0.6, borderRadius: '5px', display: 'flex' }}><PendingIcon color="info" sx={{ fontSize: 16 }} /></Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>Pending <Box component="span" sx={{ color: 'info.main', fontWeight: 800 }}>{stats.pendingRequests}</Box></Typography>
-                </Box>
-                <Box sx={{ width: 1, height: 16, bgcolor: 'divider' }} />
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', '&:hover': { opacity: 0.75 } }} onClick={() => navigate('/stock-history?action=Rollback')}>
-                  <Box sx={{ bgcolor: 'rgba(168,85,247,0.12)', p: 0.6, borderRadius: '5px', display: 'flex' }}><SwapVertIcon sx={{ color: '#A855F7', fontSize: 16 }} /></Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>
-                    Today's Rollbacks <Box component="span" sx={{ color: '#A855F7', fontWeight: 800 }}>{stats.todayRollbacks || 0}</Box>
-                    <Box component="span" sx={{ color: 'text.secondary', ml: 0.75, fontSize: '0.72rem' }}>(Total: {stats.totalRollbacks || 0})</Box>
-                  </Typography>
-                </Box>
-              </Box>
-              <Button variant="contained" size="small" onClick={() => navigate('/stock-requests')}
-                sx={{ borderRadius: '6px', fontWeight: 700, fontSize: '0.75rem', whiteSpace: 'nowrap', bgcolor: '#3B111A', '&:hover': { bgcolor: '#2A0B12' } }}>
-                Create Purchase Order
-              </Button>
-            </Box>
-            {stats.lastRollback && (
-              <Box sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="caption" sx={{ fontWeight: 800, color: '#A855F7', letterSpacing: '0.04em' }}>LAST ROLLBACK:</Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                  {stats.lastRollback.series_code} · {stats.lastRollback.combination_name} by <b>{stats.lastRollback.user_name}</b> ({new Date(stats.lastRollback.timestamp).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}) — <i>"{stats.lastRollback.reason}"</i>
-                </Typography>
-              </Box>
-            )}
-          </Paper>
+            {/* Current Stock */}
+            <Card className="border border-border shadow-luxury hover:shadow-luxury-hover transition-all">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Available Stock
+                  </span>
+                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600">
+                    <Package className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="text-3xl font-bold font-mono tracking-tight text-foreground">
+                    {(stats.currentStock ?? 0).toLocaleString()}
+                  </span>
+                  <span className="text-xs text-muted-foreground font-semibold">pcs</span>
+                </div>
+                <span className="text-[11px] text-muted-foreground mt-1 block">
+                  Physical warehouse volume
+                </span>
+              </CardContent>
+            </Card>
 
-          {/* STOCK MOVEMENT + HEALTH ANALYTICS */}
-          <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
-            <Grid size={{ xs: 12, md: 8 }}>
-              <Paper sx={{ p: 3, height: 400 }} elevation={0}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-                  <Box>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'text.primary' }}>Stock In vs Delivered Out</Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>Movement trend for selected period</Typography>
-                  </Box>
-                  <ButtonGroup size="small" variant="outlined" color="primary">
-                    <Button variant={grouping === 'daily' ? 'contained' : 'outlined'} onClick={() => setGrouping('daily')}>Daily</Button>
-                    <Button variant={grouping === 'weekly' ? 'contained' : 'outlined'} onClick={() => setGrouping('weekly')}>Weekly</Button>
-                    <Button variant={grouping === 'monthly' ? 'contained' : 'outlined'} onClick={() => setGrouping('monthly')}>Monthly</Button>
-                  </ButtonGroup>
-                </Box>
-                {stockMovement.length === 0 ? (
-                  <Box sx={{ height: '75%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                    <GridIcon sx={{ fontSize: '2rem', color: 'text.disabled' }} />
-                    <Typography color="text.secondary" sx={{ fontWeight: 600, fontSize: '0.88rem' }}>No movement data for this period</Typography>
-                    <Typography variant="caption" color="text.disabled">Try expanding the date range</Typography>
-                  </Box>
-                ) : (
-                  <ResponsiveContainer width="100%" height="82%">
-                    <BarChart data={stockMovement} barGap={4} barCategoryGap="32%">
-                      <CartesianGrid strokeDasharray="2 4" vertical={false} stroke={theme.palette.divider} />
-                      <XAxis dataKey="label" stroke={theme.palette.text.disabled} fontSize={10} tickLine={false} axisLine={false} />
-                      <YAxis stroke={theme.palette.text.disabled} fontSize={10} tickLine={false} axisLine={false} />
-                      <RechartsTooltip contentStyle={tooltipStyle} cursor={{ fill: isLight ? 'rgba(59,17,26,0.03)' : 'rgba(255,255,255,0.03)' }} />
-                      <Legend verticalAlign="top" height={36} iconType="circle" iconSize={8} />
-                      <Bar dataKey="stockAdded" name="Stock In" fill="#16A34A" radius={[4, 4, 0, 0]} maxBarSize={32} />
-                      <Bar dataKey="stockDelivered" name="Delivered Out" fill="#DC2626" radius={[4, 4, 0, 0]} maxBarSize={32} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </Paper>
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Paper sx={{ ...glassCard, p: 3, height: 400, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }} elevation={0}>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>Health Analytics</Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 3, fontWeight: 600 }}>
-                    Aggregated warehouse transaction metrics
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.5px' }}>Turnover Rate</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.72rem', fontWeight: 500 }}>% of stock delivered</Typography>
-                      </Box>
-                      <Typography variant="h5" sx={{ fontWeight: 900, color: 'primary.main' }}>{stockTurnover}%</Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.5px' }}>Daily Outflow</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.72rem', fontWeight: 500 }}>Avg volume shipped daily</Typography>
-                      </Box>
-                      <Typography variant="h5" sx={{ fontWeight: 900 }}>{avgDailyDelivery} <Box component="span" sx={{ fontSize: '0.85rem', fontWeight: 600 }}>pcs</Box></Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.5px' }}>Stock Cover</Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.72rem', fontWeight: 500 }}>Supply remaining duration</Typography>
-                      </Box>
-                      <Typography variant="h5" sx={{ fontWeight: 900, color: stockDemandRatio < 15 ? 'warning.main' : 'success.main' }}>
-                        {stockDemandRatio === 999 ? '∞' : `${stockDemandRatio}d`}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Box>
-                <Button variant="outlined" size="small" fullWidth endIcon={<ArrowForwardIcon />} onClick={() => navigate('/history')} sx={{ borderRadius: 2, py: 1, fontWeight: 700 }}>
-                  View Full Audit History
-                </Button>
-              </Paper>
-            </Grid>
-          </Grid>
-
-          {/* AI DEMAND PREDICTION BANNER — dark maroon matching image */}
-          {selectedSaree && (
-            <Box sx={{
-              bgcolor: '#3B111A', borderRadius: '8px', px: 3, py: 2, mb: 2.5,
-              display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer',
-              '&:hover': { bgcolor: '#2A0B12' }, transition: 'background 0.2s'
-            }} onClick={() => setActiveTab(1)}>
-              <SparklesIcon sx={{ color: '#F0C98A', fontSize: 20 }} />
-              <Typography sx={{ color: '#F0C98A', fontWeight: 700, fontSize: '0.9rem' }}>
-                AI Demand Prediction{selectedSaree?.series_code ? `: ${selectedSaree.series_code} — ${selectedSaree.sari_name || ''}` : ''}
-              </Typography>
-              <Box sx={{ ml: 'auto' }}>
-                <ArrowForwardIcon sx={{ color: 'rgba(240,201,138,0.7)', fontSize: 18 }} />
-              </Box>
-            </Box>
-          )}
-          {/* AI INVENTORY BRIEF */}
-          {aiBrief.length > 0 && (
-            <Paper sx={{ p: 2.5, mb: 2.5, border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', borderRadius: '8px' }} elevation={0}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                <SparklesIcon color="primary" sx={{ fontSize: 18 }} />
-                <Typography sx={{ fontWeight: 700, fontSize: '0.88rem' }}>AI Inventory Brief</Typography>
-              </Box>
-              <Grid container spacing={1.5}>
-                {aiBrief.map((brief) => (
-                  <Grid size={{ xs: 12, md: 6 }} key={brief.id}>
-                    <Box sx={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, p: 2, borderRadius: '6px',
-                      border: `1px solid ${theme.palette.divider}`,
-                      borderLeft: `3px solid ${brief.severity === 'warning' ? theme.palette.warning.main : brief.severity === 'success' ? theme.palette.success.main : theme.palette.primary.main}`,
-                    }}>
-                      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                        {brief.severity === 'warning' ? <WarningIcon color="warning" fontSize="small" /> : brief.severity === 'success' ? <TrendingUpIcon color="success" fontSize="small" /> : <InsightsIcon color="info" fontSize="small" />}
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 700 }}>{brief.title}</Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>{brief.explanation}</Typography>
-                        </Box>
-                      </Box>
-                      {brief.action && brief.route && (
-                        <Button variant="text" color={brief.severity === 'warning' ? 'warning' : 'primary'} size="small" onClick={() => navigate(brief.route)} sx={{ flexShrink: 0, fontWeight: 700, fontSize: '0.72rem' }}>
-                          {brief.action}
-                        </Button>
+            {/* Delivery Out */}
+            <Card className="border border-border shadow-luxury hover:shadow-luxury-hover transition-all">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Dispatched Out
+                  </span>
+                  <div className="p-2 rounded-xl bg-destructive/10 text-destructive">
+                    <Truck className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="text-3xl font-bold font-mono tracking-tight text-foreground">
+                    {(stats.delivered ?? 0).toLocaleString()}
+                  </span>
+                  <span className="text-xs text-muted-foreground font-semibold">pcs</span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-1">
+                  {typeof stats?.comparison?.deliveredPercent === 'number' && (
+                    <span
+                      className={cn(
+                        "text-[10px] font-bold px-1.5 py-0.5 rounded-sm flex items-center gap-0.5",
+                        stats.comparison.deliveredPercent >= 0
+                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                          : "bg-destructive/10 text-destructive"
                       )}
-                    </Box>
-                  </Grid>
-                ))}
-              </Grid>
-            </Paper>
+                    >
+                      {stats.comparison.deliveredPercent >= 0 ? '+' : ''}
+                      {stats.comparison.deliveredPercent}%
+                    </span>
+                  )}
+                  <span className="text-[11px] text-muted-foreground">vs prior range</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Stock In */}
+            <Card className="border border-border shadow-luxury hover:shadow-luxury-hover transition-all">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Replenished In
+                  </span>
+                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="text-3xl font-bold font-mono tracking-tight text-foreground">
+                    {(stats.added ?? 0).toLocaleString()}
+                  </span>
+                  <span className="text-xs text-muted-foreground font-semibold">pcs</span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-1">
+                  {typeof stats?.comparison?.addedPercent === 'number' && (
+                    <span
+                      className={cn(
+                        "text-[10px] font-bold px-1.5 py-0.5 rounded-sm flex items-center gap-0.5",
+                        stats.comparison.addedPercent >= 0
+                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                          : "bg-destructive/10 text-destructive"
+                      )}
+                    >
+                      {stats.comparison.addedPercent >= 0 ? '+' : ''}
+                      {stats.comparison.addedPercent}%
+                    </span>
+                  )}
+                  <span className="text-[11px] text-muted-foreground">vs prior range</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Alert and Status Bar Strip */}
+          <Card className="border border-border shadow-xs bg-card">
+            <CardContent className="p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-center gap-4 flex-wrap text-xs">
+                {/* Low Stock pill */}
+                <button
+                  type="button"
+                  onClick={() => navigate('/low-stock')}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                >
+                  <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-600">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-muted-foreground">
+                    Low Stock: <strong className="text-amber-600 font-bold">{stats.lowStock}</strong>
+                  </span>
+                </button>
+
+                <div className="h-4 w-px bg-border hidden sm:block" />
+
+                {/* Out of stock */}
+                <button
+                  type="button"
+                  onClick={() => navigate('/sarees?status=out')}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                >
+                  <div className="p-1.5 rounded-md bg-destructive/10 text-destructive">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-muted-foreground">
+                    Depleted: <strong className="text-destructive font-bold">{stats.outOfStock}</strong>
+                  </span>
+                </button>
+
+                <div className="h-4 w-px bg-border hidden sm:block" />
+
+                {/* Pending requests */}
+                <button
+                  type="button"
+                  onClick={() => navigate('/stock-requests')}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                >
+                  <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-600">
+                    <Clock className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-muted-foreground">
+                    Pending Orders: <strong className="text-blue-600 font-bold">{stats.pendingRequests}</strong>
+                  </span>
+                </button>
+
+                <div className="h-4 w-px bg-border hidden sm:block" />
+
+                {/* Rollbacks */}
+                <button
+                  type="button"
+                  onClick={() => navigate('/history?action=Rollback')}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                >
+                  <div className="p-1.5 rounded-md bg-purple-500/10 text-purple-600">
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-muted-foreground">
+                    Rollbacks Today: <strong className="text-purple-600 font-bold">{stats.todayRollbacks || 0}</strong>
+                  </span>
+                </button>
+              </div>
+
+              <Button
+                variant="luxury"
+                size="sm"
+                onClick={() => navigate('/stock-requests')}
+                className="text-xs font-bold h-8 px-3 shadow-xs shrink-0"
+              >
+                + New Stock Request
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Charts Row: Stock Movement & Health Analytics */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Main Bar Chart */}
+            <Card className="lg:col-span-8 border border-border shadow-luxury">
+              <CardHeader className="p-5 pb-2 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Inventory Flow Telemetry</CardTitle>
+                  <CardDescription className="text-xs">
+                    Comparative timeline of additions vs customer dispatches
+                  </CardDescription>
+                </div>
+
+                <div className="flex items-center rounded-lg border border-border p-0.5 bg-muted/30">
+                  {['daily', 'weekly', 'monthly'].map((grp) => (
+                    <button
+                      key={grp}
+                      type="button"
+                      onClick={() => setGrouping(grp)}
+                      className={cn(
+                        "px-2.5 py-1 text-[11px] font-bold rounded-md capitalize transition-colors",
+                        grouping === grp
+                          ? "bg-card text-foreground shadow-xs"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {grp}
+                    </button>
+                  ))}
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-5 pt-2">
+                {stockMovement.length === 0 ? (
+                  <div className="h-72 flex items-center justify-center text-xs text-muted-foreground">
+                    No movement records registered for this interval.
+                  </div>
+                ) : (
+                  <div className="h-72 w-full pt-2">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={stockMovement} barGap={2} barCategoryGap="30%">
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                        <XAxis
+                          dataKey="label"
+                          stroke="hsl(var(--muted-foreground))"
+                          fontSize={11}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          stroke="hsl(var(--muted-foreground))"
+                          fontSize={11}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <RechartsTooltip contentStyle={tooltipStyle} />
+                        <Legend verticalAlign="top" height={32} iconType="circle" />
+                        <Bar
+                          dataKey="stockAdded"
+                          name="Stock In"
+                          fill="#22C55E"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="stockDelivered"
+                          name="Dispatched"
+                          fill="#EF4444"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Health Analytics Card */}
+            <Card className="lg:col-span-4 border border-border shadow-luxury flex flex-col justify-between">
+              <CardHeader className="p-5 pb-2">
+                <CardTitle className="text-base">Efficiency & Run-Rate</CardTitle>
+                <CardDescription className="text-xs">
+                  Inventory turnover velocity & safety runway
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="p-5 space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                      Turnover Velocity
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      % stock cleared in period
+                    </span>
+                  </div>
+                  <span className="font-mono text-2xl font-bold text-burgundy-900 dark:text-burgundy-300">
+                    {stockTurnover}%
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                      Average Outflow
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Mean daily pieces dispatched
+                    </span>
+                  </div>
+                  <span className="font-mono text-2xl font-bold text-foreground">
+                    {avgDailyDelivery} <span className="text-xs font-normal">pcs</span>
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                      Stock Runway
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Duration until depletion
+                    </span>
+                  </div>
+                  <span
+                    className={cn(
+                      "font-mono text-2xl font-bold",
+                      stockDemandRatio < 15 ? "text-amber-600" : "text-emerald-600 dark:text-emerald-400"
+                    )}
+                  >
+                    {stockDemandRatio === 999 ? '∞' : `${stockDemandRatio}d`}
+                  </span>
+                </div>
+
+                <Button
+                  variant="outline"
+                  className="w-full text-xs font-bold h-9 mt-4"
+                  onClick={() => navigate('/history')}
+                >
+                  Inspect Full Audit Ledger
+                  <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* AI Banner Shortcut to Prediction Tab */}
+          {selectedSaree && (
+            <div
+              onClick={() => setActiveTab(1)}
+              className="flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-800 text-white shadow-luxury cursor-pointer hover:shadow-luxury-hover transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs uppercase tracking-widest text-amber-200 font-bold block">
+                    Predictive Intelligence Available
+                  </span>
+                  <span className="text-sm font-semibold text-white group-hover:underline">
+                    Analyze future run-rates for {selectedSaree.series_code} ({selectedSaree.sari_name || 'Design'}) &rarr;
+                  </span>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-amber-200 group-hover:translate-x-1 transition-transform" />
+            </div>
           )}
 
-          {/* NEEDS ATTENTION + OPPORTUNITIES */}
-          <Grid container spacing={2.5} sx={{ mb: 2.5 }}>
+          {/* Needs Attention vs Opportunities */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Needs Attention */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Paper sx={{ p: 2.5, border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', borderRadius: '8px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 300 }} elevation={0}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: 'error.main' }}>Needs Attention</Typography>
-                  <Button size="small" variant="text" onClick={() => navigate('/low-stock')} sx={{ fontSize: '0.72rem', fontWeight: 700, color: 'text.secondary' }}>View All</Button>
-                </Box>
+            <Card className="border border-border shadow-luxury">
+              <CardHeader className="p-5 pb-2 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-base text-destructive flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    Needs Attention
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Depleted combinations requiring replenishment
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/low-stock')}
+                  className="text-xs font-bold"
+                >
+                  View All
+                </Button>
+              </CardHeader>
+
+              <CardContent className="p-5 pt-3 space-y-2.5">
                 {needsAttention.length === 0 ? (
-                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
-                    <Typography variant="body2" color="text.secondary">Nothing needs attention right now.</Typography>
-                  </Box>
+                  <div className="py-8 text-center text-xs text-muted-foreground">
+                    Zero items currently require emergency replenishment.
+                  </div>
                 ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, flexGrow: 1 }}>
-                    {needsAttention.map((item) => (
-                      <Box key={item.id} sx={{
-                        display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5,
-                        border: `1px solid ${theme.palette.divider}`, borderRadius: '6px',
-                        bgcolor: 'background.paper',
-                        '&:hover': { borderColor: theme.palette.primary.light }
-                      }}>
-                        {/* Thumbnail */}
+                  needsAttention.slice(0, 5).map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/80 bg-muted/20 hover:border-destructive/40 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
                         {item.image_url ? (
-                          <Box sx={{
-                            width: 44, height: 44, borderRadius: '6px', flexShrink: 0, overflow: 'hidden'
-                          }}>
-                            <Box
-                              component="img"
-                              src={item.image_url}
-                              alt={item.name}
-                              loading="lazy"
-                              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                            />
-                          </Box>
+                          <img
+                            src={item.image_url}
+                            alt=""
+                            className="w-10 h-10 rounded-lg object-cover border border-border shrink-0"
+                          />
                         ) : (
-                          <Box sx={{
-                            width: 44, height: 44, borderRadius: '6px', flexShrink: 0,
-                            bgcolor: 'rgba(59,17,26,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '1.2rem'
-                          }}>🧵</Box>
+                          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-xs shrink-0">
+                            🧵
+                          </div>
                         )}
-                        {/* Info */}
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.82rem' }} noWrap>{item.name}</Typography>
-                            <Chip label={item.type} color={item.severity === 'error' ? 'error' : 'warning'} size="small"
-                              sx={{ height: 16, fontSize: '0.58rem', fontWeight: 800, borderRadius: '3px' }} />
-                          </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>{item.detail}</Typography>
-                        </Box>
-                        {/* Actions */}
-                        <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
-                          <Button size="small" variant="outlined"
-                            onClick={() => {
-                              const code = item.name?.split(' - ')[0];
-                              navigate(`/sarees?search=${encodeURIComponent(code || '')}&expandSareeId=${item.sareeId}&highlightComboId=${item.id}`);
-                            }}
-                            sx={{ fontSize: '0.68rem', fontWeight: 700, borderRadius: '4px', px: 1, py: 0.4, minWidth: 0 }}>View</Button>
-                          <Button size="small" variant="contained" color="success"
-                            startIcon={<WhatsAppIcon sx={{ fontSize: '13px !important' }} />}
-                            onClick={() => handleActionableRequestStock(item)}
-                            sx={{ fontSize: '0.68rem', fontWeight: 700, borderRadius: '4px', px: 1, py: 0.4, minWidth: 0 }}>Stock</Button>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-foreground truncate">
+                              {item.name}
+                            </span>
+                            <Badge variant="danger" className="text-[9px] px-1.5 py-0">
+                              {item.type}
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                            {item.detail}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const code = item.name?.split(' - ')[0];
+                            navigate(`/sarees?search=${encodeURIComponent(code || '')}&expandSareeId=${item.sareeId}&highlightComboId=${item.id}`);
+                          }}
+                          className="h-7 px-2 text-[11px] font-bold"
+                        >
+                          View
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleActionableRequestStock(item)}
+                          className="h-7 px-2 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                        >
+                          <MessageCircle className="w-3 h-3 mr-1" />
+                          Stock
+                        </Button>
+                      </div>
+                    </div>
+                  ))
                 )}
-              </Paper>
-            </Grid>
+              </CardContent>
+            </Card>
 
             {/* Opportunities */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Paper sx={{ p: 2.5, border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', borderRadius: '8px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 300 }} elevation={0}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', color: 'success.main' }}>Opportunities</Typography>
-                  <Button size="small" variant="text" onClick={() => navigate('/sarees')} sx={{ fontSize: '0.72rem', fontWeight: 700, color: 'text.secondary' }}>View All</Button>
-                </Box>
+            <Card className="border border-border shadow-luxury">
+              <CardHeader className="p-5 pb-2 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-base text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                    <Zap className="w-4 h-4" />
+                    Demand Opportunities
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Fast-moving sarees trending with buyers
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/sarees')}
+                  className="text-xs font-bold"
+                >
+                  View Catalog
+                </Button>
+              </CardHeader>
+
+              <CardContent className="p-5 pt-3 space-y-2.5">
                 {opportunities.length === 0 ? (
-                  <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', py: 4 }}>
-                    <Typography variant="body2" color="text.secondary">No opportunities in this range.</Typography>
-                  </Box>
+                  <div className="py-8 text-center text-xs text-muted-foreground">
+                    No velocity surges detected in current window.
+                  </div>
                 ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, flexGrow: 1 }}>
-                    {opportunities.map((item) => (
-                      <Box key={item.id} sx={{
-                        display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5,
-                        border: `1px solid ${theme.palette.divider}`, borderRadius: '6px',
-                        bgcolor: 'background.paper',
-                        '&:hover': { borderColor: theme.palette.success.light }
-                      }}>
-                        {/* Thumbnail */}
+                  opportunities.slice(0, 5).map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/80 bg-muted/20 hover:border-emerald-500/40 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
                         {item.image_url ? (
-                          <Box sx={{
-                            width: 44, height: 44, borderRadius: '6px', flexShrink: 0, overflow: 'hidden'
-                          }}>
-                            <Box
-                              component="img"
-                              src={item.image_url}
-                              alt={item.name}
-                              loading="lazy"
-                              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                            />
-                          </Box>
+                          <img
+                            src={item.image_url}
+                            alt=""
+                            className="w-10 h-10 rounded-lg object-cover border border-border shrink-0"
+                          />
                         ) : (
-                          <Box sx={{
-                            width: 44, height: 44, borderRadius: '6px', flexShrink: 0,
-                            bgcolor: 'rgba(34,197,94,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '1.2rem'
-                          }}>🧵</Box>
+                          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-xs shrink-0">
+                            ✨
+                          </div>
                         )}
-                        {/* Info */}
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.82rem' }} noWrap>{item.name}</Typography>
-                            <Chip label={item.type} color="success" variant="outlined" size="small"
-                              sx={{ height: 16, fontSize: '0.58rem', fontWeight: 800, borderRadius: '3px' }} />
-                          </Box>
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>{item.detail}</Typography>
-                        </Box>
-                        {/* Actions */}
-                        <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
-                          <Button size="small" variant="outlined" color="success"
-                            onClick={() => {
-                              const code = item.name?.split(' - ')[0];
-                              navigate(`/sarees?search=${encodeURIComponent(code || '')}&expandSareeId=${item.sareeId}&highlightComboId=${item.id}`);
-                            }}
-                            sx={{ fontSize: '0.68rem', fontWeight: 700, borderRadius: '4px', px: 1, py: 0.4, minWidth: 0 }}>Forecast</Button>
-                          <Button size="small" variant="contained" color="success"
-                            startIcon={<WhatsAppIcon sx={{ fontSize: '13px !important' }} />}
-                            onClick={() => handleActionableRequestStock(item)}
-                            sx={{ fontSize: '0.68rem', fontWeight: 700, borderRadius: '4px', px: 1, py: 0.4, minWidth: 0 }}>Deliver</Button>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-foreground truncate">
+                              {item.name}
+                            </span>
+                            <Badge variant="success" className="text-[9px] px-1.5 py-0">
+                              {item.type}
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                            {item.detail}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            const code = item.name?.split(' - ')[0];
+                            navigate(`/sarees?search=${encodeURIComponent(code || '')}&expandSareeId=${item.sareeId}&highlightComboId=${item.id}`);
+                          }}
+                          className="h-7 px-2 text-[11px] font-bold"
+                        >
+                          Forecast
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleActionableRequestStock(item)}
+                          className="h-7 px-2 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+                        >
+                          <MessageCircle className="w-3 h-3 mr-1" />
+                          Deliver
+                        </Button>
+                      </div>
+                    </div>
+                  ))
                 )}
-              </Paper>
-            </Grid>
-          </Grid>
+              </CardContent>
+            </Card>
+          </div>
 
+          {/* Top Performing Table & Recent Activity Feed */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Top Performing Table */}
+            <Card className="lg:col-span-7 border border-border shadow-luxury">
+              <CardHeader className="p-5 pb-2">
+                <CardTitle className="text-base">Top Performing Series</CardTitle>
+                <CardDescription className="text-xs">
+                  Highest volume dispatch items with stock runway
+                </CardDescription>
+              </CardHeader>
 
-          {/* TOP PERFORMING + RECENT ACTIVITY */}
-          <Grid container spacing={2.5}>
-            <Grid size={{ xs: 12, md: 7 }}>
-              <Paper sx={{ ...glassCard, p: 3, minHeight: 360 }} elevation={0}>
-                <Typography variant="h6" sx={{ fontWeight: 800, mb: 2 }}>Top Performing Sarees</Typography>
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-muted/40">
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 800 }}>Code</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }} align="right">Delivered</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }} align="right">Stock</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }} align="right">Trend</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }} align="right">Cover</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }} align="center"> </TableCell>
+                        <TableHead className="text-xs font-bold">Series Code</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Delivered</TableHead>
+                        <TableHead className="text-xs font-bold text-right">In Stock</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Trend</TableHead>
+                        <TableHead className="text-xs font-bold text-right">Runway</TableHead>
+                        <TableHead className="text-xs font-bold text-right"></TableHead>
                       </TableRow>
-                    </TableHead>
+                    </TableHeader>
                     <TableBody>
-                      {topPerforming.map((saree) => (
-                        <TableRow key={saree.code} hover>
-                          <TableCell sx={{ fontWeight: 700 }}>{saree.code}</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 800 }}>{saree.delivered}</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 500 }}>{saree.stock}</TableCell>
-                          <TableCell align="right">
-                            <Chip label={`${saree.trend >= 0 ? '+' : ''}${saree.trend}%`} color={saree.trend >= 0 ? 'success' : 'error'} size="small" sx={{ fontWeight: 800, fontSize: '0.68rem' }} />
-                          </TableCell>
-                          <TableCell align="right">
-                            <Chip label={saree.daysRemaining === '∞' ? '∞' : `${saree.daysRemaining}d`} variant="outlined" color={saree.daysRemaining <= 15 ? 'warning' : 'primary'} size="small" sx={{ fontSize: '0.63rem', fontWeight: 800 }} />
-                          </TableCell>
-                          <TableCell align="center">
-                            <IconButton size="small" color="primary" onClick={() => {
-                              navigate(`/sarees?search=${encodeURIComponent(saree.code)}`);
-                            }}>
-                              <ChevronRightIcon />
-                            </IconButton>
+                      {topPerforming.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-xs text-muted-foreground">
+                            No dispatch volume registered for this timeframe.
                           </TableCell>
                         </TableRow>
-                      ))}
-                      {topPerforming.length === 0 && (
-                        <TableRow><TableCell colSpan={6} align="center" sx={{ py: 5, color: 'text.secondary' }}>No sales records in active period.</TableCell></TableRow>
+                      ) : (
+                        topPerforming.map((saree) => (
+                          <TableRow key={saree.code} className="hover:bg-muted/40">
+                            <TableCell className="font-mono text-xs font-bold py-3 text-foreground">
+                              {saree.code}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-bold py-3 text-foreground">
+                              {saree.delivered}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs py-3 text-muted-foreground">
+                              {saree.stock}
+                            </TableCell>
+                            <TableCell className="text-right py-3">
+                              <Badge
+                                variant={saree.trend >= 0 ? "success" : "danger"}
+                                className="text-[10px] font-bold px-1.5 py-0 font-mono"
+                              >
+                                {saree.trend >= 0 ? '+' : ''}{saree.trend}%
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right py-3">
+                              <span
+                                className={cn(
+                                  "font-mono text-xs font-bold px-1.5 py-0.5 rounded-sm",
+                                  saree.daysRemaining <= 15
+                                    ? "bg-amber-500/10 text-amber-600"
+                                    : "bg-muted text-muted-foreground"
+                                )}
+                              >
+                                {saree.daysRemaining === '∞' ? '∞' : `${saree.daysRemaining}d`}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right py-3 pr-4">
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/sarees?search=${encodeURIComponent(saree.code)}`)}
+                                className="p-1 rounded-md text-muted-foreground hover:text-burgundy-900 dark:hover:text-burgundy-300 transition-colors"
+                              >
+                                <ChevronRight className="w-4 h-4" />
+                              </button>
+                            </TableCell>
+                          </TableRow>
+                        ))
                       )}
                     </TableBody>
                   </Table>
-                </TableContainer>
-              </Paper>
-            </Grid>
-            <Grid size={{ xs: 12, md: 5 }}>
-              <Paper sx={{ ...glassCard, p: 3, minHeight: 360, display: 'flex', flexDirection: 'column' }} elevation={0}>
-                <Typography variant="h6" sx={{ fontWeight: 800, mb: 1.5 }}>Recent Activity</Typography>
-                <Box sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: 300 }}>
-                  <List dense>
-                    {recentActivity.map((activity, idx) => (
-                      <Box key={activity.id}>
-                        <ListItem alignItems="flex-start" sx={{ px: 1, py: 1 }}>
-                          <ListItemIcon sx={{ minWidth: 34, mt: 0.5 }}>
-                            {activity.action === 'Increase' ? <PurchaseIcon color="success" fontSize="small" /> : activity.action === 'Decrease' ? <DeliveryIcon color="error" fontSize="small" /> : <SwapVertIcon color="info" fontSize="small" />}
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 700 }}>{activity.actionLabel}</Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>{new Date(activity.timestamp).toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' })}</Typography>
-                              </Box>
-                            }
-                            secondary={
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2, fontWeight: 500 }}>
-                                {activity.sareeCode} ({activity.combinationName}) • <Box component="span" sx={{ fontWeight: 800, color: activity.action === 'Increase' ? 'success.main' : 'error.main' }}>{activity.action === 'Increase' ? '+' : '-'}{activity.qty} pcs</Box> • {activity.user}
-                              </Typography>
-                            }
-                          />
-                        </ListItem>
-                        {idx < recentActivity.length - 1 && <Divider component="li" />}
-                      </Box>
-                    ))}
-                    {recentActivity.length === 0 && (
-                      <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 5 }}>No recent stock activities found.</Typography>
-                    )}
-                  </List>
-                </Box>
-              </Paper>
-            </Grid>
-          </Grid>
-        </Box>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Activity List */}
+            <Card className="lg:col-span-5 border border-border shadow-luxury">
+              <CardHeader className="p-5 pb-2">
+                <CardTitle className="text-base">Recent Ledger Operations</CardTitle>
+                <CardDescription className="text-xs">
+                  Live feed of latest inventory updates
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="p-5 pt-2">
+                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                  {recentActivity.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-muted-foreground">
+                      No recent activities logged.
+                    </div>
+                  ) : (
+                    recentActivity.map((activity) => (
+                      <div
+                        key={activity.id}
+                        className="flex items-start gap-3 pb-2.5 border-b border-border/60 last:border-0"
+                      >
+                        <div
+                          className={cn(
+                            "p-1.5 rounded-lg shrink-0 mt-0.5",
+                            activity.action === 'Increase'
+                              ? "bg-emerald-500/10 text-emerald-600"
+                              : activity.action === 'Decrease'
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-blue-500/10 text-blue-600"
+                          )}
+                        >
+                          {activity.action === 'Increase' ? (
+                            <TrendingUp className="w-3.5 h-3.5" />
+                          ) : activity.action === 'Decrease' ? (
+                            <Truck className="w-3.5 h-3.5" />
+                          ) : (
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-bold text-foreground truncate">
+                              {activity.actionLabel}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+                              {new Date(activity.timestamp).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {activity.sareeCode} ({activity.combinationName}) &bull;{' '}
+                            <strong
+                              className={
+                                activity.action === 'Increase'
+                                  ? "text-emerald-600 font-mono"
+                                  : "text-destructive font-mono"
+                              }
+                            >
+                              {activity.action === 'Increase' ? '+' : '-'}{activity.qty} pcs
+                            </strong>{' '}
+                            by {activity.user}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
 
-      {/* ══════════════════════ TAB 1: PREDICTION ══════════════════════ */}
+      {/* ══════════════════════ TAB 1: AI PREDICTION ENGINE ══════════════════════ */}
       {activeTab === 1 && (
-        <Box sx={{ position: 'relative' }}>
-          {loadingPrediction && predictionData && (
-            <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, height: 3, borderRadius: 1.5 }} />
-          )}
-          <Paper sx={{ ...glassCard, p: 3, mb: 2.5 }} elevation={0}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 800 }}>Saree Demand Prediction</Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                  How much to stock for the selected saree — based on demand, volatility, and safety stock.
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-                <Autocomplete
-                  size="small"
-                  options={sareesList}
-                  getOptionLabel={(option) => `${option.series_code} (${option.sari_name || 'Unnamed'})`}
-                  value={selectedSaree}
-                  onChange={(event, newValue) => setSelectedSaree(newValue)}
-                  renderInput={(params) => <TextField {...params} label="Select Saree" />}
-                  sx={{ width: 240 }}
-                />
-                <ButtonGroup size="small" variant="outlined" color="primary">
-                  {[7, 15, 30, 60, 90].map((h) => (
-                    <Button key={h} variant={forecastHorizon === h ? 'contained' : 'outlined'} onClick={() => setForecastHorizon(h)} sx={{ px: 1.5 }}>{h}d</Button>
+        <div className="space-y-6">
+          <Card className="border border-border shadow-luxury">
+            <CardHeader className="p-6 border-b border-border/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <CardTitle className="text-lg">Predictive Saree Demand Engine</CardTitle>
+                </div>
+                <CardDescription className="text-xs mt-1">
+                  AI-powered replenishment requirements factoring velocity and safe runway
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* Saree Selector Dropdown */}
+                <select
+                  value={selectedSaree?.id || ''}
+                  onChange={(e) => {
+                    const match = sareesList.find((s) => s.id === e.target.value);
+                    if (match) setSelectedSaree(match);
+                  }}
+                  className="h-9 px-3 rounded-lg border border-input bg-background text-xs font-semibold text-foreground focus:ring-2 focus:ring-ring min-w-[200px]"
+                >
+                  {sareesList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.series_code} ({s.sari_name || 'Design'})
+                    </option>
                   ))}
-                </ButtonGroup>
-              </Box>
-            </Box>
+                </select>
 
-            {loadingPrediction && !predictionData ? (
-              <Grid container spacing={2.5}>
-                <Grid size={{ xs: 12, md: 4 }}><Skeleton variant="rectangular" height={340} sx={{ borderRadius: 3 }} /></Grid>
-                <Grid size={{ xs: 12, md: 8 }}><Skeleton variant="rectangular" height={340} sx={{ borderRadius: 3 }} /></Grid>
-              </Grid>
-            ) : !predictionData ? (
-              <Box sx={{ py: 6, textAlign: 'center' }}>
-                <Typography color="text.secondary" sx={{ fontWeight: 650 }}>Select a saree to generate its forecast.</Typography>
-              </Box>
-            ) : (
-              <Grid container spacing={2.5}>
-                {/* HEADLINE RECOMMENDATION + METRICS */}
-                <Grid size={{ xs: 12, md: 4 }}>
-                  <Paper variant="outlined" sx={{ p: 3, borderRadius: 3.5, height: '100%', bgcolor: 'transparent', borderColor: theme.palette.divider, display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.8px' }}>
-                      {predictionData.saree?.seriesCode} · {forecastHorizon}-day outlook
-                    </Typography>
-
-                    {/* The plain-language headline the user asked for */}
-                    <Box sx={{ my: 2, p: 2.25, borderRadius: 3, bgcolor: predictionData.forecast?.recommendedOrderQty > 0 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(34, 197, 94, 0.1)', border: `1px solid ${predictionData.forecast?.recommendedOrderQty > 0 ? 'rgba(245, 158, 11, 0.25)' : 'rgba(34, 197, 94, 0.25)'}` }}>
-                      <Typography variant="caption" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: predictionData.forecast?.recommendedOrderQty > 0 ? 'warning.main' : 'success.main' }}>
-                        {predictionData.forecast?.recommendedOrderQty > 0 ? 'Recommended order' : 'Stock is healthy'}
-                      </Typography>
-                      <Typography variant="h3" sx={{ fontWeight: 900, letterSpacing: '-0.5px', color: predictionData.forecast?.recommendedOrderQty > 0 ? 'warning.main' : 'success.main', mt: 0.5 }}>
-                        {predictionData.forecast?.recommendedOrderQty > 0 ? `+${predictionData.forecast.recommendedOrderQty} pcs` : 'No order needed'}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                        {predictionData.forecast?.recommendedOrderQty > 0
-                          ? `Covers ${forecastHorizon}-day demand + safety stock`
-                          : `Current stock covers the ${forecastHorizon}-day horizon`}
-                      </Typography>
-                    </Box>
-
-                    <Grid container spacing={2} sx={{ mb: 2 }}>
-                      <Grid size={6}>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Current Stock</Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 800 }}>{predictionData.forecast?.currentStock} pcs</Typography>
-                      </Grid>
-                      <Grid size={6}>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Avg Daily Demand</Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 800 }}>{predictionData.forecast?.avgDailyDemand} pcs</Typography>
-                      </Grid>
-                      <Grid size={6}>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>{forecastHorizon}-Day Forecast</Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 800 }}>{predictionData.forecast?.forecastDemand} pcs</Typography>
-                      </Grid>
-                      <Grid size={6}>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Days of Cover</Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 800 }}>{predictionData.forecast?.daysRemaining}</Typography>
-                      </Grid>
-                    </Grid>
-
-                    <Box sx={{ mt: 'auto', pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.8, alignItems: 'center' }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>Forecast Confidence</Typography>
-                        <Typography variant="caption" sx={{ fontWeight: 800 }}>{predictionData.forecast?.confidence}%</Typography>
-                      </Box>
-                      <LinearProgress variant="determinate" value={predictionData.forecast?.confidence} sx={{ height: 6, borderRadius: 3 }} />
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2, alignItems: 'center' }}>
-                        <Chip
-                          label={`Risk: ${predictionData.forecast?.stockoutRisk}`}
-                          color={predictionData.forecast?.stockoutRisk === 'CRITICAL' || predictionData.forecast?.stockoutRisk === 'HIGH' ? 'error' : predictionData.forecast?.stockoutRisk === 'MODERATE' ? 'warning' : 'success'}
-                          size="small" sx={{ fontWeight: 800 }}
-                        />
-                        <Chip label={`Data: ${predictionData.forecast?.dataQuality}`} variant="outlined" size="small" sx={{ fontSize: '0.65rem', fontWeight: 700 }} />
-                      </Box>
-                      {predictionData.forecast?.recommendedOrderQty > 0 && (
-                        <Button variant="contained" color="warning" size="small" fullWidth onClick={() => navigate(`/sarees/${predictionData.saree?.id}`)} sx={{ py: 1, mt: 2, borderRadius: 2, fontWeight: 700 }}>
-                          Initiate Stock Request
-                        </Button>
+                {/* Horizon Buttons */}
+                <div className="flex items-center rounded-lg border border-border p-0.5 bg-muted/40">
+                  {[7, 15, 30, 60, 90].map((h) => (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => setForecastHorizon(h)}
+                      className={cn(
+                        "px-2.5 py-1 text-xs font-bold rounded-md transition-colors",
+                        forecastHorizon === h
+                          ? "bg-card text-foreground shadow-xs"
+                          : "text-muted-foreground hover:text-foreground"
                       )}
-                    </Box>
-                  </Paper>
-                </Grid>
+                    >
+                      {h}d
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardHeader>
 
-                {/* CHART + AI NARRATIVE */}
-                <Grid size={{ xs: 12, md: 8 }}>
-                  <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                    <Paper variant="outlined" sx={{ p: 2, borderRadius: 3.5, bgcolor: 'transparent', borderColor: theme.palette.divider }}>
-                      <ResponsiveContainer width="100%" height={190}>
-                        <AreaChart data={predictionData.chartPoints}>
-                          <defs>
-                            <linearGradient id="predictedSareeGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor={theme.palette.primary.main} stopOpacity={0.2} />
-                              <stop offset="95%" stopColor={theme.palette.primary.main} stopOpacity={0.01} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
-                          <XAxis dataKey="label" stroke={theme.palette.text.secondary} fontSize={10} tickLine={false} />
-                          <YAxis stroke={theme.palette.text.secondary} fontSize={10} tickLine={false} />
-                          <RechartsTooltip contentStyle={tooltipStyle} />
-                          <ReferenceLine x={predictionData.chartPoints?.[29]?.label} stroke={theme.palette.primary.main} strokeDasharray="5 5" label={{ value: 'Today', position: 'top', fill: theme.palette.text.secondary, fontSize: 10, fontWeight: 700 }} />
-                          <Area type="monotone" dataKey="historical" name="Historical Deliveries" stroke={theme.palette.primary.main} fill="url(#predictedSareeGrad)" strokeWidth={2} />
-                          <Area type="monotone" dataKey="forecast" name="Forecast Demand" stroke={theme.palette.secondary.main} strokeDasharray="5 5" fill="none" strokeWidth={2} />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </Paper>
+            <CardContent className="p-6">
+              {loadingPrediction && !predictionData ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Skeleton className="h-80 w-full rounded-2xl" />
+                  <Skeleton className="md:col-span-2 h-80 w-full rounded-2xl" />
+                </div>
+              ) : !predictionData ? (
+                <div className="py-12 text-center text-xs text-muted-foreground">
+                  Select a registered saree to evaluate its AI demand forecast.
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Left: Recommendation Card */}
+                    <div className="lg:col-span-4 p-5 rounded-2xl border border-border bg-muted/20 space-y-4 flex flex-col justify-between">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block">
+                          {predictionData.saree?.seriesCode} &bull; {forecastHorizon}-Day Forecast
+                        </span>
 
-                    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3.5, bgcolor: 'transparent', borderColor: theme.palette.divider, flexGrow: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                        <SparklesIcon color="primary" fontSize="small" />
-                        <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>AI Assessment</Typography>
-                      </Box>
-                      <Typography variant="body2" sx={{ mb: 2, fontStyle: 'italic', fontWeight: 500, lineHeight: 1.5 }}>
-                        "{predictionData.aiAnalysis?.summary || 'AI explanation temporarily unavailable.'}"
-                      </Typography>
-                      <Grid container spacing={2}>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                          <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', mb: 0.8, color: 'error.main', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Risks</Typography>
-                          {predictionData.aiAnalysis?.risks?.length ? predictionData.aiAnalysis.risks.map((risk, idx) => (
-                            <Typography key={idx} variant="caption" sx={{ display: 'block', color: 'text.secondary', fontWeight: 500, mb: 0.4 }}>• {risk}</Typography>
-                          )) : <Typography variant="caption" color="text.secondary">• No operational risk detected.</Typography>}
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6 }}>
-                          <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', mb: 0.8, color: 'success.main', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Actions</Typography>
-                          {predictionData.aiAnalysis?.actions?.length ? predictionData.aiAnalysis.actions.map((act, idx) => (
-                            <Typography key={idx} variant="caption" sx={{ display: 'block', color: 'text.secondary', fontWeight: 500, mb: 0.4 }}>• {act}</Typography>
-                          )) : <Typography variant="caption" color="text.secondary">• Stock levels optimal.</Typography>}
-                        </Grid>
-                      </Grid>
-                    </Paper>
-                  </Box>
-                </Grid>
+                        <div
+                          className={cn(
+                            "p-4 rounded-xl border mt-3 space-y-1",
+                            predictionData.forecast?.recommendedOrderQty > 0
+                              ? "bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200"
+                              : "bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200"
+                          )}
+                        >
+                          <span className="text-[10px] font-bold uppercase tracking-wider block">
+                            {predictionData.forecast?.recommendedOrderQty > 0
+                              ? "Replenishment Recommended"
+                              : "Inventory Healthy"}
+                          </span>
+                          <span className="text-2xl font-bold font-mono block">
+                            {predictionData.forecast?.recommendedOrderQty > 0
+                              ? `+${predictionData.forecast.recommendedOrderQty} pcs`
+                              : "Optimal Levels"}
+                          </span>
+                          <span className="text-[11px] opacity-80 block">
+                            {predictionData.forecast?.recommendedOrderQty > 0
+                              ? `Covers expected ${forecastHorizon}-day demand buffer`
+                              : `Sufficient runway for the full ${forecastHorizon}-day window`}
+                          </span>
+                        </div>
 
-                {/* HIERARCHICAL BREAKDOWN */}
-                <Grid size={12}>
-                  <Button
-                    variant="outlined" size="small"
-                    startIcon={showPredictionBreakdown ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    onClick={() => setShowPredictionBreakdown(!showPredictionBreakdown)}
-                    sx={{ borderRadius: 2, fontWeight: 700 }}
-                  >
-                    {showPredictionBreakdown ? 'Hide breakdown' : 'Beam → Combination breakdown'}
-                  </Button>
-                  <Collapse in={showPredictionBreakdown} sx={{ mt: 2 }}>
-                    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3.5, bgcolor: 'transparent', borderColor: theme.palette.divider }}>
-                      {(predictionData.beamsBreakdown || []).map((beam) => (
-                        <Box key={beam.id} sx={{ mb: 1.5, borderBottom: `1px solid ${theme.palette.divider}`, pb: 1.5 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', py: 0.5 }} onClick={() => setExpandedBeam(expandedBeam === beam.id ? null : beam.id)}>
-                            <Typography variant="body2" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1 }}>
-                              {expandedBeam === beam.id ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-                              {beam.name}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>
-                              Stock: {beam.currentStock} | Forecast: {beam.forecastDemand} | Rec: <Box component="span" sx={{ fontWeight: 800, color: beam.recommendedOrderQty > 0 ? 'warning.main' : 'text.secondary' }}>+{beam.recommendedOrderQty}</Box>
-                            </Typography>
-                          </Box>
-                          <Collapse in={expandedBeam === beam.id}>
-                            <List dense sx={{ pl: 3.5, mt: 1 }}>
-                              {(beam.combinations || []).map((combo) => (
-                                <ListItem key={combo.id} sx={{ py: 0.5, borderLeft: `1px dashed ${theme.palette.divider}` }}>
-                                  <ListItemText primary={
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', pr: 2, gap: 1, flexWrap: 'wrap' }}>
-                                      <Typography variant="caption" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        {combo.name}
-                                        <Chip label={combo.brand || 'KP'} size="small" sx={{ height: 16, fontSize: '0.56rem', fontWeight: 800 }} />
-                                        <Chip label={combo.status || 'In Stock'} size="small" variant="outlined" sx={{ height: 16, fontSize: '0.56rem', fontWeight: 800 }} />
-                                      </Typography>
-                                      <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-                                        Stock: {combo.currentStock} | Forecast: {combo.forecastDemand} | Rec: <Box component="span" sx={{ fontWeight: 800, color: combo.recommendedOrderQty > 0 ? 'warning.main' : 'success.main' }}>+{combo.recommendedOrderQty}</Box>
-                                      </Typography>
-                                    </Box>
-                                  } />
-                                </ListItem>
-                              ))}
-                            </List>
-                          </Collapse>
-                        </Box>
-                      ))}
-                    </Paper>
-                  </Collapse>
-                </Grid>
-              </Grid>
-            )}
+                        <div className="grid grid-cols-2 gap-3 pt-4">
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                              Current Stock
+                            </span>
+                            <span className="font-mono text-base font-bold text-foreground">
+                              {predictionData.forecast?.currentStock} pcs
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                              Daily Run-Rate
+                            </span>
+                            <span className="font-mono text-base font-bold text-foreground">
+                              {predictionData.forecast?.avgDailyDemand} pcs
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                              Horizon Demand
+                            </span>
+                            <span className="font-mono text-base font-bold text-foreground">
+                              {predictionData.forecast?.forecastDemand} pcs
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                              Cover Remaining
+                            </span>
+                            <span className="font-mono text-base font-bold text-foreground">
+                              {predictionData.forecast?.daysRemaining}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
 
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2.5, textAlign: 'center', fontStyle: 'italic', fontWeight: 500 }}>
-              Forecasts are estimates based on historical stock movement and recent demand patterns.
-            </Typography>
-          </Paper>
-        </Box>
+                      <div className="pt-4 border-t border-border/80 space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Forecast Reliability</span>
+                          <span className="font-mono font-bold text-foreground">
+                            {predictionData.forecast?.confidence}%
+                          </span>
+                        </div>
+                        <Progress value={predictionData.forecast?.confidence} className="h-2" />
+
+                        {predictionData.forecast?.recommendedOrderQty > 0 && (
+                          <Button
+                            variant="luxury"
+                            className="w-full text-xs font-bold mt-2"
+                            onClick={() => navigate(`/sarees/${predictionData.saree?.id}`)}
+                          >
+                            Open Saree Procurement
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: Forecast Chart & AI Summary */}
+                    <div className="lg:col-span-8 space-y-4">
+                      {/* Area Chart */}
+                      <div className="p-4 rounded-2xl border border-border bg-card">
+                        <div className="h-52 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={predictionData.chartPoints}>
+                              <defs>
+                                <linearGradient id="predictedSareeGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#3B111A" stopOpacity={0.25} />
+                                  <stop offset="95%" stopColor="#3B111A" stopOpacity={0.0} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                              <XAxis
+                                dataKey="label"
+                                stroke="hsl(var(--muted-foreground))"
+                                fontSize={10}
+                                tickLine={false}
+                              />
+                              <YAxis
+                                stroke="hsl(var(--muted-foreground))"
+                                fontSize={10}
+                                tickLine={false}
+                              />
+                              <RechartsTooltip contentStyle={tooltipStyle} />
+                              <ReferenceLine
+                                x={predictionData.chartPoints?.[29]?.label}
+                                stroke="#3B111A"
+                                strokeDasharray="4 4"
+                                label={{
+                                  value: 'Today',
+                                  position: 'top',
+                                  fill: 'hsl(var(--muted-foreground))',
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                }}
+                              />
+                              <Area
+                                type="monotone"
+                                dataKey="historical"
+                                name="Historical Dispatches"
+                                stroke="#3B111A"
+                                fill="url(#predictedSareeGrad)"
+                                strokeWidth={2}
+                              />
+                              <Area
+                                type="monotone"
+                                dataKey="forecast"
+                                name="Projected Demand"
+                                stroke="#AC9C8D"
+                                strokeDasharray="5 5"
+                                fill="none"
+                                strokeWidth={2}
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      {/* AI Commentary */}
+                      <div className="p-4 rounded-2xl border border-border bg-muted/20 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-amber-500" />
+                          <span className="text-xs font-bold text-foreground">
+                            Intelligence Synthesis
+                          </span>
+                        </div>
+                        <p className="text-xs italic text-muted-foreground leading-relaxed">
+                          "{predictionData.aiAnalysis?.summary || 'AI projection generated from velocity models.'}"
+                        </p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-destructive block">
+                              Identified Risks
+                            </span>
+                            {predictionData.aiAnalysis?.risks?.length ? (
+                              predictionData.aiAnalysis.risks.map((risk, idx) => (
+                                <p key={idx} className="text-[11px] text-muted-foreground">
+                                  &bull; {risk}
+                                </p>
+                              ))
+                            ) : (
+                              <p className="text-[11px] text-muted-foreground">&bull; No immediate operational risks detected.</p>
+                            )}
+                          </div>
+
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
+                              Recommended Interventions
+                            </span>
+                            {predictionData.aiAnalysis?.actions?.length ? (
+                              predictionData.aiAnalysis.actions.map((act, idx) => (
+                                <p key={idx} className="text-[11px] text-muted-foreground">
+                                  &bull; {act}
+                                </p>
+                              ))
+                            ) : (
+                              <p className="text-[11px] text-muted-foreground">&bull; Safety stock levels are optimal.</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Hierarchical Beam Breakdown Toggle */}
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowPredictionBreakdown(!showPredictionBreakdown)}
+                      className="text-xs font-bold"
+                    >
+                      {showPredictionBreakdown ? (
+                        <>
+                          <ChevronUp className="w-3.5 h-3.5 mr-1" />
+                          Hide Combination Breakdown
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-3.5 h-3.5 mr-1" />
+                          View Beam & Combination Breakdown
+                        </>
+                      )}
+                    </Button>
+
+                    {showPredictionBreakdown && (
+                      <div className="mt-4 p-4 rounded-2xl border border-border bg-card space-y-3">
+                        {(predictionData.beamsBreakdown || []).map((beam) => (
+                          <div key={beam.id} className="border-b border-border/60 pb-3 last:border-0">
+                            <div
+                              onClick={() => setExpandedBeam(expandedBeam === beam.id ? null : beam.id)}
+                              className="flex items-center justify-between cursor-pointer py-1 hover:text-burgundy-900 transition-colors"
+                            >
+                              <div className="flex items-center gap-2 font-bold text-xs">
+                                {expandedBeam === beam.id ? (
+                                  <ChevronUp className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                )}
+                                <span>{beam.name}</span>
+                              </div>
+                              <span className="text-xs font-mono text-muted-foreground">
+                                Stock: <strong>{beam.currentStock}</strong> | Forecast:{' '}
+                                <strong>{beam.forecastDemand}</strong> | Order:{' '}
+                                <strong className="text-amber-600 font-bold">
+                                  +{beam.recommendedOrderQty}
+                                </strong>
+                              </span>
+                            </div>
+
+                            {expandedBeam === beam.id && (
+                              <div className="pl-6 pt-2 space-y-1.5 border-l-2 border-border ml-2 mt-1">
+                                {(beam.combinations || []).map((combo) => (
+                                  <div
+                                    key={combo.id}
+                                    className="flex items-center justify-between text-xs text-muted-foreground py-0.5"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-foreground">{combo.name}</span>
+                                      <Badge variant="outline" className="text-[9px] px-1 py-0">
+                                        {combo.brand || 'KP'}
+                                      </Badge>
+                                    </div>
+                                    <span className="font-mono text-[11px]">
+                                      Stock: {combo.currentStock} | Forecast: {combo.forecastDemand} |{' '}
+                                      <span className="text-emerald-600 font-bold">
+                                        +{combo.recommendedOrderQty}
+                                      </span>
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
+      {/* Stock Request Modal */}
       <RequestStockDialog
         open={requestDialogOpen}
         onClose={() => setRequestDialogOpen(false)}
@@ -982,7 +1415,7 @@ const Dashboard = () => {
           setRequestDialogOpen(false);
         }}
       />
-    </Box>
+    </div>
   );
 };
 

@@ -1,17 +1,30 @@
+/**
+ * Low Stock — Action Page
+ * Redesigned with shadcn/ui & Tailwind CSS
+ * Action-oriented inventory recovery dashboard with live progress indicators and WhatsApp triggers.
+ */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sareeAPI } from '../services/api';
 import { supabase } from '../services/supabase';
 import RequestStockDialog from '../components/common/RequestStockDialog';
 import { getStockHealth } from '../constants/terms';
-import PageHeader from '../components/common/PageHeader';
-import EmptyState from '../components/common/EmptyState';
-import { ListSkeleton } from '../components/common/SkeletonLoader';
-
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Progress } from '../components/ui/progress';
+import { Skeleton } from '../components/ui/skeleton';
+import { cn } from '../lib/utils';
 import {
-  Box, Paper, Typography, Chip, Button, LinearProgress
-} from '@mui/material';
-import { WarningAmber, WhatsApp as WhatsAppIcon, Visibility as ViewIcon } from '@mui/icons-material';
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle2,
+  MessageCircle,
+  ExternalLink,
+  Layers,
+  ArrowUpRight,
+  TrendingDown
+} from 'lucide-react';
 
 const LowStock = () => {
   const navigate = useNavigate();
@@ -25,7 +38,6 @@ const LowStock = () => {
   const [selectedSeriesCode, setSelectedSeriesCode] = useState('');
   const [selectedSareeId, setSelectedSareeId] = useState('');
 
-
   const fetchLowStockSarees = async () => {
     setLoading(true);
     try {
@@ -38,7 +50,9 @@ const LowStock = () => {
     }
   };
 
-  useEffect(() => { fetchLowStockSarees(); }, []);
+  useEffect(() => {
+    fetchLowStockSarees();
+  }, []);
 
   // Real-time subscriptions
   useEffect(() => {
@@ -65,7 +79,14 @@ const LowStock = () => {
     });
     // Also include sarees with aggregated low stock but no combination-level data
     if ((!saree.beams || saree.beams.length === 0) && (saree.total_stock ?? 0) <= (saree.min_stock ?? 20)) {
-      lowItems.push({ saree, beam: null, combo: null, stock: saree.total_stock ?? 0, min: saree.min_stock ?? 20, shortage: Math.max(0, (saree.min_stock ?? 20) - (saree.total_stock ?? 0)) });
+      lowItems.push({
+        saree,
+        beam: null,
+        combo: null,
+        stock: saree.total_stock ?? 0,
+        min: saree.min_stock ?? 20,
+        shortage: Math.max(0, (saree.min_stock ?? 20) - (saree.total_stock ?? 0))
+      });
     }
   });
 
@@ -90,151 +111,209 @@ const LowStock = () => {
 
   if (loading) {
     return (
-      <Box sx={{ p: { xs: 2, sm: 3 } }}>
-        <PageHeader
-          title="Needs Stock"
-          icon={<WarningAmber />}
-          subtitle="Items below minimum stock levels — take action immediately."
-        />
-        <ListSkeleton rows={5} />
-      </Box>
+      <div className="space-y-4 max-w-5xl mx-auto">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="space-y-3 pt-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+          ))}
+        </div>
+      </div>
     );
   }
 
+  const criticalCount = lowItems.filter(i => i.stock === 0).length;
+
   return (
-    <Box>
-      <PageHeader
-        title="Needs Stock"
-        icon={<WarningAmber />}
-        subtitle={`${lowItems.length} item${lowItems.length !== 1 ? 's' : ''} below minimum stock levels. Take action immediately.`}
-      />
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 border border-amber-500/20">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+              Needs Stock
+            </h1>
+            {lowItems.length > 0 && (
+              <Badge variant="destructive" className="ml-2 font-bold px-2 py-0.5">
+                {lowItems.length} items
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Combinations currently below minimum safety stock levels. Dispatch replenishment requests directly.
+          </p>
+        </div>
+
+        {criticalCount > 0 && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold">
+            <TrendingDown className="w-4 h-4" />
+            <span>{criticalCount} completely depleted (0 pcs)</span>
+          </div>
+        )}
+      </div>
 
       {lowItems.length === 0 ? (
-        <EmptyState
-          variant="all-clear"
-          title="All stock levels are healthy!"
-          description="No items are currently below their minimum stock thresholds. Great work keeping inventory topped up!"
-        />
+        <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl bg-card border border-border shadow-luxury">
+          <div className="flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500/10 text-emerald-600 mb-4">
+            <CheckCircle2 className="w-8 h-8" />
+          </div>
+          <h3 className="text-lg font-bold text-foreground">All Stock Levels Healthy</h3>
+          <p className="text-sm text-muted-foreground max-w-md mt-1">
+            There are currently zero sarees or combinations below their designated minimum stock thresholds.
+          </p>
+        </div>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div className="space-y-3">
           {lowItems.map((item, idx) => {
             const health = getStockHealth(item.stock, item.min);
             const isCritical = item.stock === 0;
             const pct = item.min > 0 ? Math.round((item.stock / item.min) * 100) : 0;
 
             return (
-              <Box
+              <Card
                 key={`${item.saree.id}-${item.combo?.id || idx}`}
-                sx={{
-                  p: { xs: 2, sm: 2.5 },
-                  bgcolor: 'background.paper',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderLeft: `3px solid ${health.color}`,
-                  borderRadius: '10px',
-                  transition: 'box-shadow 0.18s ease',
-                  '&:hover': { boxShadow: '0 4px 20px rgba(59,17,26,0.07)' },
-                }}
+                className={cn(
+                  "overflow-hidden border transition-all duration-200 hover:shadow-luxury-hover",
+                  isCritical
+                    ? "border-destructive/30 bg-destructive/5"
+                    : "border-amber-500/30 bg-amber-500/5"
+                )}
               >
-                {/* Top: severity badge */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-                  <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 800, cursor: 'pointer', '&:hover': { color: 'primary.main' } }} onClick={() => navigate(`/sarees/${item.saree.id}`)}>
-                        {item.saree.series_code}
-                      </Typography>
-                      <Chip
-                        label={isCritical ? 'CRITICAL' : 'LOW'}
-                        size="small"
-                        sx={{
-                          height: 20, fontSize: '0.62rem', fontWeight: 800,
-                          bgcolor: isCritical ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)',
-                          color: isCritical ? 'error.main' : 'warning.dark'
-                        }}
-                      />
-                    </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
-                      {item.beam ? `${item.beam.beam_name} · ` : ''}{item.combo?.combination_name || item.saree.sari_name || 'Unnamed'}
-                    </Typography>
+                <CardContent className="p-5 sm:p-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {/* Item Information */}
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/sarees/${item.saree.id}`)}
+                          className="font-mono text-base font-bold text-foreground hover:text-burgundy-900 dark:hover:text-burgundy-300 transition-colors inline-flex items-center gap-1 group"
+                        >
+                          <span>{item.saree.series_code}</span>
+                          <ExternalLink className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
 
-                    {/* Saree Combination Colors */}
-                    {item.combo?.combination_colors && item.combo.combination_colors.length > 0 && (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.6, mt: 1 }}>
-                        {item.combo.combination_colors.map((col, cIdx) => (
-                          <Chip
-                            key={col.id || cIdx}
-                            label={`${col.f_number || `F-${cIdx + 1}`}: ${col.color_name}${col.company_name ? ` (${col.company_name})` : ''}`}
-                            size="small"
-                            sx={{
-                              height: 22,
-                              fontSize: '0.7rem',
-                              fontWeight: 700,
-                              bgcolor: 'rgba(59, 130, 246, 0.08)',
-                              color: '#1E40AF',
-                              border: '1px solid rgba(59, 130, 246, 0.2)',
-                              borderRadius: '6px'
-                            }}
-                          />
-                        ))}
-                      </Box>
-                    )}
-                  </Box>
-                </Box>
+                        <Badge
+                          variant={isCritical ? "danger" : "warning"}
+                          className="text-[10px] font-bold px-2 py-0.5 tracking-wider uppercase"
+                        >
+                          {isCritical ? 'Critical · 0 pcs' : 'Low Stock'}
+                        </Badge>
 
-                {/* Stock info */}
-                <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current</Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 800, color: health.color }}>{item.stock} pcs</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Minimum</Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>{item.min} pcs</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Shortage</Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 800, color: 'error.main' }}>−{item.shortage} pcs</Typography>
-                  </Box>
-                  <Box sx={{ flex: 1, minWidth: 120 }}>
-                    <LinearProgress
-                      variant="determinate"
-                      value={Math.min(pct, 100)}
-                      sx={{
-                        height: 6, borderRadius: 3, bgcolor: 'action.hover',
-                        '& .MuiLinearProgress-bar': { borderRadius: 3, bgcolor: health.color }
-                      }}
-                    />
-                  </Box>
-                </Box>
+                        {item.saree.brand && (
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                            {item.saree.brand}
+                          </span>
+                        )}
+                      </div>
 
-                {/* Action */}
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<WhatsAppIcon />}
-                    onClick={() => openRequest(item)}
-                    sx={{ fontWeight: 700, borderRadius: '6px', textTransform: 'none', bgcolor: '#16A34A', '&:hover': { bgcolor: '#15803D' } }}
-                  >
-                    Request Stock
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<ViewIcon />}
-                    onClick={() => navigate(`/sarees/${item.saree.id}`)}
-                    sx={{ fontWeight: 600, borderRadius: '6px', textTransform: 'none' }}
-                  >
-                    View
-                  </Button>
-                </Box>
-              </Box>
+                      <div className="text-sm font-medium text-foreground">
+                        {item.beam && (
+                          <span className="text-muted-foreground font-normal">
+                            {item.beam.beam_name} &bull;{' '}
+                          </span>
+                        )}
+                        <span>
+                          {item.combo?.combination_name || item.saree.sari_name || 'Standard Combination'}
+                        </span>
+                      </div>
+
+                      {/* Combination Colors List */}
+                      {item.combo?.combination_colors && item.combo.combination_colors.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {item.combo.combination_colors.map((col, cIdx) => (
+                            <span
+                              key={col.id || cIdx}
+                              className="inline-flex items-center text-[11px] font-medium px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20"
+                            >
+                              <span className="font-bold mr-1">{col.f_number || `F-${cIdx + 1}`}:</span>
+                              {col.color_name}
+                              {col.company_name && (
+                                <span className="opacity-70 ml-1">({col.company_name})</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stock Metrics & Progress */}
+                    <div className="flex items-center gap-6 shrink-0 pt-2 md:pt-0">
+                      <div className="text-left md:text-right">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                          Current / Min
+                        </span>
+                        <div className="flex items-baseline gap-1 mt-0.5">
+                          <span
+                            className={cn(
+                              "text-xl font-bold font-mono",
+                              isCritical ? "text-destructive" : "text-amber-600 dark:text-amber-400"
+                            )}
+                          >
+                            {item.stock}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-semibold">
+                            / {item.min} pcs
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-left md:text-right">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-destructive block">
+                          Shortage
+                        </span>
+                        <span className="text-xl font-bold font-mono text-destructive mt-0.5 block">
+                          -{item.shortage}
+                        </span>
+                      </div>
+
+                      {/* Stock Percentage Bar */}
+                      <div className="hidden lg:block w-28">
+                        <span className="text-[10px] font-semibold text-muted-foreground block text-right mb-1">
+                          {Math.min(pct, 100)}%
+                        </span>
+                        <Progress
+                          value={Math.min(pct, 100)}
+                          className="h-2 bg-muted"
+                          indicatorClassName={isCritical ? "bg-destructive" : "bg-amber-500"}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 pt-2 md:pt-0 shrink-0">
+                      <Button
+                        size="sm"
+                        onClick={() => openRequest(item)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Request Stock
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/sarees/${item.saree.id}`)}
+                        className="text-xs font-semibold"
+                      >
+                        Details
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
-        </Box>
+        </div>
       )}
 
-      {/* Request Stock Dialog — opens inline, user stays on this page */}
+      {/* Stock Request Dialog */}
       <RequestStockDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
@@ -248,7 +327,7 @@ const LowStock = () => {
           setDialogOpen(false);
         }}
       />
-    </Box>
+    </div>
   );
 };
 

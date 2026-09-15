@@ -1,70 +1,101 @@
 /**
- * Stock Requests — Visual Pipeline (spec §13)
- * Shows a progress stepper (Requested → Confirmed → Received) per request card.
- * Elevated to match the luxury catalog design system (deep burgundy highlights, 8px borders, clean flat surfaces).
+ * Stock Requests — Visual Pipeline
+ * Redesigned with shadcn/ui & Tailwind CSS
+ * Features:
+ * - Interactive stepper pipeline (Requested → Confirmed → Received)
+ * - Clickable status metric summary cards
+ * - Real-time stock arrival calculations
+ * - WhatsApp direct weaver communications
  */
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Box, Paper, Typography, Chip, Select, MenuItem, FormControl, InputLabel,
-  IconButton, Tooltip, Alert, Skeleton, Button, Dialog, DialogTitle,
-  DialogContent, DialogActions, Snackbar, Grid, LinearProgress
-} from '@mui/material';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import DeleteIcon from '@mui/icons-material/Delete';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import LocalShippingIcon from '@mui/icons-material/LocalShipping';
-import HistoryIcon from '@mui/icons-material/History';
 import { stockRequestAPI } from '../services/api';
-import { MOVEMENT_LABELS } from '../constants/terms';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../components/ui/dialog';
+import { Skeleton } from '../components/ui/skeleton';
+import { cn } from '../lib/utils';
+import {
+  MessageCircle,
+  CheckCircle2,
+  Clock,
+  Truck,
+  Trash2,
+  X,
+  Plus,
+  ArrowRight,
+  TrendingUp,
+  Inbox
+} from 'lucide-react';
 
 const PIPELINE_STEPS = ['Requested', 'Confirmed', 'Received'];
-const STATUS_COLORS = { Requested: '#F59E0B', Confirmed: '#38BDF8', Received: '#22C55E', Cancelled: '#EF4444' };
 
 const PipelineStepper = ({ currentStatus }) => {
   if (currentStatus === 'Cancelled') {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#EF4444' }} />
-        <Typography variant="caption" sx={{ fontWeight: 700, color: '#EF4444', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cancelled</Typography>
-      </Box>
+      <div className="flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-destructive" />
+        <span className="text-xs font-bold uppercase tracking-wider text-destructive">
+          Cancelled
+        </span>
+      </div>
     );
   }
+
   const currentIdx = PIPELINE_STEPS.indexOf(currentStatus);
+
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
+    <div className="flex items-center gap-2 sm:gap-4">
       {PIPELINE_STEPS.map((step, idx) => {
-        const done = idx <= currentIdx;
-        const active = idx === currentIdx;
-        let dotColor = '#EAE6E1';
-        if (active) dotColor = STATUS_COLORS[step];
-        else if (done) dotColor = '#241C1A';
+        const isDone = idx <= currentIdx;
+        const isActive = idx === currentIdx;
 
         return (
-          <Box key={step} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1.5 } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box sx={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                bgcolor: dotColor,
-                transition: 'bgcolor 0.2s ease',
-              }} />
-              <Typography variant="caption" sx={{
-                fontWeight: active ? 750 : (done ? 600 : 500),
-                color: active ? 'text.primary' : 'text.secondary',
-                fontSize: '0.75rem',
-              }}>
+          <div key={step} className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={cn(
+                  "w-2.5 h-2.5 rounded-full transition-all duration-300",
+                  isActive
+                    ? "bg-amber-500 ring-4 ring-amber-500/20"
+                    : isDone
+                    ? "bg-burgundy-900 dark:bg-burgundy-400"
+                    : "bg-muted-foreground/30"
+                )}
+              />
+              <span
+                className={cn(
+                  "text-xs font-semibold tracking-wide",
+                  isActive
+                    ? "text-foreground font-bold"
+                    : isDone
+                    ? "text-foreground/80"
+                    : "text-muted-foreground/60"
+                )}
+              >
                 {step}
-              </Typography>
-            </Box>
+              </span>
+            </div>
+
             {idx < PIPELINE_STEPS.length - 1 && (
-              <Box sx={{ width: { xs: 20, sm: 40 }, height: 1, bgcolor: '#EAE6E1' }} />
+              <div
+                className={cn(
+                  "w-6 sm:w-10 h-0.5 transition-colors",
+                  isDone && idx < currentIdx ? "bg-burgundy-900/60" : "bg-border"
+                )}
+              />
             )}
-          </Box>
+          </div>
         );
       })}
-    </Box>
+    </div>
   );
 };
 
@@ -89,11 +120,13 @@ const StockRequests = () => {
     }
   }, [statusFilter]);
 
-  useEffect(() => { fetchRequests(); }, [fetchRequests]);
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
 
   const handleStatusChange = async (id, newStatus) => {
     if (newStatus === 'Received') {
-      const req = requests.find(r => r.id === id);
+      const req = requests.find((r) => r.id === id);
       setReceiveConfirm(req);
       return;
     }
@@ -110,7 +143,7 @@ const StockRequests = () => {
     if (!receiveConfirm) return;
     try {
       await stockRequestAPI.updateStatus(receiveConfirm.id, { status: 'Received' });
-      setSnack('Marked as Received — stock updated');
+      setSnack('Marked as Received — stock successfully updated!');
       setReceiveConfirm(null);
       fetchRequests();
     } catch (e) {
@@ -122,7 +155,7 @@ const StockRequests = () => {
     try {
       await stockRequestAPI.delete(deleteId);
       setDeleteId(null);
-      setSnack('Request deleted');
+      setSnack('Stock request deleted.');
       fetchRequests();
     } catch (e) {
       setError('Failed to delete request');
@@ -137,369 +170,303 @@ const StockRequests = () => {
   };
 
   const getMovementLabel = (req) => {
-    if (req.movement_type === 'DELIVERY_OUT' || req.notes?.startsWith('DELIVERY_OUT')) return 'Delivery Out';
+    if (req.movement_type === 'DELIVERY_OUT' || req.notes?.startsWith('DELIVERY_OUT')) {
+      return 'Delivery Out';
+    }
     return 'Stock In';
   };
 
-  // Stats
+  // Stats computation
   const stats = { Requested: 0, Confirmed: 0, Received: 0, Cancelled: 0 };
-  requests.forEach(r => { if (stats[r.status] !== undefined) stats[r.status]++; });
+  requests.forEach((r) => {
+    if (stats[r.status] !== undefined) stats[r.status]++;
+  });
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 1, md: 3 }, py: 1 }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4, flexWrap: 'wrap', gap: 2 }}>
-        <Box>
-          <Typography variant="h1" sx={{ fontSize: '2.5rem', fontWeight: 800, mb: 1, letterSpacing: '-0.02em', color: '#241C1A' }}>
-            Stock Requests
-          </Typography>
-          <Typography variant="body1" sx={{ color: '#7C726A', fontSize: '0.95rem' }}>
-            Track supplier orders from request to receipt
-          </Typography>
-        </Box>
-        <FormControl size="small" sx={{ minWidth: 180 }}>
-          <InputLabel id="filter-status-label" sx={{ fontSize: '0.85rem', fontWeight: 600 }}>Filter Status</InputLabel>
-          <Select
-            labelId="filter-status-label"
-            value={statusFilter}
-            label="Filter Status"
-            onChange={e => setStatusFilter(e.target.value)}
-            sx={{
-              borderRadius: '6px',
-              bgcolor: '#FFFFFF',
-              borderColor: '#EAE6E1',
-              fontSize: '0.85rem',
-              fontWeight: 650,
-              '& .MuiOutlinedInput-notchedOutline': { borderColor: '#EAE6E1' },
-              '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#AC9E7A' },
-            }}
-          >
-            <MenuItem value="">All Statuses</MenuItem>
-            <MenuItem value="Requested">Requested</MenuItem>
-            <MenuItem value="Confirmed">Confirmed</MenuItem>
-            <MenuItem value="Received">Received</MenuItem>
-            <MenuItem value="Cancelled">Cancelled</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      {/* Toast */}
+      {snack && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-burgundy-900 text-white text-xs font-semibold shadow-luxury-lg animate-fade-in">
+          <span>{snack}</span>
+          <button onClick={() => setSnack('')} className="ml-2 opacity-70 hover:opacity-100">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
-      {/* Stats pills — redesigned as clean catalog stats */}
-      <Grid container spacing={2} sx={{ mb: 4 }}>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
+        <div>
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            Stock Requests
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Track weaver and supplier procurement cycles from initial request to receipt.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-9 px-3 rounded-lg border border-input bg-background text-xs font-semibold text-foreground focus:ring-2 focus:ring-ring"
+          >
+            <option value="">All Statuses</option>
+            <option value="Requested">Requested</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Received">Received</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Interactive Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {Object.entries(stats).map(([status, count]) => {
           const isFilterActive = statusFilter === status;
           return (
-            <Grid xs={6} sm={3} key={status}>
-              <Paper
-                onClick={() => setStatusFilter(isFilterActive ? '' : status)}
-                sx={{
-                  p: 2.5,
-                  borderRadius: '8px',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  border: isFilterActive ? '1px solid #3B111A' : '1px solid #EAE6E1',
-                  bgcolor: '#FAF8F5',
-                  boxShadow: 'none',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: '#3B111A',
-                    bgcolor: '#FFFFFF'
-                  }
-                }}
-              >
-                <Typography
-                  variant="h2"
-                  sx={{
-                    fontFamily: '"Playfair Display", Georgia, serif',
-                    fontWeight: 450,
-                    fontSize: '2.2rem',
-                    mb: 0.5,
-                    color: '#241C1A'
-                  }}
-                >
+            <Card
+              key={status}
+              onClick={() => setStatusFilter(isFilterActive ? '' : status)}
+              className={cn(
+                "cursor-pointer transition-all duration-200 border hover:shadow-luxury-hover",
+                isFilterActive
+                  ? "border-burgundy-900 ring-2 ring-burgundy-900/20 bg-burgundy-50/30 dark:bg-burgundy-900/10"
+                  : "border-border hover:border-burgundy-900/30"
+              )}
+            >
+              <CardContent className="p-4 text-center">
+                <div className="font-serif text-2xl sm:text-3xl font-bold text-foreground">
                   {count}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontWeight: 750,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    fontSize: '0.68rem',
-                    color: '#7C726A'
-                  }}
-                >
+                </div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
                   {status}
-                </Typography>
-              </Paper>
-            </Grid>
+                </div>
+              </CardContent>
+            </Card>
           );
         })}
-      </Grid>
+      </div>
 
-      {error && <Alert severity="error" sx={{ mb: 3, borderRadius: '8px' }}>{error}</Alert>}
-
-      {loading && requests.length > 0 && (
-        <LinearProgress sx={{ height: 2, mb: 3, bgcolor: '#FAF8F5', '& .MuiLinearProgress-bar': { bgcolor: 'primary.main' } }} />
+      {error && (
+        <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-medium">
+          {error}
+        </div>
       )}
 
-      {/* Request cards */}
+      {/* Requests List */}
       {loading && requests.length === 0 ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {[1, 2, 3].map(i => <Skeleton key={i} variant="rounded" height={130} sx={{ borderRadius: '8px', bgcolor: '#FAF8F5' }} />)}
-        </Box>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-36 w-full rounded-2xl" />
+          ))}
+        </div>
       ) : requests.length === 0 ? (
-        <Paper sx={{ p: 6, borderRadius: '8px', textAlign: 'center', border: '1px solid #EAE6E1', bgcolor: '#FFFFFF', boxShadow: 'none' }}>
-          <HistoryIcon sx={{ fontSize: 40, color: '#AC9E7A', mb: 1.5 }} />
-          <Typography sx={{ color: '#7C726A', fontWeight: 600 }}>No stock requests yet.</Typography>
-        </Paper>
+        <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl bg-card border border-border shadow-luxury">
+          <Inbox className="w-10 h-10 text-muted-foreground/40 mb-3" />
+          <h3 className="text-base font-bold text-foreground">No Stock Requests</h3>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+            There are currently no stock procurement requests matching the selected filter.
+          </p>
+        </div>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          {requests.map(req => {
+        <div className="space-y-3">
+          {requests.map((req) => {
             const movementLabel = getMovementLabel(req);
             const isDelivery = movementLabel === 'Delivery Out';
 
             return (
-              <Paper
+              <Card
                 key={req.id}
-                sx={{
-                  p: 3,
-                  borderRadius: '8px',
-                  border: '1px solid #EAE6E1',
-                  bgcolor: '#FFFFFF',
-                  boxShadow: 'none',
-                  transition: 'border-color 0.2s ease',
-                  '&:hover': { borderColor: '#AC9C94' }
-                }}
+                className="overflow-hidden border border-border shadow-luxury hover:shadow-luxury-hover transition-all duration-200"
               >
-                {/* Top row: Stepper + Date */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, flexWrap: 'wrap', gap: 1.5 }}>
-                  <PipelineStepper currentStatus={req.status} />
-                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#7C726A', fontSize: '0.8rem' }}>
-                    {new Date(req.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    {' · '}
-                    {new Date(req.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                  </Typography>
-                </Box>
+                <CardContent className="p-5 sm:p-6 space-y-4">
+                  {/* Stepper Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/60">
+                    <PipelineStepper currentStatus={req.status} />
+                    <span className="text-xs text-muted-foreground font-medium">
+                      {new Date(req.created_at).toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}{' '}
+                      &bull;{' '}
+                      {new Date(req.created_at).toLocaleTimeString('en-IN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true,
+                      })}
+                    </span>
+                  </div>
 
-                {/* Details grid layout matching design */}
-                <Grid container spacing={2} sx={{ mb: 2.5 }}>
-                  <Grid xs={12} md={7}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                      <Typography
-                        variant="h3"
-                        sx={{
-                          fontSize: '1.25rem',
-                          fontWeight: 800,
-                          color: '#241C1A',
-                          fontFamily: '"Plus Jakarta Sans", sans-serif'
-                        }}
-                      >
-                        {req.series_code}
-                      </Typography>
-                      <Chip
-                        label={movementLabel.toUpperCase()}
-                        size="small"
-                        sx={{
-                          height: 18,
-                          fontSize: '0.6rem',
-                          fontWeight: 800,
-                          borderRadius: '3px',
-                          bgcolor: isDelivery ? '#FFF3E0' : '#E2F6EA',
-                          color: isDelivery ? '#D97706' : '#16A34A',
-                        }}
-                      />
-                    </Box>
-                    <Typography variant="body2" sx={{ color: '#7C726A', fontWeight: 550 }}>
-                      {req.beam_name} · {req.combination_name || 'Combination'}
-                    </Typography>
-                  </Grid>
-
-                  {/* Quantity and Supplier columns */}
-                  <Grid xs={6} md={2.5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
-                    <Box>
-                      <Typography variant="caption" sx={{ fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9E8E7A', display: 'block', mb: 0.5 }}>
-                        QTY
-                      </Typography>
-                      <Typography
-                        variant="h4"
-                        sx={{
-                          fontFamily: '"Playfair Display", Georgia, serif',
-                          fontWeight: 700,
-                          fontSize: '1.4rem',
-                          color: isDelivery ? '#D97706' : '#16A34A'
-                        }}
-                      >
-                        {isDelivery ? '−' : '+'}{req.requested_qty}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                  <Grid xs={6} md={2.5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' } }}>
-                    <Box>
-                      <Typography variant="caption" sx={{ fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#9E8E7A', display: 'block', mb: 0.5 }}>
-                        SUPPLIER
-                      </Typography>
-                      <Typography
-                        variant="h4"
-                        sx={{
-                          fontFamily: '"Playfair Display", Georgia, serif',
-                          fontWeight: 700,
-                          fontSize: '1.35rem',
-                          color: '#241C1A'
-                        }}
-                      >
-                        {req.suppliers?.name || '—'}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                </Grid>
-
-                {/* Actions row */}
-                <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center', pt: 1.5, borderTop: '1px solid #FAF8F5' }}>
-                  {req.status !== 'Received' && req.status !== 'Cancelled' && (
-                    <>
-                      {req.suppliers?.mobile && (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          color="success"
-                          startIcon={<WhatsAppIcon sx={{ fontSize: 16 }} />}
-                          onClick={() => openWhatsApp(req)}
-                          sx={{
-                            fontWeight: 800,
-                            borderRadius: '4px',
-                            borderColor: '#16A34A',
-                            color: '#16A34A',
-                            px: 2,
-                            py: 0.8,
-                            fontSize: '0.78rem',
-                            '&:hover': {
-                              borderColor: '#15803d',
-                              bgcolor: 'rgba(22,163,74,0.04)'
-                            }
-                          }}
+                  {/* Core Information Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                    <div className="md:col-span-6 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-base font-bold text-foreground">
+                          {req.series_code}
+                        </span>
+                        <Badge
+                          variant={isDelivery ? "warning" : "success"}
+                          className="text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider"
                         >
+                          {movementLabel}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {req.beam_name} &bull; {req.combination_name || 'Standard Combo'}
+                      </p>
+                    </div>
+
+                    <div className="md:col-span-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                        Quantity
+                      </span>
+                      <span
+                        className={cn(
+                          "font-mono text-xl font-bold mt-0.5 block",
+                          isDelivery ? "text-amber-600" : "text-emerald-600 dark:text-emerald-400"
+                        )}
+                      >
+                        {isDelivery ? '−' : '+'}{req.requested_qty} pcs
+                      </span>
+                    </div>
+
+                    <div className="md:col-span-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                        Supplier / Weaver
+                      </span>
+                      <span className="text-sm font-semibold text-foreground block truncate mt-0.5">
+                        {req.suppliers?.name || 'In-House'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action Bar */}
+                  <div className="flex items-center justify-between pt-2 border-t border-border/40">
+                    <div className="flex items-center gap-2">
+                      {req.suppliers?.mobile && req.status !== 'Received' && req.status !== 'Cancelled' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openWhatsApp(req)}
+                          className="text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 font-semibold text-xs h-8"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
                           WhatsApp
                         </Button>
                       )}
+
                       {req.status === 'Requested' && (
                         <Button
-                          size="small"
-                          variant="outlined"
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleStatusChange(req.id, 'Confirmed')}
-                          sx={{
-                            fontWeight: 800,
-                            borderRadius: '4px',
-                            borderColor: '#EAE6E1',
-                            color: '#241C1A',
-                            px: 2,
-                            py: 0.8,
-                            fontSize: '0.78rem',
-                            '&:hover': {
-                              borderColor: '#9E8E7A',
-                              bgcolor: '#FCFCFA'
-                            }
-                          }}
+                          className="font-semibold text-xs h-8"
                         >
-                          Confirm
+                          Confirm Order
                         </Button>
                       )}
+
                       {(req.status === 'Requested' || req.status === 'Confirmed') && (
                         <Button
-                          size="small"
-                          variant="contained"
-                          startIcon={<CheckCircleIcon sx={{ fontSize: 14 }} />}
+                          size="sm"
+                          variant="luxury"
                           onClick={() => handleStatusChange(req.id, 'Received')}
-                          sx={{
-                            fontWeight: 800,
-                            borderRadius: '4px',
-                            bgcolor: '#3B111A',
-                            color: '#FFFFFF',
-                            px: 2.5,
-                            py: 0.8,
-                            fontSize: '0.78rem',
-                            '&:hover': {
-                              bgcolor: '#2A0B12'
-                            }
-                          }}
+                          className="font-semibold text-xs h-8 shadow-xs"
                         >
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
                           Mark Received
                         </Button>
                       )}
-                    </>
-                  )}
-                  <Tooltip title="Delete">
-                    <IconButton
-                      size="small"
-                      color="error"
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => setDeleteId(req.id)}
-                      sx={{
-                        ml: 'auto',
-                        color: '#DC2626',
-                        border: '1px solid #FEEBEE',
-                        borderRadius: '4px',
-                        '&:hover': { bgcolor: '#FEEBEE' }
-                      }}
+                      className="text-destructive hover:bg-destructive/10"
+                      title="Delete request"
                     >
-                      <DeleteIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              </Paper>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
-        </Box>
+        </div>
       )}
 
-      {/* Receive confirmation dialog (spec §13) */}
-      <Dialog open={!!receiveConfirm} onClose={() => setReceiveConfirm(null)} slotProps={{ paper: { sx: { borderRadius: '8px', p: 1 } } }}>
-        <DialogTitle sx={{ fontWeight: 800, fontFamily: '"Plus Jakarta Sans", sans-serif', color: '#241C1A' }}>
-          Confirm Stock Receipt
-        </DialogTitle>
+      {/* Confirmation of Stock Receipt Dialog */}
+      <Dialog open={!!receiveConfirm} onOpenChange={(open) => !open && setReceiveConfirm(null)}>
         <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-serif">Confirm Stock Receipt</DialogTitle>
+            <DialogDescription>
+              Confirm physical arrival of sarees to automatically update live warehouse inventory levels.
+            </DialogDescription>
+          </DialogHeader>
+
           {receiveConfirm && (
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, fontWeight: 600 }}>
-                {receiveConfirm.series_code} — {receiveConfirm.beam_name} · {receiveConfirm.combination_name}
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: 2, bgcolor: '#FAF8F5', borderRadius: '4px', border: '1px solid #EAE6E1' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" sx={{ color: '#7C726A', fontWeight: 550 }}>Current Stock</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#241C1A' }}>{receiveConfirm.current_stock ?? '—'} pcs</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" sx={{ color: '#7C726A', fontWeight: 550 }}>Receiving</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#16A34A' }}>+{receiveConfirm.requested_qty} pcs</Typography>
-                </Box>
-                <Box sx={{ borderTop: '1px solid #EAE6E1', pt: 1.5, display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#241C1A' }}>New Stock</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 800, color: '#241C1A' }}>{(receiveConfirm.current_stock ?? 0) + receiveConfirm.requested_qty} pcs</Typography>
-                </Box>
-              </Box>
-            </Box>
+            <div className="space-y-3 py-2">
+              <div className="p-3 rounded-xl bg-muted/40 border border-border space-y-2 text-xs">
+                <div className="font-semibold text-foreground">
+                  {receiveConfirm.series_code} &bull; {receiveConfirm.beam_name} ({receiveConfirm.combination_name})
+                </div>
+                <div className="flex justify-between text-muted-foreground pt-1 border-t border-border/50">
+                  <span>Current Stock</span>
+                  <span className="font-mono font-bold text-foreground">
+                    {receiveConfirm.current_stock ?? 0} pcs
+                  </span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Incoming Quantity</span>
+                  <span className="font-mono font-bold text-emerald-600">
+                    +{receiveConfirm.requested_qty} pcs
+                  </span>
+                </div>
+                <div className="flex justify-between text-foreground font-bold pt-1.5 border-t border-border">
+                  <span>Updated Total</span>
+                  <span className="font-mono text-sm text-burgundy-900 dark:text-burgundy-300">
+                    {(receiveConfirm.current_stock ?? 0) + receiveConfirm.requested_qty} pcs
+                  </span>
+                </div>
+              </div>
+            </div>
           )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReceiveConfirm(null)}>
+              Cancel
+            </Button>
+            <Button variant="luxury" onClick={confirmReceive}>
+              Confirm & Increment Stock
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5, gap: 1 }}>
-          <Button onClick={() => setReceiveConfirm(null)} variant="outlined" sx={{ borderRadius: '4px', textTransform: 'none', fontWeight: 700 }}>
-            Cancel
-          </Button>
-          <Button onClick={confirmReceive} variant="contained" sx={{ borderRadius: '4px', bgcolor: '#3B111A', textTransform: 'none', fontWeight: 700, '&:hover': { bgcolor: '#2A0B12' } }}>
-            Confirm & Update Stock
-          </Button>
-        </DialogActions>
       </Dialog>
 
-      {/* Delete confirm */}
-      <Dialog open={!!deleteId} onClose={() => setDeleteId(null)} slotProps={{ paper: { sx: { borderRadius: '8px' } } }}>
-        <DialogTitle sx={{ fontWeight: 800, color: '#241C1A' }}>Delete Request?</DialogTitle>
-        <DialogContent sx={{ color: '#7C726A' }}>This will permanently delete the stock request record.</DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setDeleteId(null)} variant="outlined" sx={{ borderRadius: '4px', textTransform: 'none', fontWeight: 700 }}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={handleDelete} sx={{ borderRadius: '4px', textTransform: 'none', fontWeight: 700, bgcolor: '#DC2626' }}>Delete</Button>
-        </DialogActions>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive font-serif">Delete Stock Request?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the request record from your procurement history.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
-
-      <Snackbar open={!!snack} autoHideDuration={3000} onClose={() => setSnack('')} message={snack} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
-    </Box>
+    </div>
   );
 };
 

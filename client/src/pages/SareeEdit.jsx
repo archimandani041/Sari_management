@@ -27,7 +27,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
-import PageHeader from '../components/common/PageHeader';
 
 
 // ─────────────────────────────────────────────────────
@@ -764,18 +763,24 @@ const SareeEdit = () => {
 
   return (
     <Box>
-      <PageHeader
-        title={`Edit — ${saree?.series_code}`}
-        subtitle="Manage saree identity. Beams and combinations save independently."
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Inventory', href: '/sarees' }, { label: saree?.series_code, href: `/sarees/${id}` }, { label: 'Edit' }]}
-        icon={<IconButton onClick={() => navigate(-1)} color="primary" sx={{ p: 0.5, mr: 1 }}><ArrowBack /></IconButton>}
-        actions={<>
-          <Button startIcon={<WhatsAppIcon />} variant="outlined" color="success" onClick={() => setPasteOpen(true)} size="small">
+      {/* Header */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+        <IconButton onClick={() => navigate(-1)} color="primary"><ArrowBack /></IconButton>
+        <Box flex={1}>
+          <Typography variant="h2" sx={{ fontSize: '1.75rem', fontWeight: 800 }}>
+            Edit — {saree?.series_code}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Saree identity saves with "Save Saree". Beams and combinations save independently.
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button startIcon={<WhatsAppIcon />} variant="outlined" color="success" onClick={() => setPasteOpen(true)}>
             Paste WhatsApp
           </Button>
-          <Button variant="outlined" onClick={() => navigate(`/sarees/${id}`)} size="small">View Detail</Button>
-        </>}
-      />
+          <Button variant="outlined" onClick={() => navigate(`/sarees/${id}`)}>View Detail</Button>
+        </Box>
+      </Box>
 
       <Grid container spacing={3}>
         {/* Saree identity */}

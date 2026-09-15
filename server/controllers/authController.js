@@ -179,5 +179,23 @@ const register = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/auth/users
+ * List all users in system (admin only)
+ */
+const getUsers = async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, username, email, role, full_name, is_active, created_at')
+      .order('created_at', { ascending: false });
 
-module.exports = { login, logout, getMe, register };
+    if (error) throw error;
+    res.json({ users: users || [] });
+  } catch (error) {
+    console.error('GetUsers error:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+};
+
+module.exports = { login, logout, getMe, register, getUsers };

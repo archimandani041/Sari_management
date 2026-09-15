@@ -1,42 +1,48 @@
 /**
- * Redesigned Login/Signup Page — KP Creation
- * Light-themed premium layout with sliding saree photography,
- * serif luxury typography, and email authentication.
+ * Login & Sign Up Page — Redesigned with shadcn/ui & Tailwind CSS
+ * Editorial Luxury Design: Split-screen visual showcase, smooth slider, refined typography.
  */
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
 import { supabase } from '../services/supabase';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { cn } from '../lib/utils';
 import {
-  Box,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  Checkbox,
-  FormControlLabel,
-  InputAdornment,
-  IconButton,
-  CircularProgress
-} from '@mui/material';
-import { Visibility, VisibilityOff, Email, Lock, Check } from '@mui/icons-material';
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Store,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+  ChevronLeft,
+  Sparkles
+} from 'lucide-react';
 
 const SLIDES = [
   {
     title: "KP Creation Portal",
-    description: "Premium handloom saree inventory management and real-time stock tracking.",
-    image: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800"
+    subtitle: "Artisanal Inventory Architecture",
+    description: "Premium handloom saree inventory management, intelligent stock predictions, and real-time ledger tracking.",
+    image: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=1200"
   },
   {
     title: "Artisanal Silk Textures",
-    description: "Explore exquisite details of premium Banarasi, Kanchipuram and designer silks.",
-    image: "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&q=80&w=800"
+    subtitle: "Heritage & Craftsmanship",
+    description: "Multi-tier beam management tailored for Banarasi, Kanchipuram, and bespoke designer silks.",
+    image: "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&q=80&w=1200"
   },
   {
-    title: "Efficient Coordination",
-    description: "Instantly coordinate stock requests with weavers and suppliers via WhatsApp integration.",
-    image: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800"
+    title: "Seamless Coordination",
+    subtitle: "Weaver & Supplier Network",
+    description: "Direct WhatsApp integrations and automated procurement workflows with artisan suppliers.",
+    image: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=1200"
   }
 ];
 
@@ -44,47 +50,52 @@ const Login = () => {
   const { login, signUp, isAuthenticated } = useAuth();
   const { setThemeMode } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const sessionReset = searchParams.get('reason') === 'session_reset';
+  const rawTarget = location.state?.from?.pathname || location.state?.from || '/dashboard';
+  const from = (!rawTarget || rawTarget === '/' || rawTarget === '/landing' || rawTarget === '/login')
+    ? '/dashboard'
+    : rawTarget;
 
+  // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/', { replace: true });
+      navigate(from, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, from]);
 
-  // State toggles
+  // Mode toggles
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Fields state
+  // Form Fields
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // Status state
+  // State
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
 
-  // Cover Slider State
+  // Slideshow
   const [activeSlide, setActiveSlide] = useState(0);
 
-  // Auto-rotate cover slider
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % SLIDES.length);
-    }, 5000);
+    }, 6000);
     return () => clearInterval(timer);
   }, []);
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError('Please fill in both email and password.');
       return;
     }
     setError('');
@@ -95,16 +106,15 @@ const Login = () => {
       await login(email.trim(), password);
       setThemeMode('light');
       localStorage.setItem('sari_theme', 'light');
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (err) {
       console.error(err);
-      // Give a more helpful error message
       if (err.message?.toLowerCase().includes('invalid') || err.message?.toLowerCase().includes('credentials')) {
-        setError('Invalid email or password. If you forgot your password, click "Forgot password?" below.');
+        setError('Invalid email or password. You can reset it below if forgotten.');
       } else if (err.message?.toLowerCase().includes('email not confirmed')) {
-        setError('Please confirm your email first. Check your inbox for a verification link.');
+        setError('Please verify your email address first via the link sent to your inbox.');
       } else {
-        setError(err.message || 'Login failed. Please try again.');
+        setError(err.message || 'Login failed. Please verify credentials.');
       }
     } finally {
       setLoading(false);
@@ -125,7 +135,7 @@ const Login = () => {
         redirectTo: `${window.location.origin}/auth/callback`,
       });
       if (resetError) throw resetError;
-      setSuccess(`Password reset email sent to ${email}. Check your inbox and click the link to set a new password.`);
+      setSuccess(`Reset instructions sent to ${email}. Check your inbox to proceed.`);
       setIsForgotPassword(false);
     } catch (err) {
       setError(err.message || 'Failed to send reset email. Please try again.');
@@ -137,11 +147,11 @@ const Login = () => {
   const handleSignUpSubmit = async (e) => {
     e.preventDefault();
     if (!firstName || !lastName || !email || !password) {
-      setError('Please fill in all fields');
+      setError('Please fill in all requested fields.');
       return;
     }
     if (!termsAccepted) {
-      setError('You must agree to the Terms & Conditions');
+      setError('Please accept the Terms & Conditions.');
       return;
     }
     setError('');
@@ -153,7 +163,7 @@ const Login = () => {
       const data = await signUp(email.trim(), password, fullName);
 
       if (data && !data.session) {
-        setSuccess('Verification email sent! Please check your inbox and confirm your email before logging in.');
+        setSuccess('Confirmation link sent! Check your inbox to verify your account.');
         setFirstName('');
         setLastName('');
         setEmail('');
@@ -161,400 +171,343 @@ const Login = () => {
         setTermsAccepted(false);
         setIsSignUp(false);
       } else {
-        navigate('/');
+        navigate(from, { replace: true });
       }
     } catch (err) {
       console.error(err);
-      setError(err.message || 'Signup failed');
+      setError(err.message || 'Signup failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box sx={{
-      height: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #FAFAFA 0%, #F5F1EE 100%)',
-      px: { xs: 2, sm: 4 },
-      py: 2
-    }}>
-      {/* Custom Styles for light mode inputs and fade animation */}
-      <style>{`
-        .custom-input .MuiOutlinedInput-root {
-          background-color: #FFFFFF !important;
-          border-radius: 12px !important;
-          border: 1px solid #ECE7E4 !important;
-          transition: all 0.25s ease-in-out !important;
-        }
-        .custom-input .MuiOutlinedInput-root:hover {
-          border-color: #AC9C8D !important;
-        }
-        .custom-input .MuiOutlinedInput-root.Mui-focused {
-          border-color: #72383D !important;
-          box-shadow: 0 0 0 3px rgba(114, 56, 61, 0.12) !important;
-        }
-        .custom-input .MuiOutlinedInput-notchedOutline {
-          border: none !important;
-        }
-        .custom-input input {
-          color: #2D2825 !important;
-          font-size: 0.92rem !important;
-          padding: 12.5px 14px !important;
-        }
-        .custom-input input::placeholder {
-          color: #9A8A7A !important;
-          opacity: 1 !important;
-        }
-        @keyframes slideFadeIn {
-          from { opacity: 0.4; }
-          to { opacity: 1; }
-        }
-      `}</style>
+    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-cream-50 via-background to-cream-100 dark:from-background dark:to-card">
+      <div className="w-full max-w-5xl h-auto min-h-[640px] md:h-[660px] flex flex-col md:flex-row rounded-3xl bg-card border border-border shadow-luxury-lg overflow-hidden">
+        
+        {/* LEFT PANEL: Curated Imagery & Slider */}
+        <div className="relative w-full md:w-1/2 p-8 sm:p-10 flex flex-col justify-between overflow-hidden bg-burgundy-950 text-white min-h-[320px] md:min-h-full">
+          {/* Background Images with Crossfade */}
+          {SLIDES.map((slide, idx) => (
+            <div
+              key={idx}
+              className={cn(
+                "absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out",
+                activeSlide === idx ? "opacity-45 scale-105" : "opacity-0 scale-100"
+              )}
+              style={{
+                backgroundImage: `url('${slide.image}')`,
+                transitionProperty: 'opacity, transform',
+                transitionDuration: '1200ms'
+              }}
+            />
+          ))}
 
-      {/* Main card */}
-      <Box sx={{
-        maxWidth: 960,
-        width: '100%',
-        height: { xs: 'auto', md: 560 },
-        display: 'flex',
-        flexDirection: { xs: 'column', md: 'row' },
-        bgcolor: 'rgba(255, 255, 255, 0.85)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderRadius: 6,
-        overflow: 'hidden',
-        boxShadow: '0 24px 64px -12px rgba(45, 40, 37, 0.06), 0 1px 2px rgba(0,0,0,0.01)',
-        border: '1px solid rgba(226, 232, 240, 0.8)'
-      }}>
+          {/* Luxury Overlay Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-burgundy-950 via-burgundy-950/70 to-burgundy-900/40" />
 
-        {/* LEFT PANEL: Cover image & Slider */}
-        <Box sx={{
-          width: { xs: '100%', md: '48%' },
-          display: { xs: 'none', sm: 'flex' },
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          p: 4.5,
-          position: 'relative',
-          overflow: 'hidden',
-          backgroundImage: `linear-gradient(180deg, rgba(50, 45, 41, 0.2) 0%, rgba(114, 56, 61, 0.75) 100%), url('${SLIDES[activeSlide].image}')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          borderRadius: 4,
-          m: 1.2,
-          animation: 'slideFadeIn 0.8s ease-in-out'
-        }}>
-          {/* Logo row */}
-          <Box sx={{ display: 'flex', alignItems: 'center', zIndex: 2 }}>
-            <Typography variant="h5" sx={{
-              fontWeight: 900,
-              color: '#FFF',
-              letterSpacing: '0.04em',
-              fontFamily: '"Playfair Display", Georgia, serif',
-              fontSize: '1.45rem'
-            }}>
-              KP<Box component="span" sx={{ color: '#EFE9E1' }}> Creation</Box>
-            </Typography>
-          </Box>
+          {/* Brand Header */}
+          <div className="relative z-10 flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20">
+              <Store className="w-5 h-5 text-amber-200" />
+            </div>
+            <div>
+              <h2 className="font-serif text-xl font-bold tracking-tight text-white">
+                KP Creation
+              </h2>
+              <p className="text-[10px] uppercase tracking-widest text-amber-200/80 font-semibold">
+                Saree Inventory Enterprise
+              </p>
+            </div>
+          </div>
 
-          {/* Slider Content & Dots */}
-          <Box sx={{ zIndex: 2 }}>
-            <Box sx={{ minHeight: 90, mb: 3 }}>
-              {SLIDES.map((slide, idx) => (
-                <Box
-                  key={idx}
-                  sx={{
-                    display: activeSlide === idx ? 'block' : 'none',
-                    animation: 'fadeIn 0.6s ease-in-out',
-                    '@keyframes fadeIn': {
-                      from: { opacity: 0, transform: 'translateY(10px)' },
-                      to: { opacity: 1, transform: 'translateY(0)' }
-                    }
-                  }}
-                >
-                  <Typography variant="h3" sx={{
-                    fontFamily: '"Playfair Display", Georgia, serif',
-                    color: '#FFF',
-                    fontWeight: 800,
-                    fontSize: '1.65rem',
-                    mb: 1.2,
-                    letterSpacing: '-0.01em',
-                    lineHeight: 1.25
-                  }}>
-                    {slide.title}
-                  </Typography>
-                  <Typography variant="body2" sx={{
-                    color: '#EFE9E1',
-                    fontSize: '0.85rem',
-                    lineHeight: 1.5,
-                    fontWeight: 400
-                  }}>
-                    {slide.description}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
+          {/* Slide Captions */}
+          <div className="relative z-10 space-y-4 my-auto py-8">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs text-amber-200 font-medium">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{SLIDES[activeSlide].subtitle}</span>
+            </div>
+            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-white leading-tight tracking-tight">
+              {SLIDES[activeSlide].title}
+            </h1>
+            <p className="text-sm text-cream-200/90 max-w-md leading-relaxed font-normal">
+              {SLIDES[activeSlide].description}
+            </p>
+          </div>
 
-            {/* Slider Dots */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {SLIDES.map((_, idx) => (
-                <Box
-                  key={idx}
-                  onClick={() => setActiveSlide(idx)}
-                  sx={{
-                    width: activeSlide === idx ? 28 : 8,
-                    height: 8,
-                    borderRadius: 4,
-                    bgcolor: activeSlide === idx ? '#FFF' : 'rgba(255, 255, 255, 0.3)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease-in-out'
-                  }}
-                />
-              ))}
-            </Box>
-          </Box>
-        </Box>
+          {/* Slider Pagination Indicators */}
+          <div className="relative z-10 flex items-center gap-2 pt-4">
+            {SLIDES.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setActiveSlide(idx)}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  activeSlide === idx
+                    ? "w-8 bg-amber-300"
+                    : "w-2 bg-white/30 hover:bg-white/50"
+                )}
+                aria-label={`Go to slide ${idx + 1}`}
+              />
+            ))}
+          </div>
+        </div>
 
-        {/* RIGHT PANEL: Authentication Form */}
-        <Box sx={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          p: { xs: 4, md: 6 },
-          overflowY: 'auto'
-        }}>
-          {/* Header */}
-          <Box sx={{ mb: 4, textAlign: 'center' }}>
-            <Typography variant="h1" sx={{
-              fontFamily: '"Playfair Display", Georgia, serif',
-              color: '#322D29', fontWeight: 900, fontSize: '2.2rem',
-              mb: 1, letterSpacing: '-0.02em'
-            }}>
-              {isForgotPassword ? 'Reset Password' : (isSignUp ? 'Create an account' : 'Welcome back')}
-            </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
-              <Typography sx={{ color: '#8C827A', fontSize: '0.85rem' }}>
-                {isForgotPassword ? 'Enter your email to receive a reset link.' : (isSignUp ? 'Already have an account?' : "Don't have an account?")}
-              </Typography>
+        {/* RIGHT PANEL: Auth Forms */}
+        <div className="w-full md:w-1/2 p-6 sm:p-10 md:p-12 flex flex-col justify-center bg-card">
+          <div className="max-w-md w-full mx-auto space-y-6">
+            
+            {/* Header Title & Switcher */}
+            <div>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+                {isForgotPassword
+                  ? 'Reset Password'
+                  : isSignUp
+                  ? 'Join KP Creation'
+                  : 'Welcome Back'}
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1.5">
+                {isForgotPassword ? (
+                  'Provide your registered email to receive recovery instructions.'
+                ) : isSignUp ? (
+                  <>
+                    Already have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSignUp(false);
+                        setError('');
+                        setSuccess('');
+                      }}
+                      className="font-semibold text-burgundy-900 dark:text-burgundy-300 hover:underline"
+                    >
+                      Sign In
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    New to KP Creation?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSignUp(true);
+                        setError('');
+                        setSuccess('');
+                      }}
+                      className="font-semibold text-burgundy-900 dark:text-burgundy-300 hover:underline"
+                    >
+                      Create an account
+                    </button>
+                  </>
+                )}
+              </p>
+            </div>
+
+            {/* Notification & Alerts */}
+            {sessionReset && (
+              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>Session reset detected. Please sign in with your email credentials.</span>
+              </div>
+            )}
+
+            {error && (
+              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {success && (
+              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{success}</span>
+              </div>
+            )}
+
+            {/* Main Form */}
+            <form
+              onSubmit={
+                isForgotPassword
+                  ? handleForgotPassword
+                  : isSignUp
+                  ? handleSignUpSubmit
+                  : handleLoginSubmit
+              }
+              className="space-y-4"
+            >
+              {/* First & Last Name (Sign Up only) */}
+              {isSignUp && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="firstName" className="text-xs font-semibold">
+                      First Name
+                    </Label>
+                    <Input
+                      id="firstName"
+                      placeholder="e.g. Ramesh"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      disabled={loading}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lastName" className="text-xs font-semibold">
+                      Last Name
+                    </Label>
+                    <Input
+                      id="lastName"
+                      placeholder="e.g. Patel"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      disabled={loading}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Email Address */}
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-semibold">
+                  Email Address
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@kpcreation.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
               {!isForgotPassword && (
-                <Typography
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password" className="text-xs font-semibold">
+                      Password
+                    </Label>
+                    {!isSignUp && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsForgotPassword(true);
+                          setError('');
+                          setSuccess('');
+                        }}
+                        className="text-xs font-medium text-muted-foreground hover:text-burgundy-900 dark:hover:text-burgundy-300 hover:underline"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                      className="pl-10 pr-10"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Terms Checkbox (SignUp only) */}
+              {isSignUp && (
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="terms"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="h-4 w-4 rounded-sm border-input text-burgundy-900 focus:ring-burgundy-900"
+                    required
+                  />
+                  <label htmlFor="terms" className="text-xs text-muted-foreground">
+                    I agree to the{' '}
+                    <span className="font-semibold text-burgundy-900 dark:text-burgundy-300">
+                      Terms of Service
+                    </span>{' '}
+                    & Privacy Policy
+                  </label>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                variant="luxury"
+                className="w-full h-11 text-sm font-bold tracking-wide mt-2 shadow-luxury"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : isForgotPassword ? (
+                  'Send Reset Email'
+                ) : isSignUp ? (
+                  <>
+                    Create Account
+                    <ArrowRight className="w-4 h-4 ml-1.5" />
+                  </>
+                ) : (
+                  <>
+                    Sign In
+                    <ArrowRight className="w-4 h-4 ml-1.5" />
+                  </>
+                )}
+              </Button>
+            </form>
+
+            {/* Back button for Forgot Password */}
+            {isForgotPassword && (
+              <div className="text-center pt-2">
+                <button
+                  type="button"
                   onClick={() => {
-                    setIsSignUp(!isSignUp);
                     setIsForgotPassword(false);
                     setError('');
                     setSuccess('');
                   }}
-                  sx={{
-                    color: '#72383D',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textDecoration: 'underline',
-                    '&:hover': { color: '#592B2F' }
-                  }}
+                  className="inline-flex items-center text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {isSignUp ? 'Log in' : 'Sign up'}
-                </Typography>
-              )}
-            </Box>
-          </Box>
-
-          {/* Feedback Messages */}
-          {sessionReset && (
-            <Alert severity="warning" sx={{ mb: 2.5, bgcolor: 'rgba(114, 56, 61, 0.06)', color: '#72383D', border: '1px solid rgba(114, 56, 61, 0.15)', borderRadius: 2 }}>
-              Database was reset — please log in again with email.
-            </Alert>
-          )}
-          {error && (
-            <Alert severity="error" sx={{ mb: 2.5, bgcolor: 'rgba(114, 56, 61, 0.08)', color: '#72383D', border: '1px solid rgba(114, 56, 61, 0.2)', borderRadius: 2 }}>
-              {error}
-            </Alert>
-          )}
-          {success && (
-            <Alert severity="success" icon={<Check sx={{ color: '#22C55E' }} />} sx={{ mb: 2.5, bgcolor: 'rgba(34, 197, 94, 0.08)', color: '#16A34A', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: 2 }}>
-              {success}
-            </Alert>
-          )}
-
-          {/* Form */}
-          <Box
-            component="form"
-            onSubmit={isForgotPassword ? handleForgotPassword : (isSignUp ? handleSignUpSubmit : handleLoginSubmit)}
-            sx={{ display: 'flex', flexDirection: 'column', gap: 2.2 }}
-          >
-            {/* First Name & Last Name (SignUp only) */}
-            {isSignUp && (
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField
-                  placeholder="First name"
-                  variant="outlined"
-                  fullWidth
-                  className="custom-input"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  disabled={loading}
-                />
-                <TextField
-                  placeholder="Last name"
-                  variant="outlined"
-                  fullWidth
-                  className="custom-input"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  disabled={loading}
-                />
-              </Box>
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Back to Sign In
+                </button>
+              </div>
             )}
+          </div>
+        </div>
 
-            {/* Email Field */}
-            <TextField
-              placeholder="Email"
-              variant="outlined"
-              fullWidth
-              className="custom-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email sx={{ color: '#AC9C8D', fontSize: 18, mr: 0.5 }} />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-
-            {/* Password Field */}
-            {!isForgotPassword && (
-              <TextField
-                placeholder="Enter your password"
-                type={showPassword ? 'text' : 'password'}
-                variant="outlined"
-                fullWidth
-                className="custom-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Lock sx={{ color: '#AC9C8D', fontSize: 18, mr: 0.5 }} />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
-                          sx={{ color: '#AC9C8D' }}
-                        >
-                          {showPassword ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-              />
-            )}
-
-            {/* Forgot Password link — only show on login view */}
-            {!isSignUp && !isForgotPassword && (
-              <Typography
-                onClick={() => {
-                  setIsForgotPassword(true);
-                  setError('');
-                  setSuccess('');
-                }}
-                sx={{
-                  color: '#AC9C8D',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  textAlign: 'right',
-                  mt: -0.5,
-                  '&:hover': { color: '#72383D', textDecoration: 'underline' }
-                }}
-              >
-                Forgot password?
-              </Typography>
-            )}
-
-            {/* Terms & Conditions Checkbox (SignUp only) */}
-            {isSignUp && (
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={termsAccepted}
-                    onChange={(e) => setTermsAccepted(e.target.checked)}
-                    sx={{
-                      color: '#D1C7BD',
-                      '&.Mui-checked': { color: '#72383D' }
-                    }}
-                  />
-                }
-                label={
-                  <Typography variant="body2" sx={{ color: '#AC9C8D', fontSize: '0.78rem' }}>
-                    I agree to the{' '}
-                    <span style={{ color: '#72383D', fontWeight: 600, cursor: 'pointer' }}>Terms & Conditions</span>
-                  </Typography>
-                }
-                sx={{ ml: -0.5, mt: -0.5 }}
-              />
-            )}
-
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              variant="contained"
-              size="large"
-              fullWidth
-              disabled={loading}
-              sx={{
-                bgcolor: '#72383D',
-                color: '#FFF',
-                borderRadius: '30px',
-                py: 1.5,
-                fontSize: '0.92rem',
-                fontWeight: 700,
-                textTransform: 'none',
-                boxShadow: '0 4px 12px rgba(114, 56, 61, 0.15)',
-                mt: 1,
-                '&:hover': {
-                  bgcolor: '#592B2F',
-                  boxShadow: '0 6px 20px rgba(114, 56, 61, 0.25)',
-                  transform: 'translateY(-1px)'
-                },
-                '&:active': {
-                  transform: 'translateY(1px)'
-                },
-                '&.Mui-disabled': {
-                  bgcolor: 'rgba(114, 56, 61, 0.4)',
-                  color: 'rgba(255, 255, 255, 0.5)'
-                },
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-              }}
-            >
-              {loading ? <CircularProgress size={20} color="inherit" /> : (isForgotPassword ? 'Send Reset Email' : isSignUp ? 'Create account' : 'Log in')}
-            </Button>
-
-            {/* Back to login in forgot-password mode */}
-            {isForgotPassword && (
-              <Typography
-                onClick={() => { setIsForgotPassword(false); setError(''); setSuccess(''); }}
-                sx={{ color: '#AC9C8D', fontSize: '0.82rem', textAlign: 'center', cursor: 'pointer', '&:hover': { color: '#72383D' } }}
-              >
-                ← Back to login
-              </Typography>
-            )}
-          </Box>
-        </Box>
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 };
 

@@ -14,29 +14,34 @@ import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { stockRequestAPI, combinationAPI } from '../../services/api';
 
-// ── Build compact WhatsApp message (no blank lines) ──────────
-const buildWhatsAppMessage = ({ brand, movementType, seriesCode, beamName, colors, requestedQty }) => {
+// ── Build compact WhatsApp message with *bold* wrapping ──────────
+const buildWhatsAppMessage = ({ movementType, seriesCode, beamName, colors, requestedQty }) => {
   const lines = [];
-  if (brand) lines.push(brand.trim());
-  const beamHeader = beamName
-    ? (beamName.trim().endsWith(':') ? beamName.trim() : `${beamName.trim()}:`)
-    : 'Beam:';
-  lines.push(beamHeader);
 
-  let statusLabel = '( IN STOCK )';
-  if (movementType === 'DELIVERY') statusLabel = '( MACHINE DELIVERY )';
+  // Beam header — "Black beam :"
+  const cleanBeam = (beamName || 'Beam').trim().replace(/:+$/, '');
+  lines.push(`${cleanBeam} :`);
+
+  // Series code + status — "KS491 ( DELIVERY )"
+  let statusLabel = '( STOCK )';
+  if (movementType === 'DELIVERY') statusLabel = '( DELIVERY )';
   else if (movementType === 'STOCK_DELIVERY' || movementType === 'DELIVERY_OUT') statusLabel = '( STOCK DELIVERY )';
 
-  if (seriesCode) lines.push(`${seriesCode} ${statusLabel}`);
-  else lines.push(statusLabel);
+  lines.push(seriesCode ? `${seriesCode} ${statusLabel}` : statusLabel);
+
+  // F-colors — "F-1 : Black ( Spon )"
   (colors || []).forEach(c => {
     const fPart = c.f_number || 'F';
     const colorPart = c.color_name || '';
     const companyPart = c.company_name ? ` ( ${c.company_name.trim()} )` : '';
     lines.push(`${fPart} : ${colorPart}${companyPart}`);
   });
-  lines.push(`${requestedQty} pcs/-`);
-  return lines.join('\n');
+
+  // Quantity — "60pcs/-"
+  lines.push(`${requestedQty}pcs/-`);
+
+  // Wrap entire message in * for WhatsApp bold
+  return `*${lines.join('\n')}*`;
 };
 
 const RequestStockDialog = ({
@@ -82,7 +87,6 @@ const RequestStockDialog = ({
     : '';
 
   const message = buildWhatsAppMessage({
-    brand: combination?.brand,
     movementType,
     seriesCode,
     beamName,

@@ -450,30 +450,17 @@ const getLedgerStats = async (req, res) => {
   try {
     const ownerId = req.user.owner_id;
 
-    // Compute today's start in IST (UTC+5:30) so records are counted for the
-    // correct calendar day regardless of the server's local timezone (UTC).
-    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // 5h 30m in ms
-    const nowUtc = Date.now();
-    const nowIst = new Date(nowUtc + IST_OFFSET_MS);
-    // Get year/month/day in IST
-    const istYear = nowIst.getUTCFullYear();
-    const istMonth = nowIst.getUTCMonth();
-    const istDay = nowIst.getUTCDate();
-    // Build IST midnight as a UTC instant
-    const todayStartIst = new Date(Date.UTC(istYear, istMonth, istDay, 0, 0, 0, 0));
-    const todayStartUtc = new Date(todayStartIst.getTime() - IST_OFFSET_MS);
-
-    const { data: todayRecords } = await supabase
+    // Query ALL stock history records for overall totals
+    const { data: allRecords } = await supabase
       .from('stock_history')
       .select('*')
-      .eq('owner_id', ownerId)
-      .gte('created_at', todayStartUtc.toISOString());
+      .eq('owner_id', ownerId);
 
     let stockAdded = 0;
     let machineDeliveries = 0;
     let stockDeliveries = 0;
 
-    (todayRecords || []).forEach(r => {
+    (allRecords || []).forEach(r => {
       let details = {};
       try {
         if (r.reason && (r.reason.startsWith('{') || r.reason.startsWith('['))) {

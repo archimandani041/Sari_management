@@ -21,8 +21,14 @@ const getStockRequests = async (req, res) => {
     const { data, error, count } = await query.range(offset, offset + parseInt(limit) - 1);
     if (error) throw error;
 
+    const formattedRequests = (data || []).map(r => ({
+      ...r,
+      quantity: r.requested_qty || r.quantity || 0,
+      requested_qty: r.requested_qty || r.quantity || 0,
+    }));
+
     res.json({
-      requests: data || [],
+      requests: formattedRequests,
       pagination: { page: parseInt(page), limit: parseInt(limit), total: count || 0 }
     });
   } catch (error) {
@@ -37,12 +43,13 @@ const createStockRequest = async (req, res) => {
     const {
       saree_id, combination_id,
       beam_name, combination_name, series_code,
-      requested_qty, current_stock, minimum_stock,
+      requested_qty, quantity, current_stock, minimum_stock,
       whatsapp_message, notes, movement_type
     } = req.body;
 
+    const targetQty = parseInt(requested_qty || quantity);
     if (!combination_id) return res.status(400).json({ error: 'combination_id is required' });
-    if (!requested_qty || requested_qty <= 0) return res.status(400).json({ error: 'requested_qty must be > 0' });
+    if (!targetQty || targetQty <= 0) return res.status(400).json({ error: 'requested_qty must be > 0' });
 
     const { data: combo, error: comboErr } = await supabase
       .from('combinations')
@@ -58,7 +65,7 @@ const createStockRequest = async (req, res) => {
 
     const isDelivery = movement_type === 'DELIVERY_OUT';
     const oldStock = combo.current_stock || 0;
-    const newStock = isDelivery ? (oldStock - parseInt(requested_qty)) : (oldStock + parseInt(requested_qty));
+    const newStock = isDelivery ? (oldStock - targetQty) : (oldStock + targetQty);
     const newStatus = isDelivery ? 'In Delivery' : 'In Stock';
 
     if (isDelivery && newStock < 0) {
@@ -79,7 +86,7 @@ const createStockRequest = async (req, res) => {
         saree_code: series_code,
         beam_name,
         combination_name: combo.combination_name || combination_name,
-        requested_qty: parseInt(requested_qty),
+        requested_qty: targetQty,
         old_stock: oldStock,
         new_stock: newStock
       }
@@ -98,7 +105,7 @@ const createStockRequest = async (req, res) => {
         beam_name: beam_name || null,
         combination_name: combination_name || null,
         series_code: series_code || null,
-        requested_qty: parseInt(requested_qty),
+        requested_qty: targetQty,
         current_stock: oldStock,
         minimum_stock: parseInt(minimum_stock) || 20,
         whatsapp_message: whatsapp_message || null,

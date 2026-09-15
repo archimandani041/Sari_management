@@ -1,6 +1,7 @@
 /**
- * Saree Details Page — V3 Hierarchical & Analytical
- * Premium control panel with interactive inventory adjustments, analytics charts, and a detailed audit timeline.
+ * Saree Details Page — Redesigned with shadcn/ui & Tailwind CSS
+ * Editorial Luxury Control Panel with live beam hierarchy breakdown, series letter management,
+ * and direct WhatsApp replenishment triggers.
  */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -10,28 +11,36 @@ import { useAuth } from '../contexts/AuthContext';
 import { useApp } from '../contexts/AppContext';
 import RequestStockDialog from '../components/common/RequestStockDialog';
 import { useDebouncedCallback } from '../hooks/useDebounce';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Input } from '../components/ui/input';
 import {
-  Box, Grid, Paper, Typography, Button, Chip, Divider, Card, CardContent,
-  CardMedia, TextField, FormControl, InputLabel, Select, MenuItem, Alert,
-  Table, TableBody, TableCell, TableContainer, TableRow, TableHead, IconButton,
-  CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText, LinearProgress
-} from '@mui/material';
-import {
-  ArrowBack as ArrowBackIcon,
-  Edit as EditIcon,
-  Print as PrintIcon,
-  FiberNew as FiberNewIcon,
-  Favorite as FavoriteIcon,
-  FavoriteBorder as FavoriteBorderIcon,
-  WhatsApp as WhatsAppIcon,
-  Delete as DeleteIcon
-} from '@mui/icons-material';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../components/ui/dialog';
+import { Skeleton } from '../components/ui/skeleton';
+import { cn } from '../lib/utils';
 import { useSnackbar } from 'notistack';
-import PageHeader from '../components/common/PageHeader';
-import StatusBadge from '../components/common/StatusBadge';
-import ConfirmDialog from '../components/common/ConfirmDialog';
-
-
+import {
+  ArrowLeft,
+  Printer,
+  Heart,
+  Pencil,
+  Trash2,
+  Sparkles,
+  MessageCircle,
+  Layers,
+  CheckCircle2,
+  AlertTriangle,
+  RotateCcw,
+  FastForward,
+  X
+} from 'lucide-react';
 
 const SareeDetail = () => {
   const { id } = useParams();
@@ -55,12 +64,8 @@ const SareeDetail = () => {
   const [requestCombo, setRequestCombo] = useState(null);
   const [requestBeamName, setRequestBeamName] = useState('');
 
-
-
   // Delete dialog
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const fetchSareeDetails = async () => {
     try {
@@ -79,12 +84,10 @@ const SareeDetail = () => {
     fetchSareeDetails();
   }, [id]);
 
-  // Debounced realtime callback to avoid rapid multiple fetches
   const handleRealtimeUpdate = useDebouncedCallback(() => {
     fetchSareeDetails();
   }, 300);
 
-  // Real-time Supabase subscriptions
   useEffect(() => {
     if (!supabase || !id) return;
 
@@ -105,8 +108,6 @@ const SareeDetail = () => {
       supabase.removeChannel(channel);
     };
   }, [id, handleRealtimeUpdate]);
-
-
 
   const handleNextSeriesConfirm = async () => {
     try {
@@ -147,20 +148,34 @@ const SareeDetail = () => {
     try {
       await sareeAPI.delete(saree.id);
       setDeleteConfirmOpen(false);
-      setSnackbarMessage('Saree deleted successfully.');
-      setSnackbarOpen(true);
+      enqueueSnackbar('Saree deleted successfully.', { variant: 'success' });
+      navigate('/sarees');
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || 'Failed to delete saree.');
     }
   };
 
+  if (loading && !saree) {
+    return (
+      <div className="max-w-6xl mx-auto space-y-6 pb-12">
+        <Skeleton className="h-10 w-64" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Skeleton className="h-96 rounded-2xl" />
+          <Skeleton className="md:col-span-2 h-96 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
 
+  if (!saree) {
+    return (
+      <div className="p-8 text-center text-destructive text-sm font-semibold">
+        Saree record not found.
+      </div>
+    );
+  }
 
-  if (loading && !saree) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>;
-  if (!saree) return <Box sx={{ p: 3 }}><Alert severity="error">Saree details not found.</Alert></Box>;
-
-  // Calculations
   const totalStock = (saree.beams || []).reduce((sum, b) =>
     sum + (b.combinations || []).reduce((cs, c) => cs + (c.current_stock || 0), 0), 0
   );
@@ -169,330 +184,422 @@ const SareeDetail = () => {
   );
 
   const getStockStatus = (total, min) => {
-    if (total === 0) return { label: 'OUT OF STOCK', color: 'error', bg: 'rgba(239, 68, 68, 0.08)' };
-    if (total <= min) return { label: 'LOW STOCK', color: 'warning', bg: 'rgba(245, 158, 11, 0.08)' };
-    return { label: 'HEALTHY', color: 'success', bg: 'rgba(16, 185, 129, 0.08)' };
+    if (total === 0) return { label: 'OUT OF STOCK', variant: 'danger' };
+    if (total <= min) return { label: 'LOW STOCK', variant: 'warning' };
+    return { label: 'HEALTHY', variant: 'success' };
   };
   const statusInfo = getStockStatus(totalStock, minStock);
 
-
-
   return (
-    <Box className="printable-area" sx={{ position: 'relative' }}>
-      {loading && saree && (
-        <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, height: 2, borderRadius: 0 }} color="primary" />
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+      {/* Alert Notices */}
+      {error && (
+        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </div>
       )}
-      
-      <PageHeader
-        title={saree.sari_name || 'Unnamed Saree'}
-        subtitle={`Series Code: ${saree.series_code} · Manage details and combination stock levels`}
-        breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Inventory', href: '/sarees' }, { label: saree.series_code }]}
-        icon={<IconButton onClick={() => navigate('/sarees')} color="primary" sx={{ p: 0.5, mr: 1 }}><ArrowBackIcon /></IconButton>}
-        actions={<>
-          <IconButton onClick={() => toggleFavorite(saree.id)} color="error" sx={{ mr: 1 }}>
-            {isFavorite(saree.id) ? <FavoriteIcon /> : <FavoriteBorderIcon />}
-          </IconButton>
-          <Button variant="outlined" startIcon={<PrintIcon />} onClick={() => window.print()} size="small">Print</Button>
+
+      {actionSuccess && (
+        <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs">
+          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{actionSuccess}</span>
+        </div>
+      )}
+
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => navigate('/sarees')}
+            title="Back to Catalog"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                {saree.sari_name || 'Design Details'}
+              </h1>
+              <Badge variant="luxury" className="font-mono font-bold text-xs px-2 py-0.5">
+                {saree.series_code}
+              </Badge>
+
+              <button
+                type="button"
+                onClick={() => toggleFavorite(saree.id)}
+                className="p-1 rounded-full text-muted-foreground hover:text-destructive transition-colors ml-1"
+                title="Favorite"
+              >
+                <Heart
+                  className={cn(
+                    "w-4 h-4",
+                    isFavorite(saree.id) && "fill-destructive text-destructive"
+                  )}
+                />
+              </button>
+            </div>
+
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Series Base: <strong className="font-mono">{saree.series_base || 'KP'}</strong> &bull; Variant Letter: <strong className="font-mono">{saree.series_letter || 'A'}</strong>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.print()}
+            className="text-xs font-semibold h-9"
+          >
+            <Printer className="w-3.5 h-3.5 mr-1.5" />
+            Print Sheet
+          </Button>
+
           {(isAdmin || isStaff) && (
             <>
-              <Button variant="outlined" startIcon={<FiberNewIcon />} onClick={() => { setManualSeriesLetter(saree?.series_letter || 'A'); setSeriesDialogOpen(true); }} size="small">Series</Button>
-              <Button variant="contained" startIcon={<EditIcon />} onClick={() => navigate(`/sarees/edit/${saree.id}`)} size="small">Edit</Button>
-              <Button variant="contained" color="error" startIcon={<DeleteIcon />} onClick={() => setDeleteConfirmOpen(true)} size="small">Delete</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setManualSeriesLetter(saree?.series_letter || 'A');
+                  setSeriesDialogOpen(true);
+                }}
+                className="text-xs font-semibold h-9"
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
+                Series Options
+              </Button>
+
+              <Button
+                variant="luxury"
+                size="sm"
+                onClick={() => navigate(`/sarees/edit/${saree.id}`)}
+                className="text-xs font-bold h-9 shadow-luxury"
+              >
+                <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                Edit
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setDeleteConfirmOpen(true)}
+                className="text-destructive hover:bg-destructive/10 h-9 w-9"
+                title="Delete Saree"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </>
           )}
-        </>}
-      />
+        </div>
+      </div>
 
-      {error && <Alert severity="error" sx={{ mb: 3, displayPrint: 'none' }}>{error}</Alert>}
-      {actionSuccess && <Alert severity="success" sx={{ mb: 3, displayPrint: 'none' }}>{actionSuccess}</Alert>}
+      {/* Main Grid Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Side: Summary Card */}
+        <div className="lg:col-span-4 space-y-6">
+          <Card className="border border-border shadow-luxury overflow-hidden">
+            {saree.image_url && (
+              <div className="w-full h-64 overflow-hidden bg-muted">
+                <img
+                  src={saree.image_url}
+                  alt={saree.sari_name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
 
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base font-serif">Saree Specifications</CardTitle>
+            </CardHeader>
 
+            <CardContent className="p-5 pt-0 space-y-3 text-xs">
+              <div className="flex justify-between pb-2 border-b border-border/60">
+                <span className="text-muted-foreground">Series Code</span>
+                <span className="font-mono font-bold text-foreground">{saree.series_code}</span>
+              </div>
 
-      {/* TAB 0: BEAMS & COMBINATIONS */}
+              <div className="flex justify-between pb-2 border-b border-border/60">
+                <span className="text-muted-foreground">Brand Line</span>
+                <span className="font-semibold text-foreground">{saree.brand || 'KP'}</span>
+              </div>
 
-      <Grid container spacing={3}>
-        {/* Left column */}
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Paper sx={{ p: 3, borderRadius: 4, mb: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>Saree Info</Typography>
-            <TableContainer>
-              <Table size="small">
-                <TableBody>
-                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Series Code</TableCell><TableCell>{saree.series_code}</TableCell></TableRow>
-                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Brands</TableCell><TableCell>
-                    {Array.from(new Set(saree.beams?.flatMap(b => b.combinations?.map(c => c.brand).filter(Boolean)) || [])).map(b => (
-                      <Chip
-                        key={b}
-                        label={b}
-                        size="small"
-                        sx={{
-                          fontWeight: 700,
-                          mr: 0.5,
-                          bgcolor: b === 'KP' ? 'secondary.light' : 'warning.light',
-                          color: b === 'KP' ? 'secondary.dark' : 'warning.dark'
-                        }}
-                      />
-                    ))}
-                  </TableCell></TableRow>
-                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Statuses</TableCell><TableCell>
-                    {Array.from(new Set(saree.beams?.flatMap(b => b.combinations?.map(c => c.status).filter(Boolean)) || [])).map(s => (
-                      <Chip
-                        key={s}
-                        label={s}
-                        size="small"
-                        variant="outlined"
-                        sx={{
-                          fontWeight: 700,
-                          mr: 0.5,
-                          color: s === 'In Stock' ? 'success.main' : 'info.main',
-                          borderColor: s === 'In Stock' ? 'success.main' : 'info.main'
-                        }}
-                      />
-                    ))}
-                  </TableCell></TableRow>
-                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Total Stock</TableCell><TableCell sx={{ fontWeight: 800 }}>{totalStock} pcs</TableCell></TableRow>
-                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Price</TableCell><TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>{saree.price != null ? `₹${Number(saree.price).toLocaleString('en-IN')}` : '—'}</TableCell></TableRow>
-                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Stock Status</TableCell><TableCell>
-                    <StatusBadge variant={statusInfo.label.toLowerCase().replace(' ', '-')} label={statusInfo.label} />
-                  </TableCell></TableRow>
-                  <TableRow><TableCell sx={{ fontWeight: 700 }}>Beams</TableCell><TableCell>{saree.beams?.length || 0}</TableCell></TableRow>
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </Grid>
+              <div className="flex justify-between pb-2 border-b border-border/60">
+                <span className="text-muted-foreground">Price</span>
+                <span className="font-mono font-bold text-burgundy-900 dark:text-burgundy-300 text-sm">
+                  {saree.price != null ? `₹${Number(saree.price).toLocaleString('en-IN')}` : '—'}
+                </span>
+              </div>
 
-        {/* Right column */}
-        <Grid size={{ xs: 12, md: 8 }}>
-          <Paper sx={{ p: 3, borderRadius: 4, mb: 3 }}>
-            <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>Beams & Combinations</Typography>
-            {(() => {
-              const naturalSort = (a, b) => (a || '').localeCompare(b || '', undefined, { numeric: true, sensitivity: 'base' });
-              const sortedBeams = [...(saree.beams || [])].sort((a, b) =>
-                (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSort(a.beam_name, b.beam_name)
-              );
-              return sortedBeams.map((beam, bi) => {
-                const sortedCombos = [...(beam.combinations || [])].sort((a, b) =>
-                  (a.sort_order ?? 0) - (b.sort_order ?? 0) || naturalSort(a.combination_name, b.combination_name)
-                );
-                return (
-                  <Box key={beam.id} sx={{ mb: 3 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'primary.main', mb: 1 }}>{beam.beam_name}</Typography>
-                    <Grid container spacing={2}>
-                      {sortedCombos.map((c, ci) => {
-                        const isLow = (c.current_stock ?? 0) <= (c.minimum_stock ?? 20);
-                    return (
-                      <Grid size={12} key={c.id}>
-                        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: isLow ? 'warning.light' : 'divider' }}>
-                          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, alignItems: { sm: 'center' } }}>
-                            {/* Left: Medium Square Combination Image */}
-                            {c.image_url && (
-                              <Box
-                                sx={{
-                                  width: { xs: '100%', sm: 105 },
-                                  height: { xs: 160, sm: 105 },
-                                  minWidth: { sm: 105 },
-                                  borderRadius: 2,
-                                  overflow: 'hidden',
-                                  border: '1px solid',
-                                  borderColor: 'divider',
-                                  bgcolor: 'background.paper',
-                                  flexShrink: 0
-                                }}
-                              >
-                                <Box
-                                  component="img"
-                                  src={c.image_url}
-                                  alt={c.combination_name || `Combination ${ci + 1}`}
-                                  loading="lazy"
-                                  sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              <div className="flex justify-between pb-2 border-b border-border/60">
+                <span className="text-muted-foreground">Total Stock</span>
+                <span className="font-mono font-bold text-foreground">{totalStock} pcs</span>
+              </div>
+
+              <div className="flex justify-between pb-2 border-b border-border/60">
+                <span className="text-muted-foreground">Inventory Status</span>
+                <Badge variant={statusInfo.variant} className="text-[10px] font-bold px-1.5 py-0">
+                  {statusInfo.label}
+                </Badge>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Beams Registered</span>
+                <span className="font-bold text-foreground">{saree.beams?.length || 0}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Side: Beams & Combinations Hierarchy */}
+        <div className="lg:col-span-8 space-y-6">
+          <Card className="border border-border shadow-luxury">
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base font-serif flex items-center gap-2">
+                <Layers className="w-4 h-4 text-burgundy-900 dark:text-burgundy-300" />
+                Beams & Combinations Architecture
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Structural breakdown of warp beams, yarn combination codes, and inventory levels
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="p-5 pt-0 space-y-5">
+              {(!saree.beams || saree.beams.length === 0) ? (
+                <div className="py-12 text-center text-xs text-muted-foreground">
+                  No warp beams configured for this saree design.
+                </div>
+              ) : (
+                saree.beams.map((beam) => (
+                  <div
+                    key={beam.id}
+                    className="p-4 rounded-xl border border-border/80 bg-muted/20 space-y-3"
+                  >
+                    <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-burgundy-900 dark:text-burgundy-300">
+                        {beam.beam_name}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground font-medium">
+                        {beam.combinations?.length || 0} combinations
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {(beam.combinations || []).map((combo) => {
+                        const isLow = (combo.current_stock ?? 0) <= (combo.minimum_stock ?? 20);
+
+                        return (
+                          <div
+                            key={combo.id}
+                            className="p-3 rounded-lg border border-border bg-card flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              {combo.image_url && (
+                                <img
+                                  src={combo.image_url}
+                                  alt=""
+                                  className="w-12 h-12 rounded-md object-cover border border-border shrink-0"
                                 />
-                              </Box>
-                            )}
-
-                            {/* Right: Combination Details & Actions */}
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1, flexWrap: 'wrap', gap: 1 }}>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
-                                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                                    {c.combination_name || `Combination ${ci + 1}`}
-                                  </Typography>
-                                  <Chip
-                                    label={c.brand || 'KP'}
-                                    color="secondary"
-                                    size="small"
-                                    sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
-                                  />
-                                  <Chip
-                                    label={c.status || 'In Stock'}
-                                    variant="outlined"
-                                    color={(c.status || 'In Stock') === 'In Stock' ? 'success' : 'info'}
-                                    size="small"
-                                    sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }}
-                                  />
-                                  {c.notes && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', width: '100%' }}>Notes: {c.notes}</Typography>}
-                                </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Chip
-                                    label={`${c.current_stock} pcs`}
-                                    color={isLow ? (c.current_stock === 0 ? 'error' : 'warning') : 'primary'}
-                                    size="small"
-                                  />
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    color="success"
-                                    startIcon={<WhatsAppIcon fontSize="small" />}
-                                    onClick={() => {
-                                      setRequestCombo(c);
-                                      setRequestBeamName(beam.beam_name);
-                                      setRequestDialogOpen(true);
-                                    }}
-                                    sx={{ whiteSpace: 'nowrap', fontSize: '0.72rem' }}
+                              )}
+                              <div className="min-w-0 space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-foreground">
+                                    {combo.combination_name}
+                                  </span>
+                                  <Badge
+                                    variant={
+                                      combo.status === 'In Stock'
+                                        ? 'success'
+                                        : combo.status === 'Out of Stock'
+                                        ? 'danger'
+                                        : 'secondary'
+                                    }
+                                    className="text-[9px] px-1.5 py-0 font-bold"
                                   >
-                                    Request Stock
-                                  </Button>
-                                </Box>
-                              </Box>
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                {c.combination_colors?.map((col) => (
-                                  <Chip key={col.id} label={`${col.f_number}: ${col.color_name} ${col.company_name ? `(${col.company_name})` : ''}`} size="small" variant="outlined" />
-                                ))}
-                              </Box>
-                            </Box>
-                          </Box>
-                        </Paper>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-                {bi < sortedBeams.length - 1 && <Divider sx={{ mt: 2 }} />}
-              </Box>
-            );
-          });
-        })()}
-          </Paper>
-        </Grid>
-      </Grid>
+                                    {combo.status || 'Active'}
+                                  </Badge>
+                                </div>
 
+                                <div className="flex flex-wrap gap-1">
+                                  {combo.combination_colors?.map((col) => (
+                                    <span
+                                      key={col.id}
+                                      className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
+                                    >
+                                      <strong>{col.f_number}:</strong> {col.color_name}
+                                      {col.company_name && (
+                                        <span className="opacity-70 ml-0.5">({col.company_name})</span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
 
+                            <div className="flex items-center gap-4 shrink-0 justify-between sm:justify-end">
+                              <div className="text-left sm:text-right">
+                                <span
+                                  className={cn(
+                                    "font-mono text-xs font-bold block",
+                                    isLow ? "text-amber-600" : "text-foreground"
+                                  )}
+                                >
+                                  {combo.current_stock ?? 0} pcs
+                                </span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  Min: {combo.minimum_stock ?? 20}
+                                </span>
+                              </div>
 
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setRequestCombo(combo);
+                                  setRequestBeamName(beam.beam_name);
+                                  setRequestDialogOpen(true);
+                                }}
+                                className="h-7 text-[11px] font-bold text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10"
+                              >
+                                <MessageCircle className="w-3 h-3 mr-1" />
+                                WhatsApp
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-      {/* Series Management Dialog */}
-      <Dialog open={seriesDialogOpen} onClose={() => setSeriesDialogOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
-        <DialogTitle sx={{ fontWeight: 800, fontSize: '1.25rem', pb: 1 }}>Series Options</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body1" sx={{ fontWeight: 700 }}>Current Series:</Typography>
-            <Chip label={saree?.series_code} color="primary" sx={{ fontWeight: 700 }} />
-          </Box>
-          <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
-            Adjust the series letter (A-Z) for this saree. This affects the product catalog immediately.
-          </Typography>
+      {/* Series Management Modal */}
+      <Dialog open={seriesDialogOpen} onOpenChange={setSeriesDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Series Version Control</DialogTitle>
+            <DialogDescription>
+              Adjust or increment the series letter (e.g. 101A &rarr; 101B) for fresh weave rollouts.
+            </DialogDescription>
+          </DialogHeader>
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button 
-                fullWidth 
-                variant="outlined" 
-                color="primary" 
+          <div className="space-y-4 py-2 text-xs">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border">
+              <span className="text-muted-foreground font-medium">Current Series Code:</span>
+              <Badge variant="luxury" className="font-mono text-xs font-bold">
+                {saree?.series_code}
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleUndoSeries}
                 disabled={!saree?.series_letter || saree.series_letter === 'A'}
-                sx={{ height: 48, fontWeight: 700 }}
+                className="text-xs font-bold"
               >
-                Undo Series
+                <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                Undo Step
               </Button>
-              <Button 
-                fullWidth 
-                variant="contained" 
-                color="primary" 
+              <Button
+                variant="luxury"
+                size="sm"
                 onClick={() => setSeriesConfirmOpen(true)}
                 disabled={saree?.series_letter === 'Z'}
-                sx={{ height: 48, fontWeight: 700 }}
+                className="text-xs font-bold"
               >
+                <FastForward className="w-3.5 h-3.5 mr-1" />
                 Next Series
               </Button>
-            </Box>
-            
-            <Divider sx={{ my: 1 }}>OR SET MANUALLY</Divider>
-            
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label="Series Letter"
-                fullWidth
-                value={manualSeriesLetter}
-                onChange={(e) => setManualSeriesLetter(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1))}
-                placeholder="A-Z"
-                inputProps={{ maxLength: 1, style: { textAlign: 'center', fontWeight: 'bold' } }}
-              />
-              <Button 
-                variant="contained" 
-                color="secondary" 
-                onClick={() => handleSetSeries(manualSeriesLetter)}
-                disabled={!manualSeriesLetter || manualSeriesLetter === saree?.series_letter}
-                sx={{ px: 4 }}
-              >
-                Apply
-              </Button>
-            </Box>
-          </Box>
+            </div>
+
+            <div className="pt-2 border-t border-border space-y-2">
+              <span className="text-[11px] font-semibold text-muted-foreground block">
+                Or designate custom letter:
+              </span>
+              <div className="flex gap-2">
+                <Input
+                  value={manualSeriesLetter}
+                  onChange={(e) =>
+                    setManualSeriesLetter(
+                      e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 1)
+                    )
+                  }
+                  placeholder="A-Z"
+                  maxLength={1}
+                  className="font-mono font-bold text-center h-9 text-sm"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleSetSeries(manualSeriesLetter)}
+                  disabled={!manualSeriesLetter || manualSeriesLetter === saree?.series_letter}
+                  className="h-9 px-4 text-xs font-bold"
+                >
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </div>
         </DialogContent>
-        <DialogActions sx={{ pt: 2 }}>
-          <Button onClick={() => setSeriesDialogOpen(false)} color="inherit">Close</Button>
-        </DialogActions>
       </Dialog>
 
-      {/* Legacy Next Series Confirmation (Triggered from new dialog) */}
-      <Dialog open={seriesConfirmOpen} onClose={() => setSeriesConfirmOpen(false)} PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
-        <DialogTitle sx={{ fontWeight: 700 }}>Confirm Next Series</DialogTitle>
+      {/* Next Series Confirmation Dialog */}
+      <Dialog open={seriesConfirmOpen} onOpenChange={setSeriesConfirmOpen}>
         <DialogContent>
-          <DialogContentText>Are you sure you want to advance this saree series? This increments the letter (e.g. A → B).</DialogContentText>
+          <DialogHeader>
+            <DialogTitle className="font-serif">Advance to Next Series?</DialogTitle>
+            <DialogDescription>
+              This will increment the series letter for this catalog item and apply immediately across the system.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSeriesConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="luxury" onClick={handleNextSeriesConfirm}>
+              Advance Series
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5 }}>
-          <Button onClick={() => setSeriesConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleNextSeriesConfirm} variant="contained" color="primary">Advance Series</Button>
-        </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        open={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
-        onConfirm={handleDeleteConfirm}
-        title="Delete Saree"
-        message="Are you sure you want to delete this saree? This will permanently remove all associated beams, combinations, color variants, stock history, and media files."
-        itemName={saree?.sari_name ? `${saree.series_code} — ${saree.sari_name}` : saree?.series_code}
-        confirmLabel="Delete Permanently"
-        variant="delete"
-      />
-
-      {/* Success Dialog */}
-      <Dialog
-        open={snackbarOpen}
-        onClose={() => {
-          setSnackbarOpen(false);
-          navigate('/sarees');
-        }}
-        PaperProps={{ sx: { p: 1, borderRadius: 2 } }}
-      >
-        <DialogContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
-          <Typography sx={{ fontWeight: 700 }}>{snackbarMessage}</Typography>
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive font-serif">Delete Saree Design?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong className="text-foreground">{saree.series_code}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs space-y-1">
+            <span className="font-bold block">Permanent Action:</span>
+            <span>All beams, combinations, color codes, and historical records will be deleted.</span>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteConfirm}>
+              Permanently Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setSnackbarOpen(false);
-              navigate('/sarees');
-            }}
-            variant="contained"
-            color="primary"
-          >
-            Ok
-          </Button>
-        </DialogActions>
       </Dialog>
 
-      {/* Request Stock Dialog component */}
+      {/* WhatsApp Stock Request Modal */}
       {requestCombo && (
         <RequestStockDialog
           open={requestDialogOpen}
@@ -505,12 +612,12 @@ const SareeDetail = () => {
           beamName={requestBeamName}
           combination={requestCombo}
           onSuccess={() => {
-            enqueueSnackbar('Stock request sent via WhatsApp!', { variant: 'success' });
+            enqueueSnackbar('Stock replenishment request dispatched via WhatsApp!', { variant: 'success' });
             fetchSareeDetails();
           }}
         />
       )}
-    </Box>
+    </div>
   );
 };
 

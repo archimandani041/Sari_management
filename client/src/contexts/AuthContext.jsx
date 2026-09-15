@@ -15,12 +15,19 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('sari_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(sessionStorage.getItem('sari_token'));
 
   // Fetch the public user profile from the backend
-  const fetchProfile = useCallback(async (accessToken) => {
+  const fetchProfile = useCallback(async (accessToken, sessionUser = null) => {
     try {
       // Temporarily store token in sessionStorage so API interceptor uses it
       sessionStorage.setItem('sari_token', accessToken);
@@ -29,12 +36,29 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
         sessionStorage.setItem('sari_user', JSON.stringify(data.user));
         setToken(accessToken);
+        return data.user;
       } else {
-        throw new Error('No user data returned');
+        throw new Error('No user data returned from /api/auth/me');
       }
     } catch (err) {
-      console.error('Failed to fetch user profile:', err);
-      // Clean up on failure
+      console.error('Failed to fetch user profile from API, checking fallback:', err);
+      // If we have sessionUser from Supabase, construct fallback user
+      const su = sessionUser || (await supabase?.auth?.getUser(accessToken))?.data?.user;
+      if (su) {
+        const fallbackUser = {
+          id: su.id,
+          email: su.email,
+          username: su.user_metadata?.username || su.email?.split('@')[0],
+          full_name: su.user_metadata?.full_name || su.email?.split('@')[0],
+          role: su.user_metadata?.role || 'admin',
+          created_at: su.created_at,
+        };
+        setUser(fallbackUser);
+        sessionStorage.setItem('sari_user', JSON.stringify(fallbackUser));
+        setToken(accessToken);
+        return fallbackUser;
+      }
+      // Clean up on failure only if no valid session user exists
       sessionStorage.removeItem('sari_token');
       sessionStorage.removeItem('sari_user');
       setUser(null);
@@ -53,7 +77,7 @@ export const AuthProvider = ({ children }) => {
     // Get current session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        await fetchProfile(session.access_token);
+        await fetchProfile(session.access_token, session.user);
       } else {
         sessionStorage.removeItem('sari_token');
         sessionStorage.removeItem('sari_user');
@@ -66,7 +90,7 @@ export const AuthProvider = ({ children }) => {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        await fetchProfile(session.access_token);
+        await fetchProfile(session.access_token, session.user);
       } else {
         sessionStorage.removeItem('sari_token');
         sessionStorage.removeItem('sari_user');
@@ -92,7 +116,7 @@ export const AuthProvider = ({ children }) => {
     if (error) throw error;
 
     if (data.session) {
-      await fetchProfile(data.session.access_token);
+      await fetchProfile(data.session.access_token, data.session.user);
     }
     return data;
   }, [fetchProfile]);

@@ -1,262 +1,149 @@
-/* ── KP Creation — Global Stylesheet ───────────────────────────
-   LUXE Design System: Charcoal · Burgundy · Taupe · Beige · Linen
-   ─────────────────────────────────────────────────────────────── */
-
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;0,900;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
 
-/* ── LUXE Color Tokens ─────────────────────────────────────── */
-:root {
-  --color-charcoal:  #1A1512;
-  --color-burgundy:  #3B111A;
-  --color-wine:      #72383D;
-  --color-taupe:     #9E8E7A;
-  --color-grey:      #E5E1DC;
-  --color-beige:     #F0EBE6;
-  --color-linen:     #FAF9F7;
-  --color-white:     #FFFFFF;
-  --color-gold:      #C9A96E;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  /* Status palette */
-  --status-healthy:   #16A34A;
-  --status-low:       #D97706;
-  --status-critical:  #DC2626;
-  --status-delivery:  #2563EB;
+/* ── shadcn/ui CSS Variables ───────────────────────────────── */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 20 14% 10%;
 
-  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color-scheme: light dark;
-}
+    --card: 0 0% 100%;
+    --card-foreground: 20 14% 10%;
 
-/* ── Base Reset ─────────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 14% 10%;
 
-body {
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  background-color: var(--color-linen);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-}
+    --primary: 350 54% 16%;
+    --primary-foreground: 0 0% 100%;
 
-/* ── Keyframe Animations ────────────────────────────────────── */
+    --secondary: 30 14% 95%;
+    --secondary-foreground: 20 14% 20%;
 
-/* Shimmer effect for skeleton loading */
-@keyframes shimmer {
-  0%   { background-position: -1000px 0; }
-  100% { background-position: 1000px 0; }
-}
+    --muted: 30 10% 94%;
+    --muted-foreground: 25 10% 50%;
 
-/* Fade + slide up for page sections */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
+    --accent: 30 10% 92%;
+    --accent-foreground: 20 14% 15%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 25 14% 88%;
+    --input: 25 14% 88%;
+    --ring: 350 54% 25%;
+
+    --radius: 0.625rem;
+
+    /* Luxury custom tokens */
+    --luxury-burgundy: #3B111A;
+    --luxury-wine: #72383D;
+    --luxury-taupe: #9E8E7A;
+    --luxury-cream: #FAF9F7;
+    --luxury-beige: #F0EBE6;
+    --luxury-border: #E5E1DC;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
-/* Subtle fade in */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
+  .dark {
+    --background: 20 13% 9%;
+    --foreground: 30 14% 92%;
 
-/* Pulse for live status dot */
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.6; transform: scale(1.15); }
-}
+    --card: 20 13% 12%;
+    --card-foreground: 30 14% 92%;
 
-/* Slide fade for login panel */
-@keyframes slideFadeIn {
-  from { opacity: 0.3; transform: scale(1.02); }
-  to   { opacity: 1; transform: scale(1); }
-}
+    --popover: 20 13% 12%;
+    --popover-foreground: 30 14% 92%;
 
-/* ── Animation Utility Classes ───────────────────────────────── */
-.fade-in-up {
-  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
+    --primary: 350 54% 75%;
+    --primary-foreground: 20 14% 5%;
 
-.fade-in {
-  animation: fadeIn 0.25s ease both;
-}
+    --secondary: 20 10% 18%;
+    --secondary-foreground: 30 14% 85%;
 
-.fade-in-up-delay-1 { animation: fadeInUp 0.35s 0.05s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.fade-in-up-delay-2 { animation: fadeInUp 0.35s 0.10s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.fade-in-up-delay-3 { animation: fadeInUp 0.35s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.fade-in-up-delay-4 { animation: fadeInUp 0.35s 0.20s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    --muted: 20 10% 18%;
+    --muted-foreground: 25 10% 55%;
 
-/* ── Skeleton Shimmer ───────────────────────────────────────── */
-.skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(229, 225, 220, 0.4) 0%,
-    rgba(229, 225, 220, 0.8) 40%,
-    rgba(229, 225, 220, 0.4) 80%
-  );
-  background-size: 1000px 100%;
-  animation: shimmer 1.6s infinite linear;
-  border-radius: 6px;
-}
+    --accent: 20 10% 20%;
+    --accent-foreground: 30 14% 90%;
 
-.dark .skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(40, 36, 32, 0.6) 0%,
-    rgba(60, 54, 48, 0.9) 40%,
-    rgba(40, 36, 32, 0.6) 80%
-  );
-  background-size: 1000px 100%;
-}
+    --destructive: 0 62% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-/* ── Typography helpers ─────────────────────────────────────── */
-.font-serif {
-  font-family: 'Playfair Display', Georgia, serif !important;
-}
-
-.font-sans {
-  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif !important;
-}
-
-.text-tabular {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
-}
-
-/* ── Live Status Pulse ──────────────────────────────────────── */
-.live-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--status-healthy);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-/* ── Reduced-motion preference ─────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
+    --border: 20 10% 22%;
+    --input: 20 10% 22%;
+    --ring: 350 54% 75%;
   }
 }
 
-/* ── Custom Scrollbar — Light ───────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+}
+
+/* ── Custom scrollbar ─────────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(158, 142, 122, 0.30);
-  border-radius: 10px;
+  background: rgba(172, 156, 141, 0.35);
+  border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(114, 56, 61, 0.45);
 }
 
-/* ── Combo row expand animation ─────────────────────────────── */
-.combo-row-enter {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-.combo-row-enter-active {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 200ms ease, transform 200ms ease;
-}
-
-/* ── Status badge helpers ───────────────────────────────────── */
-.status-healthy  { color: var(--status-healthy) !important; }
-.status-low      { color: var(--status-low) !important; }
-.status-critical { color: var(--status-critical) !important; }
-.status-delivery { color: var(--status-delivery) !important; }
-
-/* ── Notistack Premium Overrides ────────────────────────────── */
-.notistack-MuiContent {
-  border-radius: 8px !important;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important;
-  font-size: 0.84rem !important;
-  font-weight: 600 !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12) !important;
+/* ── Utility classes ──────────────────────────────────────── */
+@layer utilities {
+  .font-serif {
+    font-family: 'Playfair Display', Georgia, serif !important;
+  }
+  .text-luxury {
+    @apply text-burgundy-900;
+  }
+  .bg-luxury {
+    @apply bg-burgundy-900;
+  }
+  .gradient-luxury {
+    background: linear-gradient(135deg, #3B111A 0%, #72383D 100%);
+  }
+  .gradient-warm {
+    background: linear-gradient(135deg, #FAF9F7 0%, #F0EBE6 100%);
+  }
 }
 
-.notistack-MuiContent-success {
-  background: #ECFDF5 !important;
-  color: #14532D !important;
-  border: 1px solid #BBF7D0 !important;
+/* ── Reduced motion ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
-.notistack-MuiContent-error {
-  background: #FFF1F2 !important;
-  color: #7F1D1D !important;
-  border: 1px solid #FECDD3 !important;
-}
-
-.notistack-MuiContent-warning {
-  background: #FFFBEB !important;
-  color: #78350F !important;
-  border: 1px solid #FDE68A !important;
-}
-
-.notistack-MuiContent-info {
-  background: #EFF6FF !important;
-  color: #1E3A8A !important;
-  border: 1px solid #BFDBFE !important;
-}
-
-/* ── Focus Visible ──────────────────────────────────────────── */
-:focus-visible {
-  outline: 2px solid rgba(114, 56, 61, 0.6);
-  outline-offset: 2px;
-}
-
-/* ── Print CSS ──────────────────────────────────────────────── */
+/* ── Print CSS ────────────────────────────────────────────── */
 @media print {
   body {
     background: white !important;
     color: black !important;
   }
-
-  .MuiDrawer-root,
-  header,
-  .MuiAppBar-root,
-  .no-print,
-  button,
-  .MuiButton-root,
-  .MuiInputBase-root,
-  .MuiTablePagination-root {
-    display: none !important;
-  }
-
-  .printable-area {
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  .MuiPaper-root {
-    border: none !important;
-    box-shadow: none !important;
-    background: transparent !important;
-  }
-
-  svg, canvas {
-    max-width: 100% !important;
-  }
+  .no-print, nav, header, aside { display: none !important; }
 }
